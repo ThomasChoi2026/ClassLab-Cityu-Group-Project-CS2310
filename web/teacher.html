@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassLab · 教师工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="teacher">
+  <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span></div></header>
+  <main>
+    <section id="setup" class="intro">
+      <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
+      <div class="panel">
+        <form id="create">
+          <label>课堂名称<input name="name" required maxlength="40" placeholder="例如 C++ 程序设计"></label>
+          <button>创建课堂</button>
+        </form>
+      </div>
+    </section>
+    <section id="dashboard" hidden>
+      <div class="heading"><div><h1 id="room-name"></h1><p>分享链接，让学生加入课堂。</p></div></div>
+      <section class="panel share" aria-label="课堂加入链接">
+        <label for="join-link">课堂加入链接</label>
+        <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">复制链接</button></div>
+      </section>
+      <div class="layout">
+        <section class="panel">
+          <h2>发布任务</h2>
+          <form id="publish">
+            <label>标题<input name="title" required maxlength="53"></label>
+            <label>任务说明<textarea name="description" required maxlength="3000" rows="4"></textarea></label>
+            <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="10" maxlength="20000" spellcheck="false"></textarea></label>
+            <button>发布为当前任务</button>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><h2>课堂进度</h2><span id="refresh-state"></span></div>
+          <p id="current-task"></p>
+          <dl class="metrics">
+            <div><dt>已加入</dt><dd id="joined">0</dd></div>
+            <div><dt>已提交</dt><dd id="submitted">0</dd></div>
+            <div><dt>提交次数</dt><dd id="attempts">0</dd></div>
+          </dl>
+          <div class="table-wrap">
+            <table><thead><tr><th scope="col">学生</th><th scope="col">状态</th><th scope="col">次数</th></tr></thead><tbody id="students"></tbody></table>
+          </div>
+          <p id="empty-students">还没有学生加入。</p>
+        </section>
+      </div>
+    </section>
+    <p id="feedback" role="status" class="feedback"></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassLab · 学生课堂</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="student">
+  <header class="top"><div><strong>ClassLab</strong><span>学生课堂</span></div></header>
+  <main class="student">
+    <section id="setup" class="intro">
+      <div><h1>加入编程课堂</h1><p>输入昵称，让教师认出你的提交。</p></div>
+      <div class="panel">
+        <form id="join">
+          <label>你的昵称<input name="name" required maxlength="40" autocomplete="nickname"></label>
+          <button>加入课堂</button>
+        </form>
+      </div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="heading"><div><h1 id="room-name"></h1><p id="student-name"></p></div></div>
+      <section class="panel">
+        <p id="waiting">等待教师发布任务，页面将自动更新。</p>
+        <div id="assignment" hidden>
+          <h2 id="task-title"></h2>
+          <p id="task-description" class="description"></p>
+          <form id="submit">
+            <label>你的 C++ 代码<textarea class="editor" name="code" required rows="16" maxlength="20000" spellcheck="false"></textarea></label>
+            <button>提交代码</button>
+          </form>
+        </div>
+      </section>
+    </section>
+    <p id="feedback" role="status" class="feedback"></p>
+  </main>
+</body>
+</html>

@@ -4,3 +4,26 @@ project(ClassLab LANGUAGES CXX)
 add_executable(classlab src/main.cpp)
 target_compile_features(classlab PRIVATE cxx_std_20)
 set_target_properties(classlab PROPERTIES CXX_EXTENSIONS OFF)
+
+include(FetchContent)
+set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "")
+set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "")
+set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "")
+set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "")
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+FetchContent_Declare(httplib
+    URL https://codeload.github.com/yhirose/cpp-httplib/tar.gz/refs/tags/v0.28.0
+    URL_HASH SHA256=ccb32f9832c906d571f61794f453223dbb724ba738265551e3cd28ca325b529d)
+FetchContent_Declare(json
+    URL https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.12.0
+    URL_HASH SHA256=4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187)
+FetchContent_MakeAvailable(httplib json)
+target_link_libraries(classlab PRIVATE httplib::httplib nlohmann_json::nlohmann_json)
+target_compile_definitions(classlab PRIVATE CLASSLAB_WEB_DIR="${CMAKE_CURRENT_SOURCE_DIR}/web")
+
+include(CTest)
+if(BUILD_TESTING)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME classroom_workflow
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/workflow.py" $<TARGET_FILE:classlab>)
+endif()
