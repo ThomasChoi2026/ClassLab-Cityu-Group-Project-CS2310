@@ -1,3 +1,5 @@
+#include "judging.hpp"
+
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 
@@ -13,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <random>
 #include <stdexcept>
@@ -49,7 +52,7 @@ long long now() {
 
 void reply(Response& response, const Json& body, int status = 200) {
     response.status = status;
-    response.set_content(body.dump(), "application/json; charset=utf-8");
+    response.set_content(body.dump(-1, ' ', false, Json::error_handler_t::replace), "application/json; charset=utf-8");
     response.set_header("Cache-Control", "no-store");
 }
 
@@ -164,30 +167,105 @@ Json active_task(const Json& room) {
     return tasks.empty() ? Json(nullptr) : tasks.back();
 }
 
+Json test_cases(const Json& body) {
+    const auto& tests = body.at("testCases");
+    if (!tests.is_array() || tests.empty() || tests.size() > 12) {
+        throw ApiError{400, "每项评测任务需要 1 到 12 个测试用例。"};
+    }
+    Json normalized = Json::array();
+    for (const auto& test : tests) {
+        if (!test.is_object()) throw ApiError{400, "测试用例格式无效。"};
+        const auto visibility = field(test, "visibility", 6);
+        if (visibility != "public" && visibility != "hidden") {
+            throw ApiError{400, "测试用例只能设为公开或隐藏。"};
+        }
+        normalized.push_back({{"id", std::to_string(normalized.size() + 1)},
+            {"name", field(test, "name", 120)}, {"visibility", visibility},
+            {"input", field(test, "input", 8192, true)},
+            {"expectedOutput", field(test, "expectedOutput", 8192, true)}});
+    }
+    return normalized;
+}
+
 Json progress(const Json& room) {
     const auto task = active_task(room);
+    const auto task_id = task.is_null() ? Json(nullptr) : task.at("id");
     Json rows = Json::array();
-    std::size_t submitted = 0;
-    std::size_t attempts = 0;
+    Json cases = Json::array();
+    std::map<std::string, Json> errors;
+    std::size_t submitted = 0, attempts = 0, accepted = 0, failed = 0, pending = 0, unjudged = 0;
+    if (!task.is_null()) {
+        for (const auto& test : judging::cases_for(task)) {
+            cases.push_back({{"id", test.at("id")}, {"name", test.at("name")},
+                {"visibility", test.at("visibility")}, {"passed", 0}, {"failed", 0}});
+        }
+    }
     for (const auto& [key, student] : room.at("students").items()) {
-        std::size_t count = 0;
-        Json latest;
-        for (const auto& submission : student.at("submissions")) {
-            if (!task.is_null() && submission.at("taskId") == task.at("id")) {
-                ++count;
-                latest = submission.at("receivedAt");
+        const auto& submissions = student.at("submissions");
+        const auto count = std::count_if(submissions.begin(), submissions.end(),
+            [&](const Json& item) { return item.at("taskId") == task_id; });
+        attempts += count;
+        Json row = {{"number", student.at("number")}, {"name", student.at("name")}, {"count", count},
+                    {"lastSubmittedAt", nullptr}, {"latestStatus", "not_submitted"}};
+        if (const auto* latest = judging::latest_for(student, task_id)) {
+            ++submitted;
+            const auto result = judging::result_for(*latest);
+            const auto status = result.at("status").get<std::string>();
+            row["lastSubmittedAt"] = latest->at("receivedAt");
+            row["latestStatus"] = status;
+            if (result.contains("passed")) row["passed"] = result.at("passed");
+            if (result.contains("total")) row["total"] = result.at("total");
+            if (status == "accepted") ++accepted;
+            else if (status == "pending") ++pending;
+            else if (status == "compilation_error" || judging::case_failed(status)) ++failed;
+            else ++unjudged;
+
+            if (status == "compilation_error") {
+                const auto [category, message] = judging::classify_diagnostic(result.value("diagnostic", ""));
+                auto [entry, inserted] = errors.try_emplace(std::string(category), Json{
+                    {"category", category}, {"count", 0}, {"example", message},
+                    {"studentNumber", student.at("number")}});
+                auto& group = entry->second;
+                group["count"] = group.at("count").get<unsigned>() + 1;
+                if (!inserted && student.at("number") < group.at("studentNumber")) {
+                    group["studentNumber"] = student.at("number");
+                    group["example"] = message;
+                }
+            }
+
+            const auto outcomes = result.value("cases", Json::array());
+            for (auto& test : cases) {
+                const auto outcome = std::find_if(outcomes.begin(), outcomes.end(), [&](const Json& item) {
+                    return item.at("testId") == test.at("id");
+                });
+                if (outcome == outcomes.end()) continue;
+                const auto& status = outcome->at("status");
+                const char* field = status == "passed" ? "passed" :
+                    (judging::case_failed(status) ? "failed" : nullptr);
+                if (field) test[field] = test.at(field).get<unsigned>() + 1;
             }
         }
-        if (count > 0) ++submitted;
-        attempts += count;
-        rows.push_back({{"number", student.at("number")}, {"name", student.at("name")},
-                        {"count", count}, {"lastSubmittedAt", latest}});
+        rows.push_back(std::move(row));
     }
     std::sort(rows.begin(), rows.end(), [](const Json& left, const Json& right) {
         return left.at("number") < right.at("number");
     });
-    return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()},
-            {"submitted", submitted}, {"attempts", attempts}, {"students", rows}};
+    Json groups = Json::array();
+    for (const auto& [category, group] : errors) groups.push_back(group);
+    std::sort(groups.begin(), groups.end(), [](const Json& left, const Json& right) {
+        if (left.at("count") != right.at("count")) return left.at("count") > right.at("count");
+        return left.at("category") < right.at("category");
+    });
+    return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
+            {"submitted", submitted}, {"attempts", attempts}, {"students", rows}, {"executionAvailable", false},
+            {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"unjudged", unjudged},
+            {"caseStats", cases}, {"errorGroups", groups}};
+}
+
+Json receipt_for(const Json& submission) {
+    Json receipt = {{"status", "received"}, {"receivedAt", submission.at("receivedAt")}};
+    if (submission.contains("judgement")) receipt["judgement"] = submission.at("judgement").at("status");
+    return receipt;
 }
 
 void routes(httplib::Server& server, Store& store) {
@@ -244,6 +322,7 @@ void routes(httplib::Server& server, Store& store) {
             Json task = {{"id", random_id()}, {"title", field(body, "title", 160)},
                          {"description", field(body, "description", 10000)},
                          {"starterCode", field(body, "starterCode", 65536, true)}};
+            if (body.contains("testCases")) task["testCases"] = test_cases(body);
             room["tasks"].push_back(task);
             return task;
         }), 201);
@@ -255,6 +334,27 @@ void routes(httplib::Server& server, Store& store) {
             return progress(room);
         }));
     });
+    server.Get(R"(/api/rooms/([a-f0-9]{32})/latest/([1-9][0-9]{0,15}))",
+        [&](const Request& request, Response& response) {
+            reply(response, store.read([&](const Json& rooms) -> Json {
+                const auto& room = room_for(rooms, request);
+                require_teacher(room, request);
+                const auto task = active_task(room);
+                if (task.is_null() || task.at("id") != request.get_param_value("taskId")) {
+                    throw ApiError{409, "当前任务已切换，请重新打开提交记录。"};
+                }
+                const auto number = std::stoull(request.matches[2].str());
+                for (const auto& student : room.at("students")) {
+                    if (student.at("number") != number) continue;
+                    if (const auto* latest = judging::latest_for(student, task.at("id"))) {
+                        return {{"name", student.at("name")}, {"code", latest->at("code")},
+                                {"result", judging::result_for(*latest)}};
+                    }
+                    break;
+                }
+                throw ApiError{404, "没有找到这位学生的提交。"};
+            }));
+        });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/students)", [&](const Request& request, Response& response) {
         const auto name = field(body_of(request), "name", 120);
         reply(response, store.write([&](Json& rooms) -> Json {
@@ -270,9 +370,34 @@ void routes(httplib::Server& server, Store& store) {
         reply(response, store.read([&](const Json& rooms) -> Json {
             const auto& room = room_for(rooms, request);
             const auto key = require_student(room, request);
-            return {{"roomName", room.at("name")}, {"studentName", room.at("students").at(key).at("name")},
-                    {"task", active_task(room)}};
+            const auto& student = room.at("students").at(key);
+            const auto task = active_task(room);
+            Json latest_result;
+            if (!task.is_null()) {
+                if (const auto* latest = judging::latest_for(student, task.at("id"))) {
+                    latest_result = judging::student_result(*latest, task);
+                }
+            }
+            return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
+                    {"task", judging::student_task(task)}, {"latestResult", latest_result},
+                    {"executionAvailable", false}};
         }));
+    });
+    server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
+        const auto body = body_of(request);
+        store.read([&](const Json& rooms) -> Json {
+            const auto& room = room_for(rooms, request);
+            require_student(room, request);
+            const auto task = active_task(room);
+            if (task.is_null() || task.at("id") != field(body, "taskId", 32)) {
+                throw ApiError{409, "教师已更新任务，请刷新后再运行。"};
+            }
+            field(body, "code", 65536);
+            field(body, "input", 8192, true);
+            return nullptr;
+        });
+        reply(response, {{"status", "judge_unavailable"},
+                         {"error", "隔离执行器不可用，程序未运行。"}}, 503);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
@@ -284,11 +409,23 @@ void routes(httplib::Server& server, Store& store) {
             if (task.is_null() || task.at("id") != task_id) {
                 throw ApiError{409, "教师已更新任务，请刷新任务后再提交。"};
             }
-            const auto received_at = now();
-            room["students"][key]["submissions"].push_back({
-                {"taskId", task_id}, {"code", field(body, "code", 65536)}, {"receivedAt", received_at}
-            });
-            return {{"status", "received"}, {"receivedAt", received_at}};
+            const auto code = field(body, "code", 65536);
+            auto& submissions = room["students"][key]["submissions"];
+            Json submission = {{"taskId", task_id}, {"code", code}, {"receivedAt", now()}};
+            if (body.contains("requestId")) {
+                const auto request_id = field(body, "requestId", 64);
+                for (const auto& saved : submissions) {
+                    if (saved.at("taskId") != task_id || saved.value("requestId", "") != request_id) continue;
+                    if (saved.at("code") != code) throw ApiError{409, "提交编号与已保存的代码不一致。"};
+                    return receipt_for(saved);
+                }
+                submission["requestId"] = request_id;
+            }
+            if (task.contains("testCases")) {
+                submission["judgement"] = {{"status", "judge_unavailable"}};
+            }
+            submissions.push_back(submission);
+            return receipt_for(submission);
         }), 201);
     });
 }

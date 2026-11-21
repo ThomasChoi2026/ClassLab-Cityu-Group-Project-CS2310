@@ -118,3 +118,32 @@ form .feedback { margin: 0; }
   .panel { padding: 1rem; }
   #submit > button { width: 100%; }
 }
+
+.case-editor, .case-row, .run-controls {
+  width: 100%;
+  min-width: 0;
+  margin: .5rem 0 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: .7rem;
+}
+.case-row, .run-controls { display: grid; gap: .45rem; }
+.case-editor > button { margin-top: .6rem; }
+legend { font-weight: 650; }
+select { font: inherit; padding: .4rem; border-radius: 7px; }
+.judge-metrics dd { font-size: 1.25rem; }
+.case-results { padding-inline-start: 1.4rem; }
+.case-results li { margin: .45rem 0; overflow-wrap: anywhere; }
+.case-results button, .table-wrap button { font-size: .85rem; }
+pre {
+  max-width: 100%;
+  overflow: auto;
+  max-height: 55dvh;
+  padding: .65rem;
+  background: #edf2f2;
+  border-radius: 7px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#public-tests { margin-bottom: 1rem; }
+#run-state { margin: 0; }

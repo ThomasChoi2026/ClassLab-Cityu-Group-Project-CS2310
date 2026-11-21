@@ -24,6 +24,12 @@ target_compile_definitions(classlab PRIVATE CLASSLAB_WEB_DIR="${CMAKE_CURRENT_SO
 include(CTest)
 if(BUILD_TESTING)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_executable(classlab_judging_tests tests/judging.cpp)
+    target_compile_features(classlab_judging_tests PRIVATE cxx_std_20)
+    set_target_properties(classlab_judging_tests PROPERTIES CXX_EXTENSIONS OFF)
+    target_include_directories(classlab_judging_tests PRIVATE src)
+    target_link_libraries(classlab_judging_tests PRIVATE nlohmann_json::nlohmann_json)
+    add_test(NAME judging_helpers COMMAND classlab_judging_tests)
     add_test(NAME classroom_workflow
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/workflow.py" $<TARGET_FILE:classlab>)
 endif()

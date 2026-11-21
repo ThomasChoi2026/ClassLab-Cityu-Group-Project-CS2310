@@ -45,6 +45,7 @@ function onSubmit(id, action, target = "feedback") {
     event.preventDefault();
     const form = event.currentTarget;
     const button = event.submitter || form.querySelector("button:not([type=button])");
+    if (button.disabled) return;
     button.disabled = true;
     feedback("", false, target);
     try {
@@ -117,6 +118,62 @@ function joinQr(link) {
   return svg;
 }
 
+const statusText = {
+  received: "已提交",
+  judge_unavailable: "未评测 · 执行器不可用",
+  judge_error: "评测服务错误",
+  pending: "评测中",
+  accepted: "全部通过",
+  passed: "通过",
+  wrong_answer: "输出不符",
+  compilation_error: "编译错误",
+  runtime_error: "运行错误",
+  time_limit: "运行超时",
+  resource_limit: "资源超限",
+};
+
+const categoryText = {
+  missing_semicolon: "可能缺少分号",
+  syntax: "语法诊断",
+  undeclared_identifier: "未声明的标识符",
+  type_mismatch: "类型不匹配",
+  header_or_namespace: "头文件或命名空间诊断",
+  other: "其他编译诊断",
+};
+
+function element(tag, text) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function sampleBlock(test) {
+  const block = element("div");
+  const summary = test.status ? test.name + " · " + statusText[test.status] : test.name;
+  block.append(element("strong", summary));
+  for (const [field, label] of [["input", "标准输入"], ["expectedOutput", "预期输出"], ["actualOutput", "实际输出"]]) {
+    if (Object.hasOwn(test, field)) {
+      block.append(element("p", label), element("pre", test[field] || "（空）"));
+    }
+  }
+  return block;
+}
+
+function displayResult(container, result, teacher = false) {
+  container.replaceChildren();
+  if (!result) return;
+  const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " 通过";
+  container.append(element("p", (statusText[result.status] || "结果未知") + score));
+  if (result.diagnostic) container.append(element("pre", result.diagnostic));
+  if (teacher) {
+    for (const test of result.cases || []) {
+      container.append(element("p", "用例 " + test.testId + " · " + (statusText[test.status] || "结果未知")));
+    }
+  } else {
+    for (const test of result.cases || []) container.append(sampleBlock(test));
+  }
+}
+
 function initializeTeacher() {
   const storageKey = "classlab.teacher";
   let credentials = JSON.parse(localStorage.getItem(storageKey) || "null");
@@ -125,6 +182,73 @@ function initializeTeacher() {
   const link = byId("join-link");
   const qrButton = byId("show-qr");
   const qrDialog = byId("qr-dialog");
+  const caseRows = byId("case-editor-rows");
+  const addCase = byId("add-case");
+  const submissionDialog = byId("submission-dialog");
+  let analysisSignature;
+  let configurationTask;
+
+  addCase.addEventListener("click", () => {
+    if (caseRows.childElementCount >= 12) return;
+    const row = byId("case-template").content.firstElementChild.cloneNode(true);
+    row.querySelector(".remove-case").addEventListener("click", () => {
+      row.remove();
+      addCase.disabled = false;
+      addCase.focus();
+    });
+    caseRows.append(row);
+    addCase.disabled = caseRows.childElementCount >= 12;
+    row.querySelector("input").focus();
+  });
+
+  function detailButton(number, taskId) {
+    const button = element("button", "查看提交");
+    button.type = "button";
+    button.className = "secondary";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const latest = await api(endpoint("/latest/" + number + "?taskId=" + encodeURIComponent(taskId)),
+          { headers: headers() });
+        byId("submission-title").textContent = latest.name + "的最新提交";
+        byId("submission-code").textContent = latest.code;
+        displayResult(byId("teacher-result"), latest.result, true);
+        if (!submissionDialog.open) submissionDialog.showModal();
+      } catch (error) {
+        feedback(error.message, true);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    return button;
+  }
+
+  function renderAnalysis(state) {
+    byId("case-analysis").hidden = !state.caseStats.length;
+    if (configurationTask !== state.task?.id) {
+      configurationTask = state.task?.id;
+      const tests = state.task?.testCases || [];
+      byId("teacher-case-config").replaceChildren(...tests.map((test) => sampleBlock({
+        ...test, name: test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）"),
+      })));
+    }
+    const stats = state.caseStats.map((test) => {
+      const evaluated = test.passed + test.failed;
+      const rate = evaluated ? "通过率 " + Math.round(100 * test.passed / evaluated) + "%" : "暂无用例结果";
+      const title = test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）");
+      return element("li", title + " · " + test.passed + " 通过 / " + test.failed + " 失败 · " + rate);
+    });
+    byId("case-stats").replaceChildren(...stats);
+    byId("no-errors").hidden = state.errorGroups.length > 0;
+    const groups = state.errorGroups.map((group) => {
+      const item = element("li");
+      item.append(element("strong", (categoryText[group.category] || "其他编译诊断") + " · " + group.count + " 人"));
+      if (group.example) item.append(element("pre", group.example));
+      item.append(detailButton(group.studentNumber, state.task.id));
+      return item;
+    });
+    byId("error-groups").replaceChildren(...groups);
+  }
 
   function showDashboard() {
     link.value = new URL("/join/" + credentials.id, location.origin).href;
@@ -150,19 +274,31 @@ function initializeTeacher() {
   function showProgress(state) {
     byId("room-name").textContent = state.name;
     byId("current-task").textContent = state.task ? "当前任务 · " + state.task.title : "尚未发布任务";
-    byId("joined").textContent = state.joined;
-    byId("submitted").textContent = state.submitted;
-    byId("attempts").textContent = state.attempts;
+    for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "pending", "unjudged"]) {
+      byId(key).textContent = state[key];
+    }
+    byId("judge-state").textContent = state.executionAvailable ? "" : "隔离执行器不可用，未评测的提交不会计为未通过。";
+    const judged = state.accepted + state.failed;
+    byId("class-pass-rate").textContent = judged ?
+      "最新提交通过率 " + Math.round(100 * state.accepted / judged) + "%（覆盖 " + judged + " 人）" :
+      "暂无已完成的评测，暂不计算通过率。";
     refreshStatus("每 2 秒更新");
     byId("empty-students").hidden = state.students.length > 0;
+    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups]);
+    if (signature === analysisSignature) return;
+    analysisSignature = signature;
+    renderAnalysis(state);
     const rows = state.students.map((student) => {
       const row = document.createElement("tr");
-      const status = state.task ? (student.count ? "已提交" : "未提交") : "等待任务";
+      const status = state.task ? (student.count ? statusText[student.latestStatus] || "结果未知" : "未提交") : "等待任务";
+      const score = student.total === undefined ? "" : " · " + student.passed + "/" + student.total;
       row.insertCell().textContent = student.name + " #" + student.number;
       const statusCell = row.insertCell();
-      statusCell.textContent = status;
-      statusCell.classList.toggle("status-received", student.count > 0);
+      statusCell.textContent = status + score;
+      statusCell.classList.toggle("status-received", ["received", "accepted"].includes(student.latestStatus));
       row.insertCell().textContent = student.count;
+      const detail = row.insertCell();
+      if (student.count) detail.append(detailButton(student.number, state.task.id));
       return row;
     });
     byId("students").replaceChildren(...rows);
@@ -176,6 +312,7 @@ function initializeTeacher() {
       credentials = null;
       byId("setup").hidden = false;
       if (qrDialog.open) qrDialog.close();
+      if (submissionDialog.open) submissionDialog.close();
       byId("dashboard").hidden = true;
       feedback(error.message, true);
     } else {
@@ -192,8 +329,14 @@ function initializeTeacher() {
   });
 
   onSubmit("publish", async (data) => {
+    const cases = Array.from(caseRows.children, (row) => Object.fromEntries(
+      Array.from(row.querySelectorAll("[data-field]"), (field) => [field.dataset.field, field.value])
+    ));
+    if (cases.length) data.testCases = cases;
     await api(endpoint("/tasks"), { data, headers: headers() });
     byId("publish").reset();
+    caseRows.replaceChildren();
+    addCase.disabled = false;
     feedback("任务已发布。", false, "publish-feedback");
     await refresh();
   }, "publish-feedback");
@@ -212,6 +355,8 @@ function initializeStudent() {
   const storageKey = "classlab.student." + room;
   let key = localStorage.getItem(storageKey);
   let currentTask = null;
+  let resultSignature;
+  let pendingSubmission;
   const editor = byId("submit").elements.code;
   const endpoint = (suffix) => "/rooms/" + room + suffix;
   const headers = () => ({ "X-Student-Key": key });
@@ -226,12 +371,22 @@ function initializeStudent() {
     byId("student-name").textContent = state.studentName;
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
+    const signature = JSON.stringify([state.task?.id, state.latestResult]);
+    if (signature !== resultSignature) {
+      resultSignature = signature;
+      byId("latest-result").hidden = !state.latestResult;
+      displayResult(byId("student-result"), state.latestResult);
+    }
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
     byId("task-description").textContent = currentTask.description;
+    const tests = currentTask.testCases || [];
+    byId("public-tests").hidden = !tests.length;
+    byId("public-tests").open = false;
+    byId("student-public-tests").replaceChildren(...tests.map(sampleBlock));
     editor.value = localStorage.getItem(draftKey(currentTask.id)) ?? currentTask.starterCode;
   }
 
@@ -272,8 +427,19 @@ function initializeStudent() {
   onSubmit("submit", async ({ code }) => {
     const taskId = currentTask.id;
     try {
-      await api(endpoint("/submissions"), { data: { taskId, code }, headers: headers() });
-      if (taskId === currentTask?.id) feedback("代码已提交，教师可以看到收件状态。", false, "submit-feedback");
+      if (pendingSubmission?.taskId !== taskId || pendingSubmission.code !== code) {
+        const requestId = [...crypto.getRandomValues(new Uint8Array(16))]
+          .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+        pendingSubmission = { taskId, code, requestId };
+      }
+      const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers() });
+      pendingSubmission = null;
+      if (taskId === currentTask?.id) {
+        const message = receipt.judgement === "judge_unavailable" ?
+          "代码已保存。隔离执行器不可用，本次提交未评测。" : "代码已提交，教师可以看到收件状态。";
+        feedback(message, false, "submit-feedback");
+        await refresh();
+      }
     } catch (error) {
       if (error.status === 409) await refresh();
       throw error;

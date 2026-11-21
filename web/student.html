@@ -27,6 +27,10 @@
         <div id="assignment" hidden>
           <h2 id="task-title"></h2>
           <p id="task-description" class="description"></p>
+          <details id="public-tests" hidden>
+            <summary>公开测试用例</summary>
+            <div id="student-public-tests"></div>
+          </details>
           <form id="submit">
             <div class="editor-field">
               <div class="section-heading">
@@ -36,9 +40,19 @@
               <textarea id="student-code" class="editor" name="code" required rows="14" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
               <p id="editor-feedback" class="inline-status" role="status"></p>
             </div>
+            <fieldset class="run-controls" disabled aria-describedby="run-state">
+              <legend>自由运行</legend>
+              <label>自定义标准输入<textarea name="runInput" rows="2" maxlength="2700"></textarea></label>
+              <button id="run-code" type="button" class="secondary">运行代码</button>
+            </fieldset>
+            <p id="run-state">隔离执行器不可用，暂时无法运行代码。</p>
             <button type="submit">提交代码</button>
             <p id="submit-feedback" role="status" class="feedback"></p>
           </form>
+          <section id="latest-result" hidden>
+            <h3>最新正式提交</h3>
+            <div id="student-result"></div>
+          </section>
         </div>
       </section>
     </section>
