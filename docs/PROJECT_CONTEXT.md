@@ -2,6 +2,10 @@
 
 更新时间：2026-11-22；用途：帮助新的 Codex Cloud 任务或组员理解此前在 ChatGPT 与旧 Codex 会话中已讨论的决策。此文档仅包含可公开讨论的项目级信息，**不包含用户私人课程资料正文**。
 
+## 当前交付范围
+
+ClassLab 是课程作业。GitHub 保存可复现代码，Codex Cloud 用于开发与测试，临时私有预览用于师生流程验收与演示录像。演示结束即可停止云端环境。优先使用免费额度。下文包含历史设想，公开部署、商业级账户及长期运营不属于当前范围。当前版本仅保存提交，任何学生代码的执行都须等到隔离方案验证后再考虑。
+
 ## 1. 项目定位
 
 **ClassLab — 实时互动编程课堂平台**，用于 City University of Hong Kong 的 CS2310 Computer Programming — Agentic Coding Project。
