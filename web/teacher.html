@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ClassLab · 教师工作台</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/vendor/qrcode.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
@@ -20,24 +21,32 @@
       </div>
     </section>
     <section id="dashboard" hidden>
-      <div class="heading"><div><h1 id="room-name"></h1><p>分享链接，让学生加入课堂。</p></div></div>
-      <section class="panel share" aria-label="课堂加入链接">
-        <label for="join-link">课堂加入链接</label>
-        <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">复制链接</button></div>
+      <div class="heading"><h1 id="room-name"></h1></div>
+      <section class="panel share" aria-labelledby="share-title">
+        <button id="show-qr" class="qr-trigger" type="button" aria-label="放大加入二维码" aria-haspopup="dialog" hidden></button>
+        <div>
+          <h2 id="share-title">邀请学生加入</h2>
+          <p id="share-hint">扫描二维码或打开链接即可进入学生页面。</p>
+          <label for="join-link">课堂加入链接</label>
+          <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">复制链接</button></div>
+          <p id="copy-feedback" class="inline-status" role="status"></p>
+        </div>
       </section>
       <div class="layout">
         <section class="panel">
           <h2>发布任务</h2>
+          <p>发布后，学生页面会自动切换到这项任务。</p>
           <form id="publish">
             <label>标题<input name="title" required maxlength="53"></label>
             <label>任务说明<textarea name="description" required maxlength="3000" rows="4"></textarea></label>
-            <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="10" maxlength="20000" spellcheck="false"></textarea></label>
+            <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <button>发布为当前任务</button>
+            <p id="publish-feedback" role="status" class="feedback"></p>
           </form>
         </section>
         <section class="panel">
-          <div class="section-heading"><h2>课堂进度</h2><span id="refresh-state"></span></div>
-          <p id="current-task"></p>
+          <div class="section-heading"><h2>课堂进度</h2><span id="refresh-state" role="status">正在加载</span></div>
+          <p id="current-task">正在获取当前任务…</p>
           <dl class="metrics">
             <div><dt>已加入</dt><dd id="joined">0</dd></div>
             <div><dt>已提交</dt><dd id="submitted">0</dd></div>
@@ -46,11 +55,18 @@
           <div class="table-wrap">
             <table><thead><tr><th scope="col">学生</th><th scope="col">状态</th><th scope="col">次数</th></tr></thead><tbody id="students"></tbody></table>
           </div>
-          <p id="empty-students">还没有学生加入。</p>
+          <p id="empty-students" hidden>还没有学生加入。可以将上方二维码投影给学生。</p>
         </section>
       </div>
     </section>
     <p id="feedback" role="status" class="feedback"></p>
+    <dialog id="qr-dialog" aria-labelledby="qr-title">
+      <div class="section-heading">
+        <h2 id="qr-title">扫码加入课堂</h2>
+        <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
+      </div>
+      <div id="qr-large" class="qr-large"></div>
+    </dialog>
   </main>
 </body>
 </html>

@@ -63,7 +63,13 @@ class ClassroomWorkflow(unittest.TestCase):
 
             with server(data) as base:
                 self.assertEqual(request(base, "/api/health"), (200, {"status": "ready"}))
-                self.assertIn('id="create"', request(base, "/")[1])
+                teacher_page = request(base, "/")[1]
+                self.assertIn('id="create"', teacher_page)
+                self.assertIn('src="/vendor/qrcode.js"', teacher_page)
+                self.assertIn('id="qr-dialog"', teacher_page)
+                status, asset = request(base, "/vendor/qrcode.js")
+                self.assertEqual(status, 200)
+                self.assertIn("QR Code Generator for JavaScript", asset)
                 self.assertEqual(request(base, "/api/rooms", {"name": " "})[0], 400)
                 status, room = request(base, "/api/rooms", {"name": "C++ 实验课"})
                 self.assertEqual(status, 201)

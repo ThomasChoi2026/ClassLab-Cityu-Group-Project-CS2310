@@ -218,7 +218,7 @@ void routes(httplib::Server& server, Store& store) {
     server.Get(R"(/join/[a-f0-9]{32})", [](const Request&, Response& response) {
         response.set_file_content(CLASSLAB_WEB_DIR "/student.html", "text/html; charset=utf-8");
     });
-    server.Get(R"(/(app\.js|style\.css))", [](const Request& request, Response& response) {
+    server.Get(R"(/(app\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
     });
