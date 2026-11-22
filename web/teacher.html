@@ -10,6 +10,7 @@
 </head>
 <body data-view="teacher">
   <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span></div></header>
+  <div id="demo-banner" class="demo-banner" role="status" hidden>预置演示结果 · 加入和提交实时记录 · 评测仅回放固定夹具 <a href="/demo-notebook.ipynb" download>下载演示 Notebook</a></div>
   <main>
     <section id="setup" class="intro">
       <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
@@ -21,7 +22,30 @@
       </div>
     </section>
     <section id="dashboard" hidden>
-      <div class="heading"><h1 id="room-name"></h1></div>
+      <div class="heading section-heading classroom-heading">
+        <h1 id="room-name"></h1>
+        <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">课堂投影</button>
+      </div>
+      <section id="classroom-view" class="panel classroom-view" aria-label="课堂投影" hidden>
+        <div class="projection-invite">
+          <h2>扫码加入课堂</h2>
+          <div id="projection-qr"></div>
+          <a id="projection-link">打开学生加入页</a>
+        </div>
+        <div class="projection-progress">
+          <h2 id="projection-task">尚未发布任务</h2>
+          <dl class="metrics">
+            <div><dt>已加入</dt><dd id="projection-joined">0</dd></div>
+            <div><dt>已提交</dt><dd id="projection-submitted">0</dd></div>
+            <div><dt>全部通过</dt><dd id="projection-accepted">0</dd></div>
+          </dl>
+          <label for="projection-meter">提交进度</label>
+          <progress id="projection-meter" value="0" max="100"></progress>
+          <p id="projection-rate">等待学生加入</p>
+          <p id="projection-connection"></p>
+        </div>
+      </section>
+      <div id="management-view">
       <section class="panel share" aria-labelledby="share-title">
         <button id="show-qr" class="qr-trigger" type="button" aria-label="放大加入二维码" aria-haspopup="dialog" hidden></button>
         <div>
@@ -39,6 +63,17 @@
           <form id="publish">
             <label>标题<input name="title" required maxlength="53"></label>
             <label>任务说明<textarea name="description" required maxlength="3000" rows="4"></textarea></label>
+            <details class="notebook-import">
+              <summary>从 Notebook 导入代码</summary>
+              <p>选择的文件只在本浏览器读取。发布时只发送编辑器中的代码。</p>
+              <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
+              <div id="notebook-cells" hidden>
+                <label>代码单元<select id="notebook-cell"></select></label>
+                <pre id="notebook-preview"></pre>
+                <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
+              </div>
+              <p id="notebook-status" class="inline-status" role="status"></p>
+            </details>
             <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <fieldset class="case-editor">
               <legend>自动评测用例</legend>
@@ -87,6 +122,7 @@
             <ul id="error-groups" class="case-results"></ul>
           </section>
         </section>
+      </div>
       </div>
     </section>
     <p id="feedback" role="status" class="feedback"></p>

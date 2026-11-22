@@ -16,10 +16,13 @@ BINARY = str(Path(sys.argv.pop(1)).resolve())
 
 
 @contextlib.contextmanager
-def server(data, judge_socket=None):
+def server(data, judge_socket=None, *, demo=False):
     settings = dict(os.environ, CLASSLAB_DATA=str(data), CLASSLAB_PORT="0",
                     CLASSLAB_HOST="127.0.0.1")
     settings.pop("CLASSLAB_JUDGE_SOCKET", None)
+    settings.pop("CLASSLAB_DEMO", None)
+    if demo:
+        settings["CLASSLAB_DEMO"] = "1"
     if judge_socket is not None:
         settings["CLASSLAB_JUDGE_SOCKET"] = str(judge_socket)
     with subprocess.Popen([BINARY], stdout=subprocess.PIPE, text=True, env=settings) as process:

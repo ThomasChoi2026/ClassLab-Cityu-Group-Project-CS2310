@@ -40,7 +40,9 @@ inline std::string limited_text(const Json& data, const char* key, std::size_t l
 
 class Client {
 public:
-    explicit Client(std::string socket) : socket_(std::move(socket)) {}
+    explicit Client(std::string socket, bool demo = false) : socket_(std::move(socket)), demo_(demo) {}
+
+    bool demo() const { return demo_; }
 
     bool configured() const { return !socket_.empty(); }
 
@@ -78,6 +80,7 @@ public:
         Json inputs = Json::array();
         for (const auto& test : tests) inputs.push_back(test.at("input"));
         const auto reply = request(code, inputs, "grade");
+        if (demo_ && reply.value("status", "") == "demo_no_fixture") return {{"status", "demo_no_fixture"}};
         if (reply.value("status", "") != "success") return failure(reply);
         try {
             const auto& cases = reply.at("cases");
@@ -146,7 +149,7 @@ private:
                 client.Post("/evaluate", Json{{"version", 1}, {"code", code}, {"inputs", inputs}, {"mode", mode}}.dump(), "application/json");
             if (!result || result->status != 200 || result->body.size() > 600000) return judge_error();
             const auto data = Json::parse(result->body, nullptr, false);
-            if (!data.is_object() || data.value("version", 0) != 1 ||
+            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) != demo_ ||
                 !data.contains("status") || !data.at("status").is_string()) return judge_error();
             return data;
         } catch (const std::exception&) {
@@ -155,6 +158,7 @@ private:
     }
 
     std::string socket_;
+    bool demo_;
     std::mutex slot_;
 };
 

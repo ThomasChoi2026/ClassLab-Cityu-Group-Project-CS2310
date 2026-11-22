@@ -147,3 +147,35 @@ pre {
 }
 #public-tests { margin-bottom: 1rem; }
 #run-state { margin: 0; }
+
+.notebook-import { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .75rem; }
+.notebook-import summary { cursor: pointer; font-weight: 650; }
+.notebook-import select { width: 100%; min-width: 0; }
+#notebook-preview { max-height: 12rem; }
+.classroom-heading { align-items: center; flex-wrap: wrap; }
+.classroom-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 4vw, 3rem);
+  padding: clamp(1rem, 4vw, 2.5rem);
+}
+.projection-invite { text-align: center; }
+.projection-invite a { color: var(--accent); }
+#projection-qr { max-width: 360px; margin: .5rem auto; }
+#projection-qr svg { display: block; width: 100%; height: auto; }
+.projection-progress h2 { font-size: clamp(1.35rem, 3vw, 2.15rem); }
+.projection-progress dd { font-size: clamp(1.35rem, 4vw, 2.8rem); }
+.projection-progress progress { width: 100%; height: 1rem; accent-color: var(--accent); }
+.demo-banner {
+  padding: .65rem 1rem;
+  background: #fff0cb;
+  color: #553400;
+  font-size: .95rem;
+  text-align: center;
+  font-weight: 650;
+}
+@media (max-width: 680px) {
+  .classroom-view { grid-template-columns: 1fr; }
+  #projection-qr { max-width: min(100%, 290px); }
+}

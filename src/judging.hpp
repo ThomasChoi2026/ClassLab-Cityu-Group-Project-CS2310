@@ -56,6 +56,7 @@ inline Json result_for(const Json& submission) {
 inline Json student_result(const Json& submission, const Json& task) {
     const auto result = result_for(submission);
     Json visible = {{"status", result.at("status")}, {"receivedAt", submission.at("receivedAt")}};
+    if (result.value("demoFixture", false)) visible["demoFixture"] = true;
     if (result.contains("passed")) visible["passed"] = result.at("passed");
     if (result.contains("total")) visible["total"] = result.at("total");
     if (result.at("status") == "compilation_error" && result.contains("diagnostic")) {

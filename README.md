@@ -2,6 +2,10 @@
 
 ClassLab 是 CityUHK CS2310 的 C++ Agentic Coding Project。教师可以在课堂上发布 C++ 练习，学生通过链接获取题目、编辑并提交代码，教师可以看到班级的参与和提交进度。
 
+ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers can publish exercises from Notebook code cells, students join through a QR code, and teachers can follow class-wide submission and test results.
+
+[English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
+
 ## 课程交付与演示
 
 GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。开发与测试在 Codex Cloud 内完成。需要操作教师和学生页面或录制演示时，可在核实免费额度和计费设置后使用临时私有预览。Mac 只需运行浏览器。演示结束后停止云端工作区。
@@ -22,6 +26,18 @@ ctest --test-dir build --output-on-failure
 从仓库根目录启动后，在同一台机器的浏览器打开 http://127.0.0.1:8080 。教师创建课堂后可以复制加入链接，也可以点击二维码放大投影。发布标题、说明和 C++ 起始代码后，学生可扫码或打开链接填写昵称、编辑并提交。可以在同一浏览器的另一个标签页扮演学生。
 
 课堂进度每两秒刷新，显示全班加入人数、当前任务已提交人数、提交总次数，以及每位学生的提交状态和次数。发布新任务后统计切换为新任务，历史任务和提交仍保存在数据文件中。学生页面会自动接收新任务。身份及各题草稿保存在此浏览器和站点地址下，刷新页面可恢复当前任务的未提交草稿。
+
+## Phase 6 教学演示
+
+教师可直接粘贴 C++，也可选择本地的 Notebook v4 文件并将一个代码单元填入任务编辑器。Notebook 只在浏览器解析。教师切换到课堂投影后，屏幕只保留课堂名称、加入二维码、任务标题与汇总进度。
+
+构建完成后，运行临时演示。此命令使用独立的临时存储、固定评测回放，并关闭自由运行。页面会明确标识回放结果。用 Ctrl+C 停止并清理演示数据。
+
+~~~sh
+python3 demo/run.py
+~~~
+
+[演示用例、完整操作和课程交付检查表](docs/COURSE_DELIVERY.md)
 
 ## Phase 5 独立评测与提交队列
 

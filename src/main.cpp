@@ -366,7 +366,8 @@ private:
             return {{"code", saved.at("code")}, {"cases", task->at("testCases")}};
         });
         if (request.is_null()) return true;
-        const auto result = judge_.grade(request.at("code").get<std::string>(), request.at("cases"));
+        auto result = judge_.grade(request.at("code").get<std::string>(), request.at("cases"));
+        if (judge_.demo()) result["demoFixture"] = true;
         slot.unlock();
         while (!stop.stop_requested()) {
             try {
@@ -424,9 +425,17 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
     });
-    server.Get("/api/health", [](const Request&, Response& response) {
-        reply(response, {{"status", "ready"}});
+    server.Get("/api/health", [&](const Request&, Response& response) {
+        Json health = {{"status", "ready"}};
+        if (judge.demo()) health["demo"] = true;
+        reply(response, health);
     });
+    if (judge.demo()) {
+        server.Get("/demo-notebook.ipynb", [](const Request&, Response& response) {
+            response.set_header("Content-Disposition", "attachment; filename=classlab-demo.ipynb");
+            response.set_file_content(CLASSLAB_WEB_DIR "/../examples/classlab-demo.ipynb", "application/json");
+        });
+    }
 
     server.Post("/api/rooms", [&](const Request& request, Response& response) {
         const auto name = field(body_of(request), "name", 120);
@@ -457,7 +466,8 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             require_teacher(room, request);
             return progress(room);
         });
-        result["executionAvailable"] = judge.available();
+        result["demo"] = judge.demo();
+        result["executionAvailable"] = !judge.demo() && judge.available();
         reply(response, result);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/latest/([1-9][0-9]{0,15}))",
@@ -507,7 +517,8 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
                     {"task", judging::student_task(task)}, {"latestResult", latest_result}};
         });
-        result["executionAvailable"] = judge.available();
+        result["demo"] = judge.demo();
+        result["executionAvailable"] = !judge.demo() && judge.available();
         reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
@@ -523,6 +534,11 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             field(body, "input", 8192, true);
             return nullptr;
         });
+        if (judge.demo()) {
+            reply(response, {{"status", "judge_unavailable"},
+                             {"error", "演示模式仅回放预置评测结果。"}}, 503);
+            return;
+        }
         auto slot = judge.reserve();
         if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
         if (!judge.available()) {
@@ -616,8 +632,13 @@ std::string setting(const char* key, const char* fallback) {
 int main() {
     try {
         ::umask(0077);
-        Store store(setting("CLASSLAB_DATA", "data/classrooms.json"));
         const auto host = setting("CLASSLAB_HOST", "127.0.0.1");
+        const bool demo = setting("CLASSLAB_DEMO", "") == "1";
+        const auto socket = setting("CLASSLAB_JUDGE_SOCKET", "");
+        if (demo && (socket.empty() || host != "127.0.0.1" || std::getenv("CLASSLAB_DATA") == nullptr)) {
+            throw std::runtime_error("Demo mode requires loopback, an explicit data path, and a fixture socket.");
+        }
+        Store store(setting("CLASSLAB_DATA", "data/classrooms.json"));
         const auto port_text = setting("CLASSLAB_PORT", "8080");
         std::size_t parsed = 0;
         const auto port = std::stoi(port_text, &parsed);
@@ -626,7 +647,7 @@ int main() {
         }
         httplib::Server server;
         recover_pending(store);
-        judging::Client judge(setting("CLASSLAB_JUDGE_SOCKET", ""));
+        judging::Client judge(socket, demo);
         GradeQueue queue(store, judge);
         routes(server, store, judge, queue);
         server.set_write_timeout(120);

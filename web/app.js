@@ -124,6 +124,7 @@ const statusText = {
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
   pending: "评测中",
+  demo_no_fixture: "未评测 · 无匹配的演示夹具",
   queued: "等待评测",
   judge_queue_full: "未评测 · 队列已满",
   accepted: "全部通过",
@@ -167,6 +168,7 @@ function displayResult(container, result, teacher = false) {
   if (!result) return;
   const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " 通过";
   container.append(element("p", (statusText[result.status] || "结果未知") + score));
+  if (result.demoFixture) container.append(element("p", "预置演示结果"));
   if (result.diagnostic) container.append(element("pre", result.diagnostic));
   if (teacher) {
     for (const test of result.cases || []) {
@@ -175,6 +177,85 @@ function displayResult(container, result, teacher = false) {
   } else {
     for (const test of result.cases || []) container.append(sampleBlock(test));
   }
+}
+
+function initializeNotebookImport(form) {
+  const picker = byId("notebook-file");
+  const chooser = byId("notebook-cell");
+  const status = byId("notebook-status");
+  const preview = byId("notebook-preview");
+  const fields = byId("notebook-cells");
+  const use = byId("use-notebook-cell");
+  let cells = [];
+  let version = 0;
+
+  function clear() {
+    ++version;
+    cells = [];
+    fields.hidden = true;
+    chooser.replaceChildren();
+    preview.textContent = "";
+    status.textContent = "";
+  }
+
+  function showCell() {
+    const code = cells[Number(chooser.value)].code;
+    preview.textContent = code.length > 4000 ? code.slice(0, 4000) + "\n…" : code;
+  }
+
+  picker.addEventListener("change", async () => {
+    clear();
+    const file = picker.files[0];
+    if (!file) return;
+    const readVersion = version;
+    if (!file.name.toLowerCase().endsWith(".ipynb") || file.size > 2 * 1024 * 1024) {
+      status.textContent = "请选择不超过 2 MiB 的 .ipynb 文件。";
+      return;
+    }
+    try {
+      const notebook = JSON.parse(await file.text());
+      if (readVersion !== version) return;
+      if (notebook?.nbformat !== 4 || !Array.isArray(notebook.cells)) throw new Error();
+      cells = notebook.cells.flatMap((cell, index) => {
+        if (cell?.cell_type !== "code") return [];
+        const source = cell.source;
+        const code = typeof source === "string" ? source :
+          Array.isArray(source) && source.every((line) => typeof line === "string") ? source.join("") : null;
+        return code === null ? [] : [{ index, code }];
+      });
+      if (!cells.length) {
+        status.textContent = "此 Notebook 没有可读取的代码单元。";
+        return;
+      }
+      const options = cells.map(({index, code}, position) => {
+        const first = code.split("\n").find((line) => line.trim())?.trim().slice(0, 60) || "（空）";
+        const option = element("option", "单元 " + (index + 1) + " · " + first);
+        option.value = position;
+        return option;
+      });
+      chooser.replaceChildren(...options);
+      fields.hidden = false;
+      showCell();
+    } catch {
+      if (readVersion === version) status.textContent = "无法读取此文件，请选择有效的 Notebook v4。";
+    }
+  });
+
+  chooser.addEventListener("change", showCell);
+  use.addEventListener("click", () => {
+    const code = cells[Number(chooser.value)].code;
+    if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
+      status.textContent = "此单元超过起始代码的长度限制，请选择较短的单元。";
+      return;
+    }
+    form.elements.starterCode.value = code;
+    status.textContent = "代码已填入。可继续编辑，发布时只发送编辑器中的内容。";
+  });
+  return clear;
+}
+
+function showDemoBanner(state) {
+  if (state.demo) byId("demo-banner").hidden = false;
 }
 
 function initializeTeacher() {
@@ -190,6 +271,21 @@ function initializeTeacher() {
   const submissionDialog = byId("submission-dialog");
   let analysisSignature;
   let configurationTask;
+  const management = byId("management-view");
+  const classroom = byId("classroom-view");
+  const toggle = byId("toggle-classroom");
+  const clearNotebook = initializeNotebookImport(byId("publish"));
+
+  function project(enabled) {
+    if (qrDialog.open) qrDialog.close();
+    if (submissionDialog.open) submissionDialog.close();
+    management.hidden = enabled;
+    classroom.hidden = !enabled;
+    toggle.setAttribute("aria-pressed", String(enabled));
+    toggle.textContent = enabled ? "返回管理" : "课堂投影";
+  }
+
+  toggle.addEventListener("click", () => project(classroom.hidden));
 
   addCase.addEventListener("click", () => {
     if (caseRows.childElementCount >= 12) return;
@@ -213,6 +309,7 @@ function initializeTeacher() {
       try {
         const latest = await api(endpoint("/latest/" + number + "?taskId=" + encodeURIComponent(taskId)),
           { headers: headers() });
+        if (management.hidden) return;
         byId("submission-title").textContent = latest.name + "的最新提交";
         byId("submission-code").textContent = latest.code;
         displayResult(byId("teacher-result"), latest.result, true);
@@ -257,14 +354,17 @@ function initializeTeacher() {
     link.value = new URL("/join/" + credentials.id, location.origin).href;
     byId("setup").hidden = true;
     byId("dashboard").hidden = false;
+    byId("projection-link").href = link.value;
     try {
       const qr = joinQr(link.value);
       qrButton.replaceChildren(qr);
       byId("qr-large").replaceChildren(qr.cloneNode(true));
+      byId("projection-qr").replaceChildren(qr.cloneNode(true));
       byId("share-hint").textContent = "扫描二维码或打开链接即可进入学生页面。点击二维码可放大投影。";
       qrButton.hidden = false;
     } catch {
       qrButton.hidden = true;
+      byId("projection-qr").replaceChildren();
       byId("share-hint").textContent = "二维码暂不可用，请复制加入链接。";
     }
   }
@@ -275,12 +375,22 @@ function initializeTeacher() {
   }
 
   function showProgress(state) {
+    showDemoBanner(state);
+    byId("projection-task").textContent = state.task?.title || "尚未发布任务";
+    for (const metric of ["joined", "submitted", "accepted"]) {
+      byId("projection-" + metric).textContent = state[metric];
+    }
+    const rate = state.joined ? Math.round(100 * state.submitted / state.joined) : 0;
+    byId("projection-meter").value = rate;
+    byId("projection-rate").textContent = state.joined ?
+      state.submitted + " / " + state.joined + " 人已提交（" + rate + "%）" : "等待学生加入";
+    byId("projection-connection").textContent = "";
     byId("room-name").textContent = state.name;
     byId("current-task").textContent = state.task ? "当前任务 · " + state.task.title : "尚未发布任务";
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
-    byId("judge-state").textContent = state.executionAvailable ? "" :
+    byId("judge-state").textContent = state.demo ? "演示评测只回放固定夹具。加入和提交是实时记录。" : state.executionAvailable ? "" :
       (state.queued ? "评测器暂不可用，等待中的提交已保存，连接恢复后继续。" : "隔离执行器不可用，未评测的提交不会计为未通过。");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
@@ -317,10 +427,12 @@ function initializeTeacher() {
       byId("setup").hidden = false;
       if (qrDialog.open) qrDialog.close();
       if (submissionDialog.open) submissionDialog.close();
+      project(false);
       byId("dashboard").hidden = true;
       feedback(error.message, true);
     } else {
       refreshStatus("连接中断，数值可能过时");
+      byId("projection-connection").textContent = "连接中断，数值可能过时";
     }
   });
 
@@ -339,6 +451,7 @@ function initializeTeacher() {
     if (cases.length) data.testCases = cases;
     await api(endpoint("/tasks"), { data, headers: headers() });
     byId("publish").reset();
+    clearNotebook();
     caseRows.replaceChildren();
     addCase.disabled = false;
     feedback("任务已发布。", false, "publish-feedback");
@@ -368,6 +481,7 @@ function initializeStudent() {
   const draftKey = (id) => storageKey + ".draft." + id;
 
   function showTask(state) {
+    showDemoBanner(state);
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
     byId("connection").textContent = "";
@@ -378,7 +492,7 @@ function initializeStudent() {
     byId("assignment").hidden = !state.task;
     byId("run-controls").disabled = !state.executionAvailable || running;
     const runStatus = byId("run-state");
-    const runMessage = running ? "正在编译和运行…" : (state.executionAvailable ?
+    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : (state.executionAvailable ?
       "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
     const signature = JSON.stringify([state.task?.id, state.latestResult]);
@@ -496,5 +610,6 @@ function initializeStudent() {
   if (key) void refresh();
 }
 
+api("/health").then(showDemoBanner).catch(() => {});
 if (document.body.dataset.view === "teacher") initializeTeacher();
 else initializeStudent();
