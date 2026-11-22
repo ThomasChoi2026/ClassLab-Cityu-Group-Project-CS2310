@@ -1,4 +1,5 @@
 #include "judge_client.hpp"
+#include "edit_patterns.hpp"
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -196,11 +197,15 @@ Json progress(const Json& room) {
     Json rows = Json::array();
     Json cases = Json::array();
     std::map<std::string, Json> errors;
+    std::map<std::pair<std::string, std::string>, unsigned> repeated_messages;
+    review::Patterns patterns(task.is_null() ? std::string_view{} :
+        std::string_view(task.at("starterCode").get_ref<const std::string&>()));
     std::size_t submitted = 0, attempts = 0, accepted = 0, failed = 0, pending = 0, queued = 0, unjudged = 0;
     if (!task.is_null()) {
         for (const auto& test : judging::cases_for(task)) {
             cases.push_back({{"id", test.at("id")}, {"name", test.at("name")},
-                {"visibility", test.at("visibility")}, {"passed", 0}, {"failed", 0}});
+                {"visibility", test.at("visibility")}, {"passed", 0}, {"failed", 0},
+                {"failureKinds", Json::object()}});
         }
     }
     for (const auto& [key, student] : room.at("students").items()) {
@@ -214,6 +219,8 @@ Json progress(const Json& room) {
             ++submitted;
             const auto result = judging::result_for(*latest);
             const auto status = result.at("status").get<std::string>();
+            patterns.observe(latest->at("code").get_ref<const std::string&>(),
+                             student.at("number").get<unsigned>(), status);
             row["lastSubmittedAt"] = latest->at("receivedAt");
             row["latestStatus"] = status;
             if (result.contains("passed")) row["passed"] = result.at("passed");
@@ -226,6 +233,7 @@ Json progress(const Json& room) {
 
             if (status == "compilation_error") {
                 const auto [category, message] = judging::classify_diagnostic(result.value("diagnostic", ""));
+                if (!message.empty()) ++repeated_messages[{std::string(category), message}];
                 auto [entry, inserted] = errors.try_emplace(std::string(category), Json{
                     {"category", category}, {"count", 0}, {"example", message},
                     {"studentNumber", student.at("number")}});
@@ -247,6 +255,11 @@ Json progress(const Json& room) {
                 const char* field = status == "passed" ? "passed" :
                     (judging::case_failed(status) ? "failed" : nullptr);
                 if (field) test[field] = test.at(field).get<unsigned>() + 1;
+                if (judging::case_failed(status)) {
+                    auto& kinds = test["failureKinds"];
+                    const auto kind = status.get<std::string>();
+                    kinds[kind] = kinds.value(kind, 0u) + 1;
+                }
             }
         }
         rows.push_back(std::move(row));
@@ -255,6 +268,9 @@ Json progress(const Json& room) {
         return left.at("number") < right.at("number");
     });
     Json groups = Json::array();
+    for (const auto& [key, count] : repeated_messages) {
+        if (count >= 2) errors.at(key.first)["repeatedMessages"].push_back({{"text", key.second}, {"count", count}});
+    }
     for (const auto& [category, group] : errors) groups.push_back(group);
     std::sort(groups.begin(), groups.end(), [](const Json& left, const Json& right) {
         if (left.at("count") != right.at("count")) return left.at("count") > right.at("count");
@@ -263,7 +279,7 @@ Json progress(const Json& room) {
     return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
             {"submitted", submitted}, {"attempts", attempts}, {"students", rows},
             {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"queued", queued}, {"unjudged", unjudged},
-            {"caseStats", cases}, {"errorGroups", groups}};
+            {"caseStats", cases}, {"errorGroups", groups}, {"editPatterns", patterns.summary()}};
 }
 
 Json receipt_for(const Json& submission) {
@@ -421,7 +437,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     server.Get(R"(/join/[a-f0-9]{32})", [](const Request&, Response& response) {
         response.set_file_content(CLASSLAB_WEB_DIR "/student.html", "text/html; charset=utf-8");
     });
-    server.Get(R"(/(app\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
+    server.Get(R"(/(app\.js|diff\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
     });
@@ -483,7 +499,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 for (const auto& student : room.at("students")) {
                     if (student.at("number") != number) continue;
                     if (const auto* latest = judging::latest_for(student, task.at("id"))) {
-                        return {{"name", student.at("name")}, {"code", latest->at("code")},
+                        return {{"name", student.at("name")}, {"code", latest->at("code")}, {"starterCode", task.at("starterCode")},
                                 {"result", judging::result_for(*latest)}};
                     }
                     break;

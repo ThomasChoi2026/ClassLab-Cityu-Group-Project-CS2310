@@ -6,9 +6,32 @@ ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers can pu
 
 [English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
 
+## 教授快速验收
+
+在 Linux 或 WSL 中，从课程交付分支开始。需要 Git、CMake 3.24+、C++20 编译器和 Python 3；首次构建需联网。
+
+~~~sh
+git clone --branch feature/classlab-course-final https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+cd ClassLab-Cityu-Group-Project-CS2310
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
+python3 demo/run.py
+~~~
+
+打开 <http://127.0.0.1:8080>。下载横幅上的示例 Notebook、创建课堂、选择第一个代码单元并点击「填入起始代码」。填写标题和说明，点击「填入三个演示用例」后发布。用独立浏览器会话打开加入链接。一位学生提交原代码，另两位将 `a - b` 改为 `a + b` 后提交，教师端应显示 **3 人提交、2 人通过、1 人未通过**。打开「全班共同修改」的示例可核对原代码与提交的行号和增删。教师页面使用本机地址时，二维码也指向本机；手机演示需要双方都能访问的课堂地址。
+
+演示中的加入、源代码和人数都是实时数据，评测使用标明的固定回放。任意新代码不会在演示中执行。普通课堂服务使用下方的启动命令，真实评测仍须通过独立 Judge 的隔离验收。
+
+### 教师如何解读反馈
+
+- 提交详情逐行对齐，保留空格、空行和末尾换行的差异，统一 CRLF/LF。大范围重写超出对齐预算时直接展示完整源码。
+- 共同修改按每人本题最后一次提交计数。仅收录去除相同首尾后，原文和新文各不超过三行、每行不超过 240 字节的修改。相同位置和内容至少出现两次才显示，按人数取前六组。
+- 每组直接列出这些学生的评测状态。教师可结合各用例的失败类型、编译器诊断原文和示例提交判断是否重讲。相同修改或共同失败本身不能确定学生的思路。
+
 ## 课程交付与演示
 
-GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。开发与测试在 Codex Cloud 内完成。需要操作教师和学生页面或录制演示时，可在核实免费额度和计费设置后使用临时私有预览。Mac 只需运行浏览器。演示结束后停止云端工作区。
+GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。课程交付分支在本地 WSL 构建和测试。课堂演示可直接使用本机浏览器，也可使用已有的临时私有预览。
 
 验收重点是从干净目录构建、运行测试，并演示创建课堂、发布任务、学生提交和教师看到状态的完整流程。公开部署、长期运营和商业级账户系统不在本课程交付范围内。未经验证的隔离环境不得执行学生提交的 C++ 代码。
 
@@ -66,7 +89,8 @@ Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续�
 | --- | --- | --- |
 | CLASSLAB_HOST | 127.0.0.1 | 监听地址。本机演示使用默认值，转发服务端口时可设置为 0.0.0.0 |
 | CLASSLAB_PORT | 8080 | 监听端口 |
-| CLASSLAB_JUDGE_SOCKET | 空 | 可选的独立 Judge 本机 Unix socket 路径 |\n| CLASSLAB_DATA | data/classrooms.json | 以进程工作目录为基准的数据文件，可设为绝对路径 |
+| CLASSLAB_JUDGE_SOCKET | 空 | 可选的独立 Judge 本机 Unix socket 路径 |
+| CLASSLAB_DATA | data/classrooms.json | 以进程工作目录为基准的数据文件，可设为绝对路径 |
 
 跨设备演示时，教师应从学生设备可访问的同一站点地址打开教师页，生成的加入链接会沿用该站点地址。在云端运行时需要另行配置支持该端口的访问入口。
 

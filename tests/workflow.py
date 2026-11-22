@@ -185,6 +185,9 @@ class ClassroomWorkflow(unittest.TestCase):
                 detail = root + "/latest/1?taskId=" + task_id
                 self.assertEqual(request(base, detail, **lin)[0], 403)
                 self.assertEqual(request(base, detail, **teacher)[1]["code"], code)
+                self.assertEqual(request(base, detail, **teacher)[1]["starterCode"], task["starterCode"])
+                self.assertEqual(progress["editPatterns"], [{"line": 1, "before": [task["starterCode"]],
+                    "after": [code], "count": 2, "studentNumber": 1, "outcomes": {"judge_unavailable": 2}}])
                 self.assertEqual(request(base, root + "/task", **ada)[1]["latestResult"]["status"], "judge_unavailable")
 
             with server(data) as base:
@@ -195,6 +198,7 @@ class ClassroomWorkflow(unittest.TestCase):
                 self.assertNotEqual(replacement["id"], task_id)
                 self.assertEqual(request(base, root + "/submissions", submit, **ada)[0], 409)
                 self.assertEqual(request(base, detail, **teacher)[0], 409)
+                self.assertEqual(request(base, root + "/progress", **teacher)[1]["editPatterns"], [])
                 self.assertIsNone(request(base, root + "/task", **ada)[1]["latestResult"])
             self.assertEqual(json.loads(data.read_text())[room["id"]]["tasks"][0], current)
 
@@ -237,8 +241,12 @@ class ClassroomWorkflow(unittest.TestCase):
                                   progress["unsubmitted"], progress["attempts"]), (1, 3, 1, 1, 6))
                 self.assertEqual([(case["passed"], case["failed"]) for case in progress["caseStats"]],
                                  [(2, 0), (1, 1)])
+                self.assertEqual(progress["caseStats"][1]["failureKinds"], {"wrong_answer": 1})
+                self.assertEqual(progress["editPatterns"][0]["outcomes"],
+                                 {"wrong_answer": 1, "compilation_error": 2, "accepted": 1, "judge_error": 1})
                 self.assertEqual(progress["errorGroups"], [{"category": "missing_semicolon", "count": 2,
-                    "example": "expected ';' before '}'", "studentNumber": 2}])
+                    "example": "expected ';' before '}'", "studentNumber": 2,
+                    "repeatedMessages": [{"text": "expected ';' before '}'", "count": 2}]}])
                 result = request(base, root + "/task", **{"X-Student-Key": "ada"})[1]
                 self.assertNotIn("PRIVATE_", json.dumps(result))
                 self.assertNotIn("fixture source", json.dumps(result))

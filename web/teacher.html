@@ -6,6 +6,7 @@
   <title>ClassLab · 教师工作台</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/vendor/qrcode.js" defer></script>
+  <script src="/diff.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
@@ -80,6 +81,7 @@
               <p>每题最多 12 项。未添加用例时只收集提交。发布后，用例随任务保存。</p>
               <div id="case-editor-rows"></div>
               <button id="add-case" type="button" class="secondary">添加测试用例</button>
+              <button id="demo-cases" type="button" class="secondary" hidden>填入三个演示用例</button>
             </fieldset>
             <button>发布为当前任务</button>
             <p id="publish-feedback" role="status" class="feedback"></p>
@@ -121,6 +123,12 @@
             <p id="no-errors">暂无可归类的编译诊断。</p>
             <ul id="error-groups" class="case-results"></ul>
           </section>
+          <section>
+            <h3>全班共同修改</h3>
+            <p>按本题每人最新提交统计。列出至少两人在同一位置做出的相同短修改（最多六组），并显示这些提交的评测结果。</p>
+            <p id="no-patterns">尚未发现重复的短修改。</p>
+            <ul id="edit-patterns" class="case-results"></ul>
+          </section>
         </section>
       </div>
       </div>
@@ -132,7 +140,13 @@
         <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
       </div>
       <div id="teacher-result"></div>
-      <pre id="submission-code"></pre>
+      <h3>相对起始代码的修改</h3>
+      <p id="diff-summary"></p>
+      <pre id="submission-diff" aria-label="原行号、新行号、修改内容"></pre>
+      <details id="full-source"><summary>查看完整起始代码和学生代码</summary>
+        <h4>起始代码</h4><pre id="starter-code"></pre>
+        <h4>学生代码</h4><pre id="submission-code"></pre>
+      </details>
     </dialog>
     <template id="case-template">
       <fieldset class="case-row">

@@ -147,6 +147,9 @@ pre {
 }
 #public-tests { margin-bottom: 1rem; }
 #run-state { margin: 0; }
+#submission-diff { white-space: pre; overflow-wrap: normal; tab-size: 4; }
+.diff-add { background: #d5f2df; color: #15452a; }
+.diff-del { background: #ffe0dd; color: #6a2625; }
 
 .notebook-import { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .75rem; }
 .notebook-import summary { cursor: pointer; font-weight: 650; }

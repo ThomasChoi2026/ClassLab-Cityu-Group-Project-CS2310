@@ -163,16 +163,21 @@ function sampleBlock(test) {
   return block;
 }
 
-function displayResult(container, result, teacher = false) {
+function displayResult(container, result, teacherCases) {
   container.replaceChildren();
   if (!result) return;
   const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " 通过";
   container.append(element("p", (statusText[result.status] || "结果未知") + score));
   if (result.demoFixture) container.append(element("p", "预置演示结果"));
   if (result.diagnostic) container.append(element("pre", result.diagnostic));
-  if (teacher) {
+  if (teacherCases) {
     for (const test of result.cases || []) {
-      container.append(element("p", "用例 " + test.testId + " · " + (statusText[test.status] || "结果未知")));
+      const config = teacherCases.find(item => item.id === test.testId);
+      const name = config ? config.name + (config.visibility === "hidden" ? "（隐藏）" : "") : "用例 " + test.testId;
+      const details = element("details");
+      details.append(element("summary", name + " · " + (statusText[test.status] || "结果未知")),
+        sampleBlock({...config, ...test, name}));
+      container.append(details);
     }
   } else {
     for (const test of result.cases || []) container.append(sampleBlock(test));
@@ -201,6 +206,7 @@ function initializeNotebookImport(form) {
   function showCell() {
     const code = cells[Number(chooser.value)].code;
     preview.textContent = code.length > 4000 ? code.slice(0, 4000) + "\n…" : code;
+    status.textContent = "当前为预览。点击“填入起始代码”采用此单元。";
   }
 
   picker.addEventListener("change", async () => {
@@ -251,16 +257,54 @@ function initializeNotebookImport(form) {
     status.textContent = "代码已填入。可继续编辑，发布时只发送编辑器中的内容。";
   }
 
-  chooser.addEventListener("change", () => {
-    showCell();
-    fillCell();
-  });
+  chooser.addEventListener("change", showCell);
   use.addEventListener("click", fillCell);
   return clear;
 }
 
 function showDemoBanner(state) {
   if (state.demo) byId("demo-banner").hidden = false;
+  if (state.demo && byId("demo-cases")) byId("demo-cases").hidden = false;
+}
+
+function renderDiff(original, code) {
+  const panel = byId("submission-diff");
+  const full = byId("full-source");
+  panel.replaceChildren();
+  byId("starter-code").textContent = original;
+  byId("submission-code").textContent = code;
+  const rows = compareLines(original, code);
+  full.open = rows === null;
+  const added = rows?.filter(row => row.kind === "+").length || 0;
+  const removed = rows?.filter(row => row.kind === "-").length || 0;
+  panel.hidden = !added && !removed;
+  byId("diff-summary").textContent = rows === null ? "改动范围较大，请对照下方两份完整源码。" :
+    panel.hidden ? "与起始代码逐行相同（统一换行格式）。" :
+    "新增 " + added + " 行，删除 " + removed + " 行。左列为原行号，右列为新行号。";
+  if (panel.hidden) return;
+  // Show two context rows on either side. Group adjoining rows for large pastes.
+  let chunk = "", lastKind, skipped = false;
+  function flush() {
+    if (!chunk) return;
+    const span = element("span", chunk);
+    span.className = lastKind === "+" ? "diff-add" : lastKind === "-" ? "diff-del" : "";
+    panel.append(span);
+    chunk = "";
+  }
+  rows.forEach((row, index) => {
+    const visible = row.kind !== " " || rows.slice(Math.max(0, index - 2), index + 3).some(r => r.kind !== " ");
+    if (!visible) {
+      if (!skipped) { flush(); panel.append(document.createTextNode("…\n")); }
+      skipped = true;
+      return;
+    }
+    skipped = false;
+    if (row.kind !== lastKind) flush();
+    lastKind = row.kind;
+    chunk += String(row.old ?? "").padStart(5) + " " + String(row.next ?? "").padStart(5) +
+      "  " + row.kind + " " + row.text + "\n";
+  });
+  flush();
 }
 
 function initializeTeacher() {
@@ -276,6 +320,7 @@ function initializeTeacher() {
   const submissionDialog = byId("submission-dialog");
   let analysisSignature;
   let configurationTask;
+  let publishedCases = [];
   const management = byId("management-view");
   const classroom = byId("classroom-view");
   const toggle = byId("toggle-classroom");
@@ -292,7 +337,7 @@ function initializeTeacher() {
 
   toggle.addEventListener("click", () => project(classroom.hidden));
 
-  addCase.addEventListener("click", () => {
+  function appendCase(values = {}) {
     if (caseRows.childElementCount >= 12) return;
     const row = byId("case-template").content.firstElementChild.cloneNode(true);
     row.querySelector(".remove-case").addEventListener("click", () => {
@@ -301,8 +346,22 @@ function initializeTeacher() {
       addCase.focus();
     });
     caseRows.append(row);
+    for (const field of row.querySelectorAll("[data-field]")) {
+      if (Object.hasOwn(values, field.dataset.field)) field.value = values[field.dataset.field];
+    }
     addCase.disabled = caseRows.childElementCount >= 12;
     row.querySelector("input").focus();
+  }
+  addCase.addEventListener("click", () => appendCase());
+  byId("demo-cases").addEventListener("click", () => {
+    if (caseRows.childElementCount) {
+      feedback("请先清空已有用例，再填入演示用例。", true, "publish-feedback");
+      return;
+    }
+    for (const [name, input, expectedOutput, visibility] of [
+      ["Positive", "2 3", "5", "public"], ["Zero", "0 0", "0", "public"], ["Mixed signs", "-4 9", "5", "hidden"],
+    ]) appendCase({name, input, expectedOutput, visibility});
+    feedback("已填入三个演示用例。", false, "publish-feedback");
   });
 
   function detailButton(number, taskId) {
@@ -314,10 +373,10 @@ function initializeTeacher() {
       try {
         const latest = await api(endpoint("/latest/" + number + "?taskId=" + encodeURIComponent(taskId)),
           { headers: headers() });
-        if (management.hidden) return;
+        if (management.hidden || configurationTask !== taskId) return;
         byId("submission-title").textContent = latest.name + "的最新提交";
-        byId("submission-code").textContent = latest.code;
-        displayResult(byId("teacher-result"), latest.result, true);
+        renderDiff(latest.starterCode, latest.code);
+        displayResult(byId("teacher-result"), latest.result, publishedCases);
         if (!submissionDialog.open) submissionDialog.showModal();
       } catch (error) {
         feedback(error.message, true);
@@ -332,8 +391,9 @@ function initializeTeacher() {
     byId("case-analysis").hidden = !state.caseStats.length;
     if (configurationTask !== state.task?.id) {
       configurationTask = state.task?.id;
-      const tests = state.task?.testCases || [];
-      byId("teacher-case-config").replaceChildren(...tests.map((test) => sampleBlock({
+      publishedCases = state.task?.testCases || [];
+      if (submissionDialog.open) submissionDialog.close();
+      byId("teacher-case-config").replaceChildren(...publishedCases.map((test) => sampleBlock({
         ...test, name: test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）"),
       })));
     }
@@ -341,7 +401,9 @@ function initializeTeacher() {
       const evaluated = test.passed + test.failed;
       const rate = evaluated ? "通过率 " + Math.round(100 * test.passed / evaluated) + "%" : "暂无用例结果";
       const title = test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）");
-      return element("li", title + " · " + test.passed + " 通过 / " + test.failed + " 失败 · " + rate);
+      const causes = Object.entries(test.failureKinds).map(([key, count]) => statusText[key] + " " + count + " 人");
+      return element("li", title + " · " + test.passed + " 通过 / " + test.failed + " 失败 · " + rate +
+        (causes.length ? "（" + causes.join("，") + "）" : ""));
     });
     byId("case-stats").replaceChildren(...stats);
     byId("no-errors").hidden = state.errorGroups.length > 0;
@@ -349,10 +411,24 @@ function initializeTeacher() {
       const item = element("li");
       item.append(element("strong", (categoryText[group.category] || "其他编译诊断") + " · " + group.count + " 人"));
       if (group.example) item.append(element("pre", group.example));
+      for (const message of group.repeatedMessages || []) {
+        item.append(element("p", "相同诊断片段 · " + message.count + " 人"),
+          element("code", message.text));
+      }
       item.append(detailButton(group.studentNumber, state.task.id));
       return item;
     });
     byId("error-groups").replaceChildren(...groups);
+    byId("no-patterns").hidden = state.editPatterns.length > 0;
+    byId("edit-patterns").replaceChildren(...state.editPatterns.map(group => {
+      const item = element("li");
+      const result = Object.entries(group.outcomes).map(([key, count]) =>
+        (statusText[key] || key) + " " + count + " 人").join("，");
+      item.append(element("strong", "原第 " + group.line + " 行位置 · " + group.count + " 人"),
+        element("pre", [...group.before.map(s => "− " + s), ...group.after.map(s => "+ " + s)].join("\n")),
+        element("p", result), detailButton(group.studentNumber, state.task.id));
+      return item;
+    }));
   }
 
   function showDashboard() {
@@ -403,7 +479,7 @@ function initializeTeacher() {
       "暂无已完成的评测，暂不计算通过率。";
     refreshStatus("每 2 秒更新");
     byId("empty-students").hidden = state.students.length > 0;
-    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups]);
+    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns]);
     if (signature === analysisSignature) return;
     analysisSignature = signature;
     renderAnalysis(state);
@@ -509,6 +585,7 @@ function initializeStudent() {
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
+    byId("submit").elements.runInput.value = "";
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -544,6 +621,12 @@ function initializeStudent() {
   });
 
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
+  editor.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !event.isComposing && !event.repeat) {
+      event.preventDefault();
+      editor.form.requestSubmit(editor.form.querySelector("button[type=submit]"));
+    }
+  });
   editor.addEventListener("input", () => {
     if (!currentTask) return;
     try {

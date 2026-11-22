@@ -6,7 +6,7 @@ ClassLab helps a teacher turn a C++ example from a notebook into a classroom deb
 
 ## Install and run
 
-Use Linux with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build.
+Check out `feature/classlab-course-final`. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
 
 ~~~sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -20,7 +20,7 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 1. Start python3 demo/run.py in the repository root. Use --port 8081 if 8080 is in use. Open the matching private preview. The demo generates a fresh temporary store for each launch. Press Ctrl+C to stop and remove it. The regular classroom data file is untouched.
 2. Download the synthetic Notebook from the demo banner. Create a classroom and expand the Notebook importer. Choose the first code cell, then fill the starter code. Add title **Fix the addition** and instruction **Replace subtraction with addition**.
-3. Add these test cases in order, then publish and open Classroom View.
+3. Click **填入三个演示用例** to load the three cases below. Publish the task and open Classroom View.
 
    | Name | Input | Expected output | Visibility |
    | --- | --- | --- | --- |
@@ -28,10 +28,12 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
    | Zero | 0 0 | 0 | Public |
    | Mixed signs | -4 9 | 5 | Hidden |
 
-4. Scan the projection QR code or follow its join link. For three separate student identities, use separate browser profiles or sessions. Have one submit the starter unchanged, one replace a - b with a + b, and one submit the Notebook's second code cell. The expected replay results are Wrong Answer, Accepted, and Compilation Error. Other source or inputs display no matching fixture.
-5. On the projected screen, show the live join and submit counts. Return to management to show the grouped diagnostic and per-test summary. Use synthetic student names and data for recording. If the browser retained an old teacher session after restarting the demo, reload and let it return to classroom creation.
+4. Scan the QR code from a reachable classroom address, or open its join link on the same machine. Use three separate student browser sessions. Have one submit the starter unchanged and two change `a - b` to `a + b`. Expect one Wrong Answer and two Accepted replays. The second code cell can also demonstrate a Compilation Error. Other source or inputs display no matching fixture.
+5. Return to management. Show the two passing students grouped under the same edit, open the sample submission, and point out the removed and added line. Contrast this with the unchanged submission and its failing cases. These are observations about the submitted code and recorded outcomes. Use synthetic student names for recording.
 
 To rehearse in 60 seconds, download the synthetic file and have three browser sessions and their source snippets ready. Prefill the teacher’s title, instructions and test cases before recording, then select the cell and publish on camera. Keep the live join and submission actions visible.
+
+For an optional automated browser rehearsal, leave the demo running and use a second terminal with Python, Playwright, Pillow and zxing-cpp installed. Run `python3 tests/browser_demo.py http://127.0.0.1:8080 --chromium /path/to/chromium`. The test decodes the displayed QR image, joins three fresh browser sessions, restores a draft after reload, submits the exercise, and checks the teacher counts and line diff. The standard build and CTest suite do not require these browser packages.
 
 ## Architecture and evidence
 
@@ -44,13 +46,13 @@ To rehearse in 60 seconds, download the synthetic file and have three browser se
 
 | Criterion | Evidence and remaining handoff |
 | --- | --- |
-| Published | Submit the private repository link and exact Phase 6 commit. Repository git access was verified from Codex Cloud. The teaching team's separate access is unverified. With the owner's approval and course policy, invite the authorized graders to the private repository or use a course-approved submission archive. |
+| Published | Submit the private delivery branch link and its commit. Verify that the teaching team can open it, or use a course-approved submission archive. |
 | Documented | English overview, setup, architecture, limitations and demo script are in this guide. Check the final submission portal for required file names and formats. |
 | Functional | Build and run CTest, rehearse the private demo, and distinguish the replay from the prior real GCC evidence. Keep arbitrary execution disabled until isolation acceptance. |
 | Innovative | The contribution is the lesson workflow from a notebook cell to immediate participation to class-level feedback. QR codes, compilation and test judging are established techniques. |
 | Teamwork | Assign reviewers for the Notebook workflow, privacy checks, and rehearsal. Record only actual contributions. The Phase 5 baseline's Git author labels list seven commits under Thomas CAI and one under ThomasChoi2026. This establishes commit attribution only. Record any confirmed offline work separately. |
 
-Review changes with git log --format='%h %aN %s' feature/classlab-phase-5..feature/classlab-phase-6. Record confirmed reviewer names and rehearsal responsibilities before submission.
+Review final changes with `git log --oneline origin/feature/classlab-phase-6..HEAD`. Record confirmed reviewer names and rehearsal responsibilities before submission.
 
 ## 60-second English demo script
 
@@ -59,5 +61,5 @@ Review changes with git log --format='%h %aN %s' feature/classlab-phase-5..featu
 | 0–10 s | Teacher editor and synthetic Notebook | “A teacher already has an example in a notebook. Turning it into a shared debugging task usually breaks the flow of the lesson. ClassLab keeps that workflow in one place.” |
 | 10–23 s | Select the buggy cell, publish, then open Classroom View | “I choose a C++ cell, add instructions and test cases, and publish it. The notebook stays in my browser. Students get the selected exercise through this QR code.” |
 | 23–38 s | Student views and their code changes | “Students join from a browser, edit the exercise, and submit. The projection updates as their submissions arrive.” |
-| 38–53 s | Teacher totals and diagnostic summary | “The teacher can see who joined, which tests were difficult, and which compiler diagnostics students encountered. These marked results are fixed demo replays. The joins and submissions are live.” |
+| 38–53 s | Common edit and line diff | “Two students changed subtraction to addition. Here is the line they edited and the test result for each submission. The verdicts are fixed replays. The submissions and class counts are live.” |
 | 53–60 s | Return to Classroom View | “The goal is to help the teacher decide what to explain next while the class is still working.” |
