@@ -241,8 +241,7 @@ function initializeNotebookImport(form) {
     }
   });
 
-  chooser.addEventListener("change", showCell);
-  use.addEventListener("click", () => {
+  function fillCell() {
     const code = cells[Number(chooser.value)].code;
     if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
       status.textContent = "此单元超过起始代码的长度限制，请选择较短的单元。";
@@ -250,7 +249,13 @@ function initializeNotebookImport(form) {
     }
     form.elements.starterCode.value = code;
     status.textContent = "代码已填入。可继续编辑，发布时只发送编辑器中的内容。";
+  }
+
+  chooser.addEventListener("change", () => {
+    showCell();
+    fillCell();
   });
+  use.addEventListener("click", fillCell);
   return clear;
 }
 

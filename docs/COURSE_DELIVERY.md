@@ -31,7 +31,7 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 4. Scan the projection QR code or follow its join link. For three separate student identities, use separate browser profiles or sessions. Have one submit the starter unchanged, one replace a - b with a + b, and one submit the Notebook's second code cell. The expected replay results are Wrong Answer, Accepted, and Compilation Error. Other source or inputs display no matching fixture.
 5. On the projected screen, show the live join and submit counts. Return to management to show the grouped diagnostic and per-test summary. Use synthetic student names and data for recording. If the browser retained an old teacher session after restarting the demo, reload and let it return to classroom creation.
 
-To rehearse in 60 seconds, download the synthetic file and have the three student sessions and their source snippets ready before recording. Keep the live publishing and submission actions visible.
+To rehearse in 60 seconds, download the synthetic file and have three browser sessions and their source snippets ready. Prefill the teacher’s title, instructions and test cases before recording, then select the cell and publish on camera. Keep the live join and submission actions visible.
 
 ## Architecture and evidence
 
