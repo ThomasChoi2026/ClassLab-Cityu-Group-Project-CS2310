@@ -1,4 +1,4 @@
-#include "judging.hpp"
+#include "judge_client.hpp"
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -257,7 +257,7 @@ Json progress(const Json& room) {
         return left.at("category") < right.at("category");
     });
     return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
-            {"submitted", submitted}, {"attempts", attempts}, {"students", rows}, {"executionAvailable", false},
+            {"submitted", submitted}, {"attempts", attempts}, {"students", rows},
             {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"unjudged", unjudged},
             {"caseStats", cases}, {"errorGroups", groups}};
 }
@@ -268,7 +268,7 @@ Json receipt_for(const Json& submission) {
     return receipt;
 }
 
-void routes(httplib::Server& server, Store& store) {
+void routes(httplib::Server& server, Store& store, judging::Client& judge) {
     server.new_task_queue = [] { return new httplib::ThreadPool(8, 64); };
     server.set_payload_max_length(512 * 1024);
     server.set_default_headers({{"X-Content-Type-Options", "nosniff"},
@@ -328,11 +328,13 @@ void routes(httplib::Server& server, Store& store) {
         }), 201);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/progress)", [&](const Request& request, Response& response) {
-        reply(response, store.read([&](const Json& rooms) {
+        auto result = store.read([&](const Json& rooms) {
             const auto& room = room_for(rooms, request);
             require_teacher(room, request);
             return progress(room);
-        }));
+        });
+        result["executionAvailable"] = judge.available();
+        reply(response, result);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/latest/([1-9][0-9]{0,15}))",
         [&](const Request& request, Response& response) {
@@ -367,7 +369,7 @@ void routes(httplib::Server& server, Store& store) {
         }), 201);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/task)", [&](const Request& request, Response& response) {
-        reply(response, store.read([&](const Json& rooms) -> Json {
+        auto result = store.read([&](const Json& rooms) -> Json {
             const auto& room = room_for(rooms, request);
             const auto key = require_student(room, request);
             const auto& student = room.at("students").at(key);
@@ -379,9 +381,10 @@ void routes(httplib::Server& server, Store& store) {
                 }
             }
             return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
-                    {"task", judging::student_task(task)}, {"latestResult", latest_result},
-                    {"executionAvailable", false}};
-        }));
+                    {"task", judging::student_task(task)}, {"latestResult", latest_result}};
+        });
+        result["executionAvailable"] = judge.available();
+        reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
@@ -396,21 +399,36 @@ void routes(httplib::Server& server, Store& store) {
             field(body, "input", 8192, true);
             return nullptr;
         });
-        reply(response, {{"status", "judge_unavailable"},
-                         {"error", "隔离执行器不可用，程序未运行。"}}, 503);
+        auto slot = judge.reserve();
+        if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
+        if (!judge.available()) {
+            reply(response, {{"status", "judge_unavailable"},
+                             {"error", "隔离执行器不可用，程序未运行。"}}, 503);
+            return;
+        }
+        reply(response, judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>()));
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
-        reply(response, store.write([&](Json& rooms) -> Json {
+        const auto task_id = field(body, "taskId", 32);
+        const auto code = field(body, "code", 65536);
+        store.read([&](const Json& rooms) -> Json {
+            require_student(room_for(rooms, request), request);
+            return nullptr;
+        });
+        auto slot = judge.reserve();
+        Json tests;
+        std::string student_key;
+        std::string submission_id;
+        const auto available = slot && judge.available();
+        auto receipt = store.write([&](Json& rooms) -> Json {
             auto& room = room_for(rooms, request);
-            const auto key = require_student(room, request);
+            student_key = require_student(room, request);
             const auto task = active_task(room);
-            const auto task_id = field(body, "taskId", 32);
             if (task.is_null() || task.at("id") != task_id) {
                 throw ApiError{409, "教师已更新任务，请刷新任务后再提交。"};
             }
-            const auto code = field(body, "code", 65536);
-            auto& submissions = room["students"][key]["submissions"];
+            auto& submissions = room["students"][student_key]["submissions"];
             Json submission = {{"taskId", task_id}, {"code", code}, {"receivedAt", now()}};
             if (body.contains("requestId")) {
                 const auto request_id = field(body, "requestId", 64);
@@ -422,12 +440,59 @@ void routes(httplib::Server& server, Store& store) {
                 submission["requestId"] = request_id;
             }
             if (task.contains("testCases")) {
-                submission["judgement"] = {{"status", "judge_unavailable"}};
+                if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
+                submission["judgement"] = {{"status", available ? "pending" : "judge_unavailable"}};
+                if (available) {
+                    submission_id = random_id();
+                    submission["id"] = submission_id;
+                    tests = judging::cases_for(task);
+                }
             }
             submissions.push_back(submission);
             return receipt_for(submission);
-        }), 201);
+        });
+        if (!submission_id.empty()) {
+            const auto result = judge.grade(code, tests);
+            receipt = store.write([&](Json& rooms) -> Json {
+                auto& submissions = room_for(rooms, request).at("students").at(student_key).at("submissions");
+                for (auto& saved : submissions) {
+                    if (saved.value("id", "") != submission_id) continue;
+                    saved["judgement"] = result;
+                    return receipt_for(saved);
+                }
+                throw std::runtime_error("Pending submission disappeared");
+            });
+        }
+        reply(response, receipt, 201);
     });
+
+}
+
+void recover_pending(Store& store) {
+    const auto contains_pending = [](const Json& submission) {
+        return submission.contains("judgement") && submission.at("judgement").at("status") == "pending";
+    };
+    const auto pending = store.read([&](const Json& rooms) -> Json {
+        for (const auto& room : rooms) {
+            for (const auto& student : room.at("students")) {
+                const auto& submissions = student.at("submissions");
+                if (std::any_of(submissions.begin(), submissions.end(), contains_pending)) return true;
+            }
+        }
+        return false;
+    });
+    if (pending == true) {
+        store.write([&](Json& rooms) -> Json {
+            for (auto& room : rooms) {
+                for (auto& student : room.at("students")) {
+                    for (auto& submission : student.at("submissions")) {
+                        if (contains_pending(submission)) submission["judgement"] = {{"status", "judge_error"}};
+                    }
+                }
+            }
+            return nullptr;
+        });
+    }
 }
 
 std::string setting(const char* key, const char* fallback) {
@@ -449,7 +514,10 @@ int main() {
             throw std::runtime_error("Invalid CLASSLAB_PORT.");
         }
         httplib::Server server;
-        routes(server, store);
+        recover_pending(store);
+        judging::Client judge(setting("CLASSLAB_JUDGE_SOCKET", ""));
+        routes(server, store, judge);
+        server.set_write_timeout(120);
         const auto bound_port = port == 0 ? server.bind_to_any_port(host)
                                           : (server.bind_to_port(host, port) ? port : -1);
         if (bound_port < 0) throw std::runtime_error("Cannot bind HTTP server.");

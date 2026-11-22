@@ -16,9 +16,12 @@ BINARY = str(Path(sys.argv.pop(1)).resolve())
 
 
 @contextlib.contextmanager
-def server(data):
+def server(data, judge_socket=None):
     settings = dict(os.environ, CLASSLAB_DATA=str(data), CLASSLAB_PORT="0",
                     CLASSLAB_HOST="127.0.0.1")
+    settings.pop("CLASSLAB_JUDGE_SOCKET", None)
+    if judge_socket is not None:
+        settings["CLASSLAB_JUDGE_SOCKET"] = str(judge_socket)
     with subprocess.Popen([BINARY], stdout=subprocess.PIPE, text=True, env=settings) as process:
         try:
             ready, _, _ = select.select([process.stdout], [], [], 10)
@@ -38,13 +41,13 @@ def server(data):
                     process.wait()
 
 
-def request(base, path, data=None, **headers):
+def request(base, path, data=None, *, timeout=5, **headers):
     payload = None if data is None else json.dumps(data).encode()
     if payload is not None:
         headers["Content-Type"] = "application/json"
     call = urllib.request.Request(base + path, data=payload, headers=headers)
     try:
-        response = urllib.request.urlopen(call, timeout=5)
+        response = urllib.request.urlopen(call, timeout=timeout)
     except urllib.error.HTTPError as error:
         response = error
     with response:

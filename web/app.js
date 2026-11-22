@@ -10,11 +10,11 @@ class RequestError extends Error {
   }
 }
 
-async function api(path, { data, headers = {} } = {}) {
+async function api(path, { data, headers = {}, timeoutMs = 8000 } = {}) {
   let response;
   let result;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const { signal } = controller;
   try {
     response = await fetch("/api" + path, data === undefined ? { headers, signal } : {
@@ -120,6 +120,7 @@ function joinQr(link) {
 
 const statusText = {
   received: "已提交",
+  success: "运行成功",
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
   pending: "评测中",
@@ -357,6 +358,7 @@ function initializeStudent() {
   let currentTask = null;
   let resultSignature;
   let pendingSubmission;
+  let running = false;
   const editor = byId("submit").elements.code;
   const endpoint = (suffix) => "/rooms/" + room + suffix;
   const headers = () => ({ "X-Student-Key": key });
@@ -371,6 +373,11 @@ function initializeStudent() {
     byId("student-name").textContent = state.studentName;
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
+    byId("run-controls").disabled = !state.executionAvailable || running;
+    const runStatus = byId("run-state");
+    const runMessage = running ? "正在编译和运行…" : (state.executionAvailable ?
+      "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
+    if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
     const signature = JSON.stringify([state.task?.id, state.latestResult]);
     if (signature !== resultSignature) {
       resultSignature = signature;
@@ -379,6 +386,7 @@ function initializeStudent() {
     }
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
+    byId("run-result").hidden = true;
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -424,6 +432,35 @@ function initializeStudent() {
     }
   });
 
+  byId("run-code").addEventListener("click", async () => {
+    if (running || !currentTask || !editor.reportValidity()) return;
+    const taskId = currentTask.id;
+    const panel = byId("run-result");
+    const input = byId("submit").elements.runInput.value;
+    running = true;
+    byId("run-controls").disabled = true;
+    byId("run-state").textContent = "正在编译和运行…";
+    panel.hidden = true;
+    try {
+      const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 45000,
+        data: { taskId, code: editor.value, input } });
+      if (taskId !== currentTask?.id) return;
+      displayResult(panel, result);
+      if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
+      if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || "（空）"));
+      if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
+      panel.hidden = false;
+    } catch (error) {
+      if (taskId === currentTask?.id) {
+        panel.replaceChildren(element("p", error.message));
+        panel.hidden = false;
+      }
+    } finally {
+      running = false;
+      await refresh();
+    }
+  });
+
   onSubmit("submit", async ({ code }) => {
     const taskId = currentTask.id;
     try {
@@ -432,11 +469,14 @@ function initializeStudent() {
           .map((byte) => byte.toString(16).padStart(2, "0")).join("");
         pendingSubmission = { taskId, code, requestId };
       }
-      const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers() });
+      feedback("正在保存代码并等待评测状态…", false, "submit-feedback");
+      const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers(), timeoutMs: 115000 });
       pendingSubmission = null;
       if (taskId === currentTask?.id) {
         const message = receipt.judgement === "judge_unavailable" ?
-          "代码已保存。隔离执行器不可用，本次提交未评测。" : "代码已提交，教师可以看到收件状态。";
+          "代码已保存。隔离执行器不可用，本次提交未评测。" :
+          (receipt.judgement ? "代码已保存 · " + (statusText[receipt.judgement] || "状态未知") :
+            "代码已提交，教师可以看到收件状态。");
         feedback(message, false, "submit-feedback");
         await refresh();
       }

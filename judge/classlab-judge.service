@@ -1,0 +1,21 @@
+[Unit]
+Description=ClassLab container Judge
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=classlab-judge
+Group=classlab-judge
+SupplementaryGroups=docker
+WorkingDirectory=/opt/classlab
+RuntimeDirectory=classlab-judge
+RuntimeDirectoryMode=0710
+# Enable the following after passing the deployment acceptance checks.
+ExecStart=/usr/bin/python3 /opt/classlab/judge/worker.py --socket /run/classlab-judge/judge.sock --operator-verified
+ExecStopPost=/usr/bin/python3 /opt/classlab/judge/worker.py --cleanup
+TimeoutStopSec=30
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
