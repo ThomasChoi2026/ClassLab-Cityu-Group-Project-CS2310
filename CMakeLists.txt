@@ -32,6 +32,8 @@ if(BUILD_TESTING)
     add_test(NAME judging_helpers COMMAND classlab_judging_tests)
     add_test(NAME classroom_workflow
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/workflow.py" $<TARGET_FILE:classlab>)
+    add_test(NAME judge_supervisor
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_supervisor.py")
     add_test(NAME judge_protocol
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_protocol.py" $<TARGET_FILE:classlab>)
 endif()

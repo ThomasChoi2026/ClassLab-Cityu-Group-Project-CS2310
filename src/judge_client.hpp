@@ -49,6 +49,11 @@ public:
         return request("", nullptr).value("status", "") == "ready";
     }
 
+    bool can_start() const {
+        const auto health = request("", nullptr);
+        return health.value("status", "") == "ready" && health.value("busy", Json(false)) == false;
+    }
+
     std::unique_lock<std::mutex> reserve() { return std::unique_lock(slot_, std::try_to_lock); }
 
     Json run(const std::string& code, const std::string& input) const {

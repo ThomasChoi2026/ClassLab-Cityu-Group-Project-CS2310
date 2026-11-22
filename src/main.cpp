@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <condition_variable>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
@@ -21,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 namespace fs = std::filesystem;
@@ -193,7 +196,7 @@ Json progress(const Json& room) {
     Json rows = Json::array();
     Json cases = Json::array();
     std::map<std::string, Json> errors;
-    std::size_t submitted = 0, attempts = 0, accepted = 0, failed = 0, pending = 0, unjudged = 0;
+    std::size_t submitted = 0, attempts = 0, accepted = 0, failed = 0, pending = 0, queued = 0, unjudged = 0;
     if (!task.is_null()) {
         for (const auto& test : judging::cases_for(task)) {
             cases.push_back({{"id", test.at("id")}, {"name", test.at("name")},
@@ -217,6 +220,7 @@ Json progress(const Json& room) {
             if (result.contains("total")) row["total"] = result.at("total");
             if (status == "accepted") ++accepted;
             else if (status == "pending") ++pending;
+            else if (status == "queued") ++queued;
             else if (status == "compilation_error" || judging::case_failed(status)) ++failed;
             else ++unjudged;
 
@@ -258,7 +262,7 @@ Json progress(const Json& room) {
     });
     return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
             {"submitted", submitted}, {"attempts", attempts}, {"students", rows},
-            {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"unjudged", unjudged},
+            {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"queued", queued}, {"unjudged", unjudged},
             {"caseStats", cases}, {"errorGroups", groups}};
 }
 
@@ -268,7 +272,127 @@ Json receipt_for(const Json& submission) {
     return receipt;
 }
 
-void routes(httplib::Server& server, Store& store, judging::Client& judge) {
+constexpr std::size_t queue_capacity = 64;
+
+struct QueueState {
+    std::size_t count = 0;
+    std::uint64_t newest = 0;
+    std::string room, student, submission;
+    std::uint64_t oldest = 0;
+};
+
+QueueState queue_state(const Json& rooms) {
+    QueueState state;
+    for (const auto& [room_id, room] : rooms.items()) {
+        for (const auto& [key, student] : room.at("students").items()) {
+            for (const auto& saved : student.at("submissions")) {
+                if (!saved.contains("queueSequence")) continue;
+                const auto& status = saved.at("judgement").at("status");
+                if (status != "queued" && status != "pending") continue;
+                ++state.count;
+                const auto number = saved.at("queueSequence").get<std::uint64_t>();
+                state.newest = std::max(state.newest, number);
+                if (status == "queued" && (state.submission.empty() || number < state.oldest)) {
+                    state.room = room_id;
+                    state.student = key;
+                    state.submission = saved.at("id").get<std::string>();
+                    state.oldest = number;
+                }
+            }
+        }
+    }
+    return state;
+}
+
+Json& queued_submission(Json& rooms, const QueueState& job) {
+    auto& submissions = rooms.at(job.room).at("students").at(job.student).at("submissions");
+    const auto found = std::find_if(submissions.begin(), submissions.end(), [&](const Json& saved) {
+        return saved.value("id", "") == job.submission;
+    });
+    if (found == submissions.end()) throw std::runtime_error("Queued submission missing");
+    return *found;
+}
+
+class GradeQueue {
+public:
+    GradeQueue(Store& store, judging::Client& judge) : store_(store), judge_(judge) {
+        if (judge_.configured()) worker_ = std::jthread([this](std::stop_token stop) { work(stop); });
+    }
+
+    void notify() {
+        {
+            std::lock_guard lock(mutex_);
+            dirty_ = true;
+        }
+        wake_.notify_one();
+    }
+
+private:
+    void work(std::stop_token stop) {
+        using namespace std::chrono_literals;
+        while (!stop.stop_requested()) {
+            try {
+                if (process_one(stop)) continue;
+            } catch (const std::exception& error) {
+                std::cerr << "ClassLab queue: " << error.what() << '\n';
+            }
+            std::unique_lock lock(mutex_);
+            wake_.wait_for(lock, stop, 500ms, [&] { return dirty_; });
+            dirty_ = false;
+        }
+    }
+
+    bool process_one(std::stop_token stop) {
+        QueueState job;
+        store_.read([&](const Json& rooms) -> Json {
+            job = queue_state(rooms);
+            return nullptr;
+        });
+        if (job.submission.empty()) return false;
+        auto slot = judge_.reserve();
+        if (!slot || !judge_.can_start() || stop.stop_requested()) return false;
+
+        const auto request = store_.write([&](Json& rooms) -> Json {
+            auto& saved = queued_submission(rooms, job);
+            const auto& tasks = rooms.at(job.room).at("tasks");
+            const auto task = std::find_if(tasks.begin(), tasks.end(), [&](const Json& candidate) {
+                return candidate.at("id") == saved.at("taskId");
+            });
+            if (task == tasks.end() || !task->contains("testCases")) {
+                saved["judgement"] = {{"status", "judge_error"}};
+                return nullptr;
+            }
+            saved["judgement"] = {{"status", "pending"}};
+            return {{"code", saved.at("code")}, {"cases", task->at("testCases")}};
+        });
+        if (request.is_null()) return true;
+        const auto result = judge_.grade(request.at("code").get<std::string>(), request.at("cases"));
+        slot.unlock();
+        while (!stop.stop_requested()) {
+            try {
+                store_.write([&](Json& rooms) -> Json {
+                    queued_submission(rooms, job)["judgement"] = result;
+                    return nullptr;
+                });
+                return true;
+            } catch (const std::exception& error) {
+                std::cerr << "ClassLab queue result: " << error.what() << '\n';
+                std::unique_lock lock(mutex_);
+                wake_.wait_for(lock, stop, std::chrono::seconds(1), [] { return false; });
+            }
+        }
+        return false;
+    }
+
+    Store& store_;
+    judging::Client& judge_;
+    std::mutex mutex_;
+    std::condition_variable_any wake_;
+    bool dirty_ = false;
+    std::jthread worker_;
+};
+
+void routes(httplib::Server& server, Store& store, judging::Client& judge, GradeQueue& queue) {
     server.new_task_queue = [] { return new httplib::ThreadPool(8, 64); };
     server.set_payload_max_length(512 * 1024);
     server.set_default_headers({{"X-Content-Type-Options", "nosniff"},
@@ -406,24 +530,19 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge) {
                              {"error", "隔离执行器不可用，程序未运行。"}}, 503);
             return;
         }
+        const auto waiting = store.read([](const Json& rooms) -> Json {
+            return !queue_state(rooms).submission.empty();
+        });
+        if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
         reply(response, judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>()));
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
         const auto task_id = field(body, "taskId", 32);
         const auto code = field(body, "code", 65536);
-        store.read([&](const Json& rooms) -> Json {
-            require_student(room_for(rooms, request), request);
-            return nullptr;
-        });
-        auto slot = judge.reserve();
-        Json tests;
-        std::string student_key;
-        std::string submission_id;
-        const auto available = slot && judge.available();
-        auto receipt = store.write([&](Json& rooms) -> Json {
+        const auto receipt = store.write([&](Json& rooms) -> Json {
             auto& room = room_for(rooms, request);
-            student_key = require_student(room, request);
+            const auto student_key = require_student(room, request);
             const auto task = active_task(room);
             if (task.is_null() || task.at("id") != task_id) {
                 throw ApiError{409, "教师已更新任务，请刷新任务后再提交。"};
@@ -440,29 +559,21 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge) {
                 submission["requestId"] = request_id;
             }
             if (task.contains("testCases")) {
-                if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
-                submission["judgement"] = {{"status", available ? "pending" : "judge_unavailable"}};
-                if (available) {
-                    submission_id = random_id();
-                    submission["id"] = submission_id;
-                    tests = judging::cases_for(task);
+                std::string status = "judge_unavailable";
+                if (judge.configured()) {
+                    const auto queue = queue_state(rooms);
+                    status = queue.count >= queue_capacity ? "judge_queue_full" : "queued";
+                    if (status == "queued") {
+                        submission["id"] = random_id();
+                        submission["queueSequence"] = queue.newest + 1;
+                    }
                 }
+                submission["judgement"] = {{"status", status}};
             }
             submissions.push_back(submission);
             return receipt_for(submission);
         });
-        if (!submission_id.empty()) {
-            const auto result = judge.grade(code, tests);
-            receipt = store.write([&](Json& rooms) -> Json {
-                auto& submissions = room_for(rooms, request).at("students").at(student_key).at("submissions");
-                for (auto& saved : submissions) {
-                    if (saved.value("id", "") != submission_id) continue;
-                    saved["judgement"] = result;
-                    return receipt_for(saved);
-                }
-                throw std::runtime_error("Pending submission disappeared");
-            });
-        }
+        if (receipt.value("judgement", "") == "queued") queue.notify();
         reply(response, receipt, 201);
     });
 
@@ -516,7 +627,8 @@ int main() {
         httplib::Server server;
         recover_pending(store);
         judging::Client judge(setting("CLASSLAB_JUDGE_SOCKET", ""));
-        routes(server, store, judge);
+        GradeQueue queue(store, judge);
+        routes(server, store, judge, queue);
         server.set_write_timeout(120);
         const auto bound_port = port == 0 ? server.bind_to_any_port(host)
                                           : (server.bind_to_port(host, port) ? port : -1);

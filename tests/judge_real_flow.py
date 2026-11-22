@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 
 from workflow import request, server
-from judge_protocol import Handler
+from judge_protocol import Handler, wait_for
 from judge_smoke import ADD, SEMICOLON, SUBTRACT, worker
 
 FORMAL_INPUTS = ("2 3", "0 0", "-4 9")
@@ -28,9 +28,13 @@ class TrustedFixtureHandler(Handler):
         self.reply(worker.evaluate(code, inputs, mode))
 
 
+class FixtureServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    pass
+
+
 @contextlib.contextmanager
 def trusted_fixtures(path):
-    with socketserver.UnixStreamServer(str(path), TrustedFixtureHandler) as instance:
+    with FixtureServer(str(path), TrustedFixtureHandler) as instance:
         thread = threading.Thread(target=instance.serve_forever)
         thread.start()
         try:
@@ -69,8 +73,9 @@ def main():
                     assert response == 200 and result["stdout"] == "8\n", result
                 status, result = request(base, root + "/submissions",
                     {"taskId": task["id"], "code": code}, timeout=110, **headers)
-                assert status == 201 and result["judgement"] == expected, result
-                current = request(base, root + "/task", **headers)[1]
+                assert status == 201 and result["judgement"] == "queued", result
+                current = wait_for(lambda: request(base, root + "/task", **headers)[1],
+                    lambda view: view["latestResult"] and view["latestResult"]["status"] == expected, timeout=105)
                 assert "HIDDEN_NAME" not in json.dumps(current)
             _, progress = request(base, root + "/progress", **teacher)
             assert (progress["joined"], progress["submitted"], progress["accepted"], progress["failed"],

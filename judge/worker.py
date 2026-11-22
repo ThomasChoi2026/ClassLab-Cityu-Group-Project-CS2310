@@ -27,8 +27,11 @@ OUTPUT = 16 * 1024
 ARTIFACT = 1024 * 1024  # maximum encoded executable
 MAX_REQUEST = 1024 * 1024
 OWNER_LABEL = "org.classlab.worker=phase4"
+READY = b"CLASSLAB_BOOTSTRAP_V1\n"
+BOOT_TIMEOUT = 12
 COMPILE = """set -eu
 cat > /work/main.cpp || exit 70
+printf "CLASSLAB_BOOTSTRAP_V1\\n" >&2
 g++ -std=c++20 -O0 -fdiagnostics-color=never -fmax-errors=12 /work/main.cpp -o /work/program
 exec base64 -w0 /work/program
 """
@@ -36,6 +39,7 @@ EXECUTE = """set -eu
 IFS= read -r binary
 printf '%s' "$binary" | base64 -d > /work/program
 chmod 500 /work/program
+printf "CLASSLAB_BOOTSTRAP_V1\\n" >&2
 exec /work/program
 """
 
@@ -88,11 +92,13 @@ def container(script):
                 raise
 
 
-def collect(process, payload, timeout, stdout_cap):
+def collect(process, payload, timeout, stdout_cap, *, expect_ready=False):
     buffers = {"stdout": bytearray(), "stderr": bytearray()}
     caps = {"stdout": stdout_cap, "stderr": OUTPUT}
     pending = memoryview(payload)
-    deadline = time.monotonic() + timeout
+    ready = not expect_ready
+    deadline = time.monotonic() + (timeout if ready else BOOT_TIMEOUT)
+    prefix = bytearray()
     with selectors.DefaultSelector() as selector:
         for stream in ("stdout", "stderr"):
             pipe = getattr(process, stream)
@@ -107,7 +113,7 @@ def collect(process, payload, timeout, stdout_cap):
         while selector.get_map():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                return "time_limit", buffers
+                return ("time_limit" if ready else "judge_error"), buffers
             for key, _ in selector.select(remaining):
                 pipe, stream = key.fileobj, key.data
                 if stream == "stdin":
@@ -127,7 +133,19 @@ def collect(process, payload, timeout, stdout_cap):
                         continue
                     if not chunk:
                         selector.unregister(pipe)
+                        if stream == "stderr" and not ready:
+                            return "judge_error", buffers
                         continue
+                    if stream == "stderr" and not ready:
+                        need = len(READY) - len(prefix)
+                        prefix.extend(chunk[:need])
+                        if not READY.startswith(prefix):
+                            return "judge_error", buffers
+                        if len(prefix) != len(READY):
+                            continue
+                        ready = True
+                        deadline = time.monotonic() + timeout
+                        chunk = chunk[need:]
                     space = caps[stream] - len(buffers[stream])
                     buffers[stream].extend(chunk[:space])
                     if len(chunk) > space:
@@ -140,13 +158,13 @@ def collect(process, payload, timeout, stdout_cap):
     return None, buffers
 
 
-def sandbox(script, payload, timeout, stdout_cap):
+def sandbox(script, payload, timeout, stdout_cap, *, expect_ready=False):
     with container(script) as name:
         with subprocess.Popen([*DOCKER, "start", "-ai", name], env=DOCKER_ENV,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE) as process:
             try:
-                limited, buffers = collect(process, payload, timeout, stdout_cap)
+                limited, buffers = collect(process, payload, timeout, stdout_cap, expect_ready=expect_ready)
             finally:
                 if process.poll() is None:
                     process.kill()
@@ -157,8 +175,6 @@ def sandbox(script, payload, timeout, stdout_cap):
             return "judge_error", None, buffers
         if state["OOMKilled"]:
             return "resource_limit", None, buffers
-        if state["ExitCode"] in (128 + 25,):  # Linux x86-64 SIGXFSZ
-            return "resource_limit", state["ExitCode"], buffers
         return None, state["ExitCode"], buffers
 
 
@@ -167,7 +183,7 @@ def text(data):
 
 
 def compile_source(code):
-    failure, exit_code, streams = sandbox(COMPILE, code.encode(), 15, ARTIFACT)
+    failure, exit_code, streams = sandbox(COMPILE, code.encode(), 15, ARTIFACT, expect_ready=True)
     if failure:
         return {"status": failure}, None
     if exit_code == 1 and streams["stderr"]:
@@ -184,7 +200,7 @@ def compile_source(code):
 
 
 def run_case(binary, input_text):
-    failure, exit_code, streams = sandbox(EXECUTE, binary + b"\n" + input_text.encode(), 3, OUTPUT)
+    failure, exit_code, streams = sandbox(EXECUTE, binary + b"\n" + input_text.encode(), 3, OUTPUT, expect_ready=True)
     if failure == "judge_error":
         return {"status": failure}
     status = failure or ("success" if exit_code == 0 else "runtime_error")
@@ -195,7 +211,7 @@ def run_case(binary, input_text):
 
 
 def evaluate(code, inputs, mode):
-    job_deadline = time.monotonic() + 70
+    job_deadline = time.monotonic() + 60
     failure, binary = compile_source(code)
     if failure:
         return failure
@@ -298,7 +314,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path != "/health":
             return self.respond(404, {"status": "judge_error"})
         available = self.server.available
-        self.respond(200 if available else 503, {"status": "ready" if available else "judge_error"})
+        self.respond(200 if available else 503, {
+            "status": "ready" if available else "judge_error", "busy": self.server.slot.locked(),
+        })
 
     def do_POST(self):
         if self.path != "/evaluate":

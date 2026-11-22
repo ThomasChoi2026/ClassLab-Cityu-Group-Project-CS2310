@@ -23,15 +23,24 @@ ctest --test-dir build --output-on-failure
 
 课堂进度每两秒刷新，显示全班加入人数、当前任务已提交人数、提交总次数，以及每位学生的提交状态和次数。发布新任务后统计切换为新任务，历史任务和提交仍保存在数据文件中。学生页面会自动接收新任务。身份及各题草稿保存在此浏览器和站点地址下，刷新页面可恢复当前任务的未提交草稿。
 
-## Phase 4 独立评测执行器
+## Phase 5 独立评测与提交队列
 
-独立 Judge 使用固定的 GCC 14.3.0 容器工具链。ClassLab 通过私有 Unix socket 发起运行与评测，并保存正式提交及结果。默认不启动 Judge。配置或验证未通过时，网页禁用 Run，提交只保存源码并显示未评测。
+配置独立 Judge 后，正式提交先保存到数据文件并立即返回，随后显示等待评测、评测中及最终结果。全站同时保留最多 64 项待评测与评测中任务，按保存顺序逐项处理。队列满时仍保存源码并标记未评测，学生可以稍后重交。学生的最新状态按提交顺序计算，评测完成顺序不会改变它。自由运行继续使用自定义输入，不计入提交次数。
 
-[Phase 4 执行与部署验收](docs/PHASE_4.md) 记录运行环境要求、可信测试以及启用步骤。Codespaces 可以继续用于私有网页预览，只有满足执行器条件的云端 Linux 主机才能启用在线编译和自动判题。
+Judge 断线时保留等待项，恢复连接后继续。Web 服务重启时继续处理已保存的等待项，中断的评测记为评测服务错误，避免重复执行。教师可查看等待人数及最新结果。关闭或未配置 Judge 的普通预览仍可保存代码，显示未评测。实际启用步骤和隔离门槛见 [执行与部署验收](docs/PHASE_4.md)。
 
 ## 用 GitHub Codespaces 私有预览
 
-在 GitHub 选择要验收的分支，在该分支的 Codespace 网页终端执行同一组构建和启动命令。进入 **Ports** 面板，转发 8080 并保持 **Private**，点 **Open in Browser** 打开教师页。二维码及复制链接都使用此 HTTPS 地址。手机扫码后也需要登录有权访问该私有端口的 GitHub 账号。没有访问权限的设备无法通过二维码绕过登录。演示完成后停止 Codespace。
+在 GitHub 选择要验收的分支，在该分支的 Codespace 网页终端执行同一组构建和启动命令。进入 **Ports** 面板，转发 8080 并保持 **Private**，点 **Open in Browser** 打开教师页。二维码及复制链接都使用此 HTTPS 地址。另一台设备也需要登录有权访问该私有端口的 GitHub 账号。用 Ctrl+C 停止网站，完成后在 GitHub 停止 Codespace。Judge 的 Unix socket 只留在服务端。
+
+判断已有 Codespace 能否作为 Judge 宿主，请在其网页终端运行下列只读命令：
+
+~~~sh
+docker --host unix:///var/run/docker.sock info --format 'cgroup={{.CgroupVersion}} driver={{.CgroupDriver}} security={{json .SecurityOptions}} runsc={{json (index .Runtimes "runsc")}}'
+cat /sys/fs/cgroup/cgroup.controllers
+~~~
+
+Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续使用仅收件预览。即使输出符合预期，仍需在实际主机通过 [执行验收](docs/PHASE_4.md) 后才能启用学生执行。当前 Codex Cloud 检查结果不能用来判定你的 Codespace。
 
 二维码由浏览器使用随项目提供的 [qrcode-generator 1.4.4](https://www.npmjs.com/package/qrcode-generator/v/1.4.4) 生成，课堂链接不会发送给外部二维码服务。开源许可见 [web/vendor/qrcode.LICENSE](web/vendor/qrcode.LICENSE)。
 

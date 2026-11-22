@@ -124,6 +124,8 @@ const statusText = {
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
   pending: "评测中",
+  queued: "等待评测",
+  judge_queue_full: "未评测 · 队列已满",
   accepted: "全部通过",
   passed: "通过",
   wrong_answer: "输出不符",
@@ -275,10 +277,11 @@ function initializeTeacher() {
   function showProgress(state) {
     byId("room-name").textContent = state.name;
     byId("current-task").textContent = state.task ? "当前任务 · " + state.task.title : "尚未发布任务";
-    for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "pending", "unjudged"]) {
+    for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
-    byId("judge-state").textContent = state.executionAvailable ? "" : "隔离执行器不可用，未评测的提交不会计为未通过。";
+    byId("judge-state").textContent = state.executionAvailable ? "" :
+      (state.queued ? "评测器暂不可用，等待中的提交已保存，连接恢复后继续。" : "隔离执行器不可用，未评测的提交不会计为未通过。");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
       "最新提交通过率 " + Math.round(100 * state.accepted / judged) + "%（覆盖 " + judged + " 人）" :
@@ -442,7 +445,7 @@ function initializeStudent() {
     byId("run-state").textContent = "正在编译和运行…";
     panel.hidden = true;
     try {
-      const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 45000,
+      const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
         data: { taskId, code: editor.value, input } });
       if (taskId !== currentTask?.id) return;
       displayResult(panel, result);
@@ -469,14 +472,18 @@ function initializeStudent() {
           .map((byte) => byte.toString(16).padStart(2, "0")).join("");
         pendingSubmission = { taskId, code, requestId };
       }
-      feedback("正在保存代码并等待评测状态…", false, "submit-feedback");
-      const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers(), timeoutMs: 115000 });
+      feedback("正在保存代码…", false, "submit-feedback");
+      const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers() });
       pendingSubmission = null;
       if (taskId === currentTask?.id) {
         const message = receipt.judgement === "judge_unavailable" ?
           "代码已保存。隔离执行器不可用，本次提交未评测。" :
-          (receipt.judgement ? "代码已保存 · " + (statusText[receipt.judgement] || "状态未知") :
-            "代码已提交，教师可以看到收件状态。");
+          receipt.judgement === "queued" || receipt.judgement === "pending" ?
+            "代码已保存，评测进度见下方。" :
+          receipt.judgement === "judge_queue_full" ?
+            "代码已保存，但评测队列已满。稍后可再次提交。" :
+          receipt.judgement ? "代码已保存 · " + (statusText[receipt.judgement] || "状态未知") :
+            "代码已提交，教师可以看到收件状态。";
         feedback(message, false, "submit-feedback");
         await refresh();
       }
