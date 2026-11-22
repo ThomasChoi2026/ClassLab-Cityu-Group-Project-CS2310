@@ -191,11 +191,52 @@ Json test_cases(const Json& body) {
     return normalized;
 }
 
+Json task_pitfalls(const Json& body, const Json& task) {
+    const auto& input = body.at("pitfalls");
+    if (!input.is_array() || input.size() > 8) {
+        throw ApiError{400, "每题最多设置 8 个预期易错点。"};
+    }
+    const auto tests = judging::cases_for(task);
+    Json items = Json::array();
+    for (const auto& item : input) {
+        if (!item.is_object()) throw ApiError{400, "易错点格式无效。"};
+        const auto note = item.contains("note") ? field(item, "note", 1200, true) : "";
+        const auto needle = item.contains("needle") ? field(item, "needle", 640, true) : "";
+        const auto test = item.contains("testNumber") ? field(item, "testNumber", 2, true) : "";
+        if (!test.empty() && std::none_of(tests.begin(), tests.end(), [&](const Json& candidate) {
+            return candidate.at("id") == test;
+        })) throw ApiError{400, "易错点所关联的用例编号不存在。"};
+        if (!needle.empty() && needle.find_first_not_of(" \t\r\n") == std::string::npos) {
+            throw ApiError{400, "源码线索不能只有空白。"};
+        }
+        items.push_back({{"name", field(item, "name", 240)}, {"note", note},
+                         {"needle", needle}, {"testNumber", test}});
+    }
+    return items;
+}
+
+Json pitfall_evidence(const Json& item, std::string_view code, const Json& outcomes) {
+    const auto& needle = item.at("needle").get_ref<const std::string&>();
+    const auto outcome = std::find_if(outcomes.begin(), outcomes.end(), [&](const Json& candidate) {
+        return candidate.at("testId") == item.at("testNumber");
+    });
+    return {{"name", item.at("name")}, {"note", item.at("note")}, {"needle", needle},
+        {"sourceMatch", !needle.empty() && code.find(needle) != std::string_view::npos},
+        {"testNumber", item.at("testNumber")},
+        {"testStatus", outcome == outcomes.end() ? Json(nullptr) : outcome->at("status")}};
+}
+
 Json progress(const Json& room) {
     const auto task = active_task(room);
     const auto task_id = task.is_null() ? Json(nullptr) : task.at("id");
     Json rows = Json::array();
     Json cases = Json::array();
+    Json pitfalls = task.is_null() ? Json::array() : task.value("pitfalls", Json::array());
+    for (auto& item : pitfalls) {
+        item["sourceMatches"] = 0;
+        item["testFailures"] = 0;
+        item["testObserved"] = 0;
+    }
     std::map<std::string, Json> errors;
     std::map<std::pair<std::string, std::string>, unsigned> repeated_messages;
     review::Patterns patterns(task.is_null() ? std::string_view{} :
@@ -246,6 +287,20 @@ Json progress(const Json& room) {
             }
 
             const auto outcomes = result.value("cases", Json::array());
+            const auto& code = latest->at("code").get_ref<const std::string&>();
+            for (auto& item : pitfalls) {
+                const auto evidence = pitfall_evidence(item, code, outcomes);
+                if (evidence.at("sourceMatch") == true) {
+                    item["sourceMatches"] = item.at("sourceMatches").get<unsigned>() + 1;
+                }
+                const auto& outcome_status = evidence.at("testStatus");
+                if (outcome_status == "passed" || judging::case_failed(outcome_status)) {
+                    item["testObserved"] = item.at("testObserved").get<unsigned>() + 1;
+                }
+                if (judging::case_failed(outcome_status)) {
+                    item["testFailures"] = item.at("testFailures").get<unsigned>() + 1;
+                }
+            }
             for (auto& test : cases) {
                 const auto outcome = std::find_if(outcomes.begin(), outcomes.end(), [&](const Json& item) {
                     return item.at("testId") == test.at("id");
@@ -279,7 +334,7 @@ Json progress(const Json& room) {
     return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
             {"submitted", submitted}, {"attempts", attempts}, {"students", rows},
             {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"queued", queued}, {"unjudged", unjudged},
-            {"caseStats", cases}, {"errorGroups", groups}, {"editPatterns", patterns.summary()}};
+            {"caseStats", cases}, {"errorGroups", groups}, {"editPatterns", patterns.summary()}, {"pitfallStats", pitfalls}};
 }
 
 Json receipt_for(const Json& submission) {
@@ -472,6 +527,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                          {"description", field(body, "description", 10000)},
                          {"starterCode", field(body, "starterCode", 65536, true)}};
             if (body.contains("testCases")) task["testCases"] = test_cases(body);
+            if (body.contains("pitfalls")) task["pitfalls"] = task_pitfalls(body, task);
             room["tasks"].push_back(task);
             return task;
         }), 201);
@@ -499,8 +555,15 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 for (const auto& student : room.at("students")) {
                     if (student.at("number") != number) continue;
                     if (const auto* latest = judging::latest_for(student, task.at("id"))) {
-                        return {{"name", student.at("name")}, {"code", latest->at("code")}, {"starterCode", task.at("starterCode")},
-                                {"result", judging::result_for(*latest)}};
+                        const auto result = judging::result_for(*latest);
+                        const auto outcomes = result.value("cases", Json::array());
+                        const auto& code = latest->at("code").get_ref<const std::string&>();
+                        Json evidence = Json::array();
+                        for (const auto& item : task.value("pitfalls", Json::array())) {
+                            evidence.push_back(pitfall_evidence(item, code, outcomes));
+                        }
+                        return {{"name", student.at("name")}, {"code", code}, {"starterCode", task.at("starterCode")},
+                                {"result", result}, {"pitfallEvidence", evidence}};
                     }
                     break;
                 }

@@ -182,3 +182,8 @@ pre {
   .classroom-view { grid-template-columns: 1fr; }
   #projection-qr { max-width: min(100%, 290px); }
 }
+
+.lesson-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .5rem; }
+.case-editor select { width: 100%; min-width: 0; }
+[data-preparing] .share, [data-preparing] #toggle-classroom, [data-preparing] #classroom-progress { display: none; }
+[data-preparing] .layout { grid-template-columns: minmax(0, 1fr); }

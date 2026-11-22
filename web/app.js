@@ -194,9 +194,23 @@ function initializeNotebookImport(form) {
   let cells = [];
   let version = 0;
 
+  const selected = new Set();
+  const toggleCell = byId("toggle-prep-cell");
+  const assemble = byId("assemble-notebook");
+  const appendText = byId("append-notebook-text");
+  const selection = byId("selected-prep-cells");
+
+  function showSelection() {
+    const positions = cells.filter((_, index) => selected.has(index)).map(cell => cell.index + 1);
+    selection.textContent = positions.length ? "组合顺序：单元 " + positions.join(" → ") : "尚未选择组合依赖。";
+    assemble.disabled = !positions.length;
+  }
+
   function clear() {
     ++version;
     cells = [];
+    selected.clear();
+    showSelection();
     fields.hidden = true;
     chooser.replaceChildren();
     preview.textContent = "";
@@ -204,9 +218,14 @@ function initializeNotebookImport(form) {
   }
 
   function showCell() {
-    const code = cells[Number(chooser.value)].code;
+    const position = Number(chooser.value);
+    const { code, kind } = cells[position];
     preview.textContent = code.length > 4000 ? code.slice(0, 4000) + "\n…" : code;
-    status.textContent = "当前为预览。点击“填入起始代码”采用此单元。";
+    use.hidden = toggleCell.hidden = kind !== "code";
+    appendText.hidden = kind !== "markdown";
+    toggleCell.textContent = selected.has(position) ? "从组合移除" : "加入代码组合";
+    toggleCell.setAttribute("aria-pressed", String(selected.has(position)));
+    status.textContent = "预览不会改动编辑器。";
   }
 
   picker.addEventListener("change", async () => {
@@ -223,19 +242,20 @@ function initializeNotebookImport(form) {
       if (readVersion !== version) return;
       if (notebook?.nbformat !== 4 || !Array.isArray(notebook.cells)) throw new Error();
       cells = notebook.cells.flatMap((cell, index) => {
-        if (cell?.cell_type !== "code") return [];
+        if (!["code", "markdown"].includes(cell?.cell_type)) return [];
         const source = cell.source;
         const code = typeof source === "string" ? source :
           Array.isArray(source) && source.every((line) => typeof line === "string") ? source.join("") : null;
-        return code === null ? [] : [{ index, code }];
+        return code === null ? [] : [{ index, code, kind: cell.cell_type }];
       });
+      cells.sort((left, right) => Number(left.kind === "markdown") - Number(right.kind === "markdown"));
       if (!cells.length) {
-        status.textContent = "此 Notebook 没有可读取的代码单元。";
+        status.textContent = "此 Notebook 没有可读取的代码或 Markdown 单元。";
         return;
       }
-      const options = cells.map(({index, code}, position) => {
+      const options = cells.map(({index, code, kind}, position) => {
         const first = code.split("\n").find((line) => line.trim())?.trim().slice(0, 60) || "（空）";
-        const option = element("option", "单元 " + (index + 1) + " · " + first);
+        const option = element("option", "单元 " + (index + 1) + " · " + (kind === "code" ? "代码" : "Markdown") + " · " + first);
         option.value = position;
         return option;
       });
@@ -247,18 +267,36 @@ function initializeNotebookImport(form) {
     }
   });
 
-  function fillCell() {
-    const code = cells[Number(chooser.value)].code;
+  function fillCode(code) {
     if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
-      status.textContent = "此单元超过起始代码的长度限制，请选择较短的单元。";
+      status.textContent = "所选代码超过起始代码长度限制。";
       return;
     }
     form.elements.starterCode.value = code;
-    status.textContent = "代码已填入。可继续编辑，发布时只发送编辑器中的内容。";
+    status.textContent = "代码已填入。请补齐依赖、保留一个 main，并检查 Notebook 专用语法。";
   }
 
   chooser.addEventListener("change", showCell);
-  use.addEventListener("click", fillCell);
+  use.addEventListener("click", () => fillCode(cells[Number(chooser.value)].code));
+  toggleCell.addEventListener("click", () => {
+    const position = Number(chooser.value);
+    if (!selected.delete(position)) selected.add(position);
+    showCell();
+    showSelection();
+  });
+  assemble.addEventListener("click", () => {
+    fillCode(cells.filter((_, index) => selected.has(index)).map(cell => cell.code.trimEnd()).join("\n\n"));
+  });
+  appendText.addEventListener("click", () => {
+    const field = form.elements.description;
+    const next = [field.value, cells[Number(chooser.value)].code.trim()].filter(Boolean).join("\n\n");
+    if (next.length > field.maxLength || new TextEncoder().encode(next).length > 10000) {
+      status.textContent = "追加后说明过长，请在预览中复制需要的部分。";
+      return;
+    }
+    field.value = next;
+    status.textContent = "已追加为纯文字，可继续修改。";
+  });
   return clear;
 }
 
@@ -307,6 +345,93 @@ function renderDiff(original, code) {
   flush();
 }
 
+function initializeLessonLibrary(serialize, load) {
+  const key = "classlab.lesson-drafts.v1";
+  const picker = byId("draft-library");
+  const open = byId("load-draft");
+  const remove = byId("delete-draft");
+  const update = byId("update-draft");
+  let loaded;
+
+  function drafts() {
+    try {
+      const values = JSON.parse(localStorage.getItem(key) || "[]");
+      if (Array.isArray(values)) return values;
+    } catch {}
+    feedback("无法读取备课草稿。", true, "draft-feedback");
+    return [];
+  }
+
+  function render(id = "") {
+    const options = drafts().map(draft => {
+      const option = element("option", draft.lesson.title);
+      option.value = draft.id;
+      return option;
+    });
+    picker.replaceChildren(element("option", "选择练习"), ...options);
+    picker.firstElementChild.value = "";
+    picker.value = id;
+    if (!picker.value) picker.value = "";
+    open.disabled = remove.disabled = !picker.value;
+    update.hidden = !loaded;
+  }
+
+  function save(id) {
+    const lesson = serialize();
+    if (!lesson.title.trim()) {
+      feedback("请填写练习标题后保存。", true, "draft-feedback");
+      return;
+    }
+    const values = drafts();
+    const existing = id && values.find(draft => draft.id === id);
+    if (id && !existing) {
+      feedback("这份草稿已删除，可另存为新练习。", true, "draft-feedback");
+      return;
+    }
+    if (!existing && values.length >= 25) {
+      feedback("练习库最多保留 25 份草稿。", true, "draft-feedback");
+      return;
+    }
+    const record = existing || { id: String(Date.now()) + "-" + Math.random().toString(36).slice(2) };
+    record.lesson = lesson;
+    if (!existing) values.push(record);
+    try {
+      localStorage.setItem(key, JSON.stringify(values));
+      loaded = record.id;
+      render(loaded);
+      feedback("练习已保存到当前浏览器。", false, "draft-feedback");
+    } catch {
+      feedback("无法写入浏览器存储，编辑器内容仍可复制。", true, "draft-feedback");
+    }
+  }
+
+  picker.addEventListener("change", () => { open.disabled = remove.disabled = !picker.value; });
+  byId("save-draft").addEventListener("click", () => save());
+  update.addEventListener("click", () => save(loaded));
+  open.addEventListener("click", () => {
+    const record = drafts().find(draft => draft.id === picker.value);
+    if (!record) return render();
+    load(record.lesson);
+    loaded = record.id;
+    render(loaded);
+    feedback("练习已载入，可修改或发布。", false, "draft-feedback");
+  });
+  remove.addEventListener("click", () => {
+    if (!confirm("删除所选的本地备课草稿？")) return;
+    const id = picker.value;
+    try {
+      localStorage.setItem(key, JSON.stringify(drafts().filter(draft => draft.id !== id)));
+      if (loaded === id) loaded = undefined;
+      render();
+      feedback("草稿已删除。", false, "draft-feedback");
+    } catch {
+      feedback("无法删除草稿。", true, "draft-feedback");
+    }
+  });
+  render();
+  return () => { loaded = undefined; render(); };
+}
+
 function initializeTeacher() {
   const storageKey = "classlab.teacher";
   let credentials = JSON.parse(localStorage.getItem(storageKey) || "null");
@@ -326,6 +451,62 @@ function initializeTeacher() {
   const toggle = byId("toggle-classroom");
   const clearNotebook = initializeNotebookImport(byId("publish"));
 
+  const form = byId("publish");
+  const pitfallRows = byId("pitfall-rows");
+  const addPitfall = byId("add-pitfall");
+  const publishTask = byId("publish-task");
+
+  function prepare(enabled) {
+    byId("dashboard").toggleAttribute("data-preparing", enabled);
+    byId("dashboard").hidden = !enabled;
+    byId("setup").hidden = enabled;
+    byId("exit-preparation").hidden = !enabled;
+    publishTask.disabled = enabled;
+    if (enabled) {
+      byId("room-name").textContent = "课前备课";
+      byId("save-draft").focus();
+    } else {
+      byId("open-preparation").focus();
+    }
+  }
+
+  byId("open-preparation").addEventListener("click", () => prepare(true));
+  byId("exit-preparation").addEventListener("click", () => prepare(false));
+
+  function rowData(rows) {
+    return Array.from(rows.children, row => Object.fromEntries(
+      Array.from(row.querySelectorAll("[data-field]"), field => [field.dataset.field, field.value])
+    ));
+  }
+
+  function appendPitfall(values = {}, focus = true) {
+    if (pitfallRows.childElementCount >= 8) return;
+    const row = byId("pitfall-template").content.firstElementChild.cloneNode(true);
+    for (const field of row.querySelectorAll("[data-field]")) field.value = values[field.dataset.field] ?? "";
+    row.querySelector(".remove-pitfall").addEventListener("click", () => {
+      row.remove();
+      addPitfall.disabled = false;
+      addPitfall.focus();
+    });
+    pitfallRows.append(row);
+    addPitfall.disabled = pitfallRows.childElementCount >= 8;
+    if (focus) row.querySelector("input").focus();
+  }
+
+  addPitfall.addEventListener("click", () => appendPitfall());
+  function draftValues() {
+    return { ...Object.fromEntries(new FormData(form)), testCases: rowData(caseRows), pitfalls: rowData(pitfallRows) };
+  }
+
+  const detachDraft = initializeLessonLibrary(draftValues, lesson => {
+    for (const name of ["title", "description", "starterCode"]) form.elements[name].value = lesson[name] || "";
+    caseRows.replaceChildren();
+    pitfallRows.replaceChildren();
+    addCase.disabled = addPitfall.disabled = false;
+    for (const test of lesson.testCases || []) appendCase(test, false);
+    for (const pitfall of lesson.pitfalls || []) appendPitfall(pitfall, false);
+  });
+
   function project(enabled) {
     if (qrDialog.open) qrDialog.close();
     if (submissionDialog.open) submissionDialog.close();
@@ -337,7 +518,7 @@ function initializeTeacher() {
 
   toggle.addEventListener("click", () => project(classroom.hidden));
 
-  function appendCase(values = {}) {
+  function appendCase(values = {}, focus = true) {
     if (caseRows.childElementCount >= 12) return;
     const row = byId("case-template").content.firstElementChild.cloneNode(true);
     row.querySelector(".remove-case").addEventListener("click", () => {
@@ -350,7 +531,7 @@ function initializeTeacher() {
       if (Object.hasOwn(values, field.dataset.field)) field.value = values[field.dataset.field];
     }
     addCase.disabled = caseRows.childElementCount >= 12;
-    row.querySelector("input").focus();
+    if (focus) row.querySelector("input").focus();
   }
   addCase.addEventListener("click", () => appendCase());
   byId("demo-cases").addEventListener("click", () => {
@@ -377,6 +558,17 @@ function initializeTeacher() {
         byId("submission-title").textContent = latest.name + "的最新提交";
         renderDiff(latest.starterCode, latest.code);
         displayResult(byId("teacher-result"), latest.result, publishedCases);
+        const evidence = latest.pitfallEvidence || [];
+        byId("submission-pitfalls").hidden = !evidence.length;
+        byId("submission-pitfall-list").replaceChildren(...evidence.map(item => {
+          const row = element("li");
+          row.append(element("strong", item.name));
+          if (item.note) row.append(element("p", item.note));
+          if (item.needle) row.append(element("p", item.sourceMatch ? "发现源码线索。" : "未发现预设源码片段。"));
+          if (item.testNumber) row.append(element("p", "用例 " + item.testNumber + " · " +
+            (statusText[item.testStatus] || "无评测结果")));
+          return row;
+        }));
         if (!submissionDialog.open) submissionDialog.showModal();
       } catch (error) {
         feedback(error.message, true);
@@ -389,6 +581,17 @@ function initializeTeacher() {
 
   function renderAnalysis(state) {
     byId("case-analysis").hidden = !state.caseStats.length;
+    const pitfalls = state.pitfallStats || [];
+    byId("pitfall-analysis").hidden = !pitfalls.length;
+    byId("pitfall-results").replaceChildren(...pitfalls.map(item => {
+      const row = element("li");
+      row.append(element("strong", item.name));
+      if (item.note) row.append(element("p", item.note));
+      if (item.needle) row.append(element("p", "源码片段命中 " + item.sourceMatches + " 人"), element("code", item.needle));
+      if (item.testNumber) row.append(element("p", "用例 " + item.testNumber + " · " +
+        item.testFailures + " 人失败 / " + item.testObserved + " 人有结果"));
+      return row;
+    }));
     if (configurationTask !== state.task?.id) {
       configurationTask = state.task?.id;
       publishedCases = state.task?.testCases || [];
@@ -432,6 +635,9 @@ function initializeTeacher() {
   }
 
   function showDashboard() {
+    byId("dashboard").removeAttribute("data-preparing");
+    byId("exit-preparation").hidden = true;
+    publishTask.disabled = false;
     link.value = new URL("/join/" + credentials.id, location.origin).href;
     byId("setup").hidden = true;
     byId("dashboard").hidden = false;
@@ -479,7 +685,7 @@ function initializeTeacher() {
       "暂无已完成的评测，暂不计算通过率。";
     refreshStatus("每 2 秒更新");
     byId("empty-students").hidden = state.students.length > 0;
-    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns]);
+    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns, state.pitfallStats]);
     if (signature === analysisSignature) return;
     analysisSignature = signature;
     renderAnalysis(state);
@@ -526,15 +732,18 @@ function initializeTeacher() {
   });
 
   onSubmit("publish", async (data) => {
-    const cases = Array.from(caseRows.children, (row) => Object.fromEntries(
-      Array.from(row.querySelectorAll("[data-field]"), (field) => [field.dataset.field, field.value])
-    ));
+    if (!credentials) return;
+    const cases = rowData(caseRows);
+    const pitfalls = rowData(pitfallRows);
     if (cases.length) data.testCases = cases;
+    if (pitfalls.length) data.pitfalls = pitfalls;
     await api(endpoint("/tasks"), { data, headers: headers() });
-    byId("publish").reset();
+    form.reset();
     clearNotebook();
     caseRows.replaceChildren();
-    addCase.disabled = false;
+    pitfallRows.replaceChildren();
+    addCase.disabled = addPitfall.disabled = false;
+    detachDraft();
     feedback("任务已发布。", false, "publish-feedback");
     await refresh();
   }, "publish-feedback");

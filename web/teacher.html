@@ -19,12 +19,14 @@
         <form id="create">
           <label>课堂名称<input name="name" required maxlength="40" placeholder="例如 C++ 程序设计"></label>
           <button>创建课堂</button>
+          <button id="open-preparation" type="button" class="secondary">课前备课</button>
         </form>
       </div>
     </section>
     <section id="dashboard" hidden>
       <div class="heading section-heading classroom-heading">
         <h1 id="room-name"></h1>
+        <button id="exit-preparation" type="button" class="secondary" hidden>返回创建课堂</button>
         <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">课堂投影</button>
       </div>
       <section id="classroom-view" class="panel classroom-view" aria-label="课堂投影" hidden>
@@ -61,17 +63,35 @@
         <section class="panel">
           <h2>发布任务</h2>
           <p>发布后，学生页面会自动切换到这项任务。</p>
+          <fieldset class="case-editor">
+            <legend>备课练习库</legend>
+            <p>草稿保存在当前浏览器。载入草稿会替换当前编辑器。</p>
+            <label>已保存练习<select id="draft-library"><option value="">选择练习</option></select></label>
+            <div class="lesson-actions">
+              <button id="save-draft" type="button" class="secondary">保存新练习</button>
+              <button id="load-draft" type="button" class="secondary" disabled>载入</button>
+              <button id="update-draft" type="button" class="secondary" hidden>更新已载入练习</button>
+              <button id="delete-draft" type="button" class="secondary" disabled>删除所选练习</button>
+            </div>
+            <p id="draft-feedback" class="inline-status" role="status"></p>
+          </fieldset>
           <form id="publish">
             <label>标题<input name="title" required maxlength="53"></label>
             <label>任务说明<textarea name="description" required maxlength="3000" rows="4"></textarea></label>
             <details class="notebook-import">
               <summary>从 Notebook 导入代码</summary>
-              <p>选择的文件只在本浏览器读取。发布时只发送编辑器中的代码。</p>
+              <p>选择的文件只在本浏览器读取。可将相关代码单元按 Notebook 顺序合并，再补上 main 或整理重复定义。选中的 Markdown 可追加到题目说明。</p>
               <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
               <div id="notebook-cells" hidden>
-                <label>代码单元<select id="notebook-cell"></select></label>
+                <label>Notebook 单元<select id="notebook-cell"></select></label>
                 <pre id="notebook-preview"></pre>
-                <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
+                <div class="lesson-actions">
+                  <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
+                  <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
+                  <button type="button" class="secondary" id="append-notebook-text" hidden>追加到题目说明</button>
+                </div>
+                <p id="selected-prep-cells"></p>
+                <button type="button" class="secondary" id="assemble-notebook" disabled>将组合填入起始代码</button>
               </div>
               <p id="notebook-status" class="inline-status" role="status"></p>
             </details>
@@ -83,11 +103,17 @@
               <button id="add-case" type="button" class="secondary">添加测试用例</button>
               <button id="demo-cases" type="button" class="secondary" hidden>填入三个演示用例</button>
             </fieldset>
-            <button>发布为当前任务</button>
+            <fieldset class="case-editor">
+              <legend>预期易错点（仅教师可见）</legend>
+              <p>可附上需查找的源码片段或关联用例编号。匹配是复核线索。</p>
+              <div id="pitfall-rows"></div>
+              <button id="add-pitfall" type="button" class="secondary">添加易错点</button>
+            </fieldset>
+            <button id="publish-task">发布为当前任务</button>
             <p id="publish-feedback" role="status" class="feedback"></p>
           </form>
         </section>
-        <section class="panel">
+        <section class="panel" id="classroom-progress">
           <div class="section-heading"><h2>课堂进度</h2><span id="refresh-state" role="status">正在加载</span></div>
           <p id="current-task">正在获取当前任务…</p>
           <dl class="metrics">
@@ -118,6 +144,11 @@
               <div id="teacher-case-config"></div>
             </details>
           </section>
+          <section id="pitfall-analysis" hidden>
+            <h3>备课预期与提交反馈</h3>
+            <p>按每位学生的最新提交统计。片段或用例结果仅供核对。</p>
+            <ul id="pitfall-results" class="case-results"></ul>
+          </section>
           <section id="error-analysis">
             <h3>常见编译诊断</h3>
             <p id="no-errors">暂无可归类的编译诊断。</p>
@@ -140,6 +171,10 @@
         <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
       </div>
       <div id="teacher-result"></div>
+      <section id="submission-pitfalls" hidden>
+        <h3>对照预期易错点</h3>
+        <ul id="submission-pitfall-list" class="case-results"></ul>
+      </section>
       <h3>相对起始代码的修改</h3>
       <p id="diff-summary"></p>
       <pre id="submission-diff" aria-label="原行号、新行号、修改内容"></pre>
@@ -148,6 +183,16 @@
         <h4>学生代码</h4><pre id="submission-code"></pre>
       </details>
     </dialog>
+    <template id="pitfall-template">
+      <fieldset class="case-row">
+        <legend>预期易错点</legend>
+        <label>易错点名称<input data-field="name" maxlength="60" required></label>
+        <label>复核说明<textarea data-field="note" rows="2" maxlength="300"></textarea></label>
+        <label>源码线索（按文字查找）<input data-field="needle" maxlength="160"></label>
+        <label>关联用例编号<input data-field="testNumber" type="number" min="1" max="12"></label>
+        <button type="button" class="secondary remove-pitfall">删除易错点</button>
+      </fieldset>
+    </template>
     <template id="case-template">
       <fieldset class="case-row">
         <legend>测试用例</legend>
