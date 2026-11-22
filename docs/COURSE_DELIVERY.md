@@ -1,4 +1,4 @@
-# ClassLab course delivery
+# ClassLab development and review guide
 
 ## Project overview
 
@@ -6,7 +6,7 @@ ClassLab helps a teacher turn a C++ example from a notebook into a classroom deb
 
 ## Install and run
 
-Check out `feature/classlab-course-final`. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
+Use `feature/classlab-teaching-workflow` as the current shared development baseline. Choose `feature/classlab-classroom-analysis` to reproduce that feature stage. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
 
 ~~~sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -42,17 +42,17 @@ For an optional automated browser rehearsal, leave the demo running and use a se
 - The normal Judge uses a private Unix socket and independent containers with a pinned GCC image. The execution service requires deployment acceptance before it can run arbitrary student programs. Phase 5 exercised real GCC with a trusted-source allowlist and verified results through the browser. Full runtime isolation acceptance for arbitrary submissions, including cgroup quotas and resource-exhaustion handling, remains outstanding.
 - Demo mode records real joins, edits and submissions against a temporary store. It replays fixed results for the published synthetic exercise. It disables free-form execution and labels replay results on both sides. It works without Docker, a compiler in the browser, student credentials, or external services at runtime.
 
-## Submission and collaboration
+## Development review and collaboration
 
 | Criterion | Evidence and remaining handoff |
 | --- | --- |
-| Published | Submit the private delivery branch link and its commit. Verify that the teaching team can open it, or use a course-approved submission archive. |
-| Documented | English overview, setup, architecture, limitations and demo script are in this guide. Check the final submission portal for required file names and formats. |
+| Published | Share the private feature branch link and exact commit for review. Verify reviewer access. |
+| Documented | English overview, setup, architecture, limitations and demo script are in this guide. Keep the guide current as the workflow changes. |
 | Functional | Build and run CTest, rehearse the private demo, and distinguish the replay from the prior real GCC evidence. Keep arbitrary execution disabled until isolation acceptance. |
 | Innovative | The contribution is the lesson workflow from a notebook cell to immediate participation to class-level feedback. QR codes, compilation and test judging are established techniques. |
 | Teamwork | Assign reviewers for the Notebook workflow, privacy checks, and rehearsal. Record only actual contributions. The Phase 5 baseline's Git author labels list seven commits under Thomas CAI and one under ThomasChoi2026. This establishes commit attribution only. Record any confirmed offline work separately. |
 
-Review final changes with `git log --oneline origin/feature/classlab-phase-6..HEAD`. Record confirmed reviewer names and rehearsal responsibilities before submission.
+Start each task from the agreed baseline on a separate feature branch. Commit and push that branch, then share its GitHub compare link for review. The team decides when reviewed changes are integrated into the shared baseline. Keep the existing history and author metadata. Record only confirmed contributors and reviewers.
 
 ## 60-second English demo script
 
