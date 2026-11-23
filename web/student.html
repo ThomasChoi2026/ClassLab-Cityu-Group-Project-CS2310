@@ -36,8 +36,12 @@
             <div class="editor-field">
               <div class="section-heading">
                 <label for="student-code">你的 C++ 代码</label>
-                <button id="copy-code" type="button" class="secondary">复制代码</button>
-                <button id="open-optcpp" type="button" class="secondary">抄送至OPT_CPP</button>
+                <div class="lesson-actions">
+                  <button id="copy-code" type="button" class="secondary">复制代码</button>
+                  <button id="reset-code" type="button" class="secondary">恢复起始代码</button>
+                  <button id="download-code" type="button" class="secondary">下载 .cpp</button>
+                  <button id="open-optcpp" type="button" class="secondary">抄送至OPT_CPP</button>
+                </div>
               </div>
               <textarea id="student-code" class="editor" name="code" required rows="14" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
               <p id="editor-feedback" class="inline-status" role="status"></p>
