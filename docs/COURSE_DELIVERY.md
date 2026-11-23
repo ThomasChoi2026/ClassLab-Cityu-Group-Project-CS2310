@@ -22,6 +22,7 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 | --- | --- |
 | **恢复起始代码** (Restore starter code) | Confirm to replace the current editor contents with the teacher's starter for this task. The page also attempts to save the restored draft in this browser. |
 | **下载 .cpp** (Download .cpp) | Save the current editor contents in a local .cpp file, named from the task title. |
+| **运行代码** (Native Run-first) | Requires an available, security-accepted ClassLab Judge. Initially stdin stays hidden. The first run detects actual stdin consumption; if needed, the student enters the complete input and runs the program again from the beginning. This is not a live interactive terminal and does not count as a formal submission. |
 | **提交代码** (Submit code) | Save a formal attempt. Ctrl+Enter or Command+Enter also submits from the editor. The receipt shows the submission time in the browser's local format and the initial status. A queued or ungraded receipt does not award a score. |
 | **本题提交历史（最近 50 次）** (Current task submission history) | Expand to see your latest 50 attempts, newest first, with time, status and a score when available. The list follows the active task. The latest submission's details remain separate from the history. |
 
