@@ -798,7 +798,9 @@ function initializeStudent() {
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
-    byId("task-description").textContent = currentTask.description;
+    const taskDescription = currentTask.description || "";
+    byId("task-description").textContent = taskDescription;
+    byId("task-description").hidden = !taskDescription.trim();
     const tests = currentTask.testCases || [];
     byId("public-tests").hidden = !tests.length;
     byId("public-tests").open = false;
