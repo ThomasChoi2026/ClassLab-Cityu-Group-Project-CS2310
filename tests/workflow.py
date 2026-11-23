@@ -152,6 +152,37 @@ class ClassroomWorkflow(unittest.TestCase):
                 self.assertEqual(request(base, delete, method="DELETE", **teacher)[0], 404)
                 self.assertEqual(request(base, path, lecture, **teacher)[0], 201)
 
+    def test_optional_task_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory) / "classrooms.json"
+            with server(data) as base:
+                status, page = request(base, "/")
+                self.assertEqual(status, 200)
+                self.assertIn("任务说明（可选）", page)
+                self.assertNotIn('name="description" required', page)
+                _, room = request(base, "/api/rooms", {"name": "Optional description"})
+                root = "/api/rooms/" + room["id"]
+                teacher = {"X-Teacher-Key": room["teacherKey"]}
+                _, student = request(base, root + "/students", {"name": "Ada"})
+                student_headers = {"X-Student-Key": student["studentKey"]}
+                task = {"title": "Practice", "starterCode": "int main() { return 0; }"}
+                for description in ("", "   ", "Explain the code"):
+                    status, created = request(base, root + "/tasks",
+                                              dict(task, description=description), **teacher)
+                    self.assertEqual(status, 201)
+                    self.assertEqual(created["description"], description)
+                    self.assertEqual(request(base, root + "/task", **student_headers)[1]
+                                     ["task"]["description"], description)
+                status, created = request(base, root + "/tasks", task, **teacher)
+                self.assertEqual(status, 201)
+                self.assertEqual(created["description"], "")
+                self.assertEqual(request(base, root + "/task", **student_headers)[1]
+                                 ["task"]["description"], "")
+                self.assertEqual(request(base, root + "/tasks",
+                                         dict(task, description=None), **teacher)[0], 400)
+                self.assertEqual(request(base, root + "/tasks",
+                                         dict(task, title="", description=""), **teacher)[0], 400)
+
     def test_classroom_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:
             data = Path(directory) / "classrooms.json"
