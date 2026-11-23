@@ -59,7 +59,6 @@ def check(browser):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("server_binary")
     parser.add_argument("--browser", choices=("chromium", "firefox", "webkit"), default="chromium")
     args = parser.parse_args()
     # workflow.server expects the classlab binary from argv[1] at import time.
