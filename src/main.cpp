@@ -590,7 +590,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             auto& room = room_for(rooms, request);
             require_teacher(room, request);
             Json task = {{"id", random_id()}, {"title", field(body, "title", 160)},
-                         {"description", field(body, "description", 10000)},
+                         {"description", body.contains("description") ? field(body, "description", 10000, true) : std::string{}},
                          {"starterCode", field(body, "starterCode", 65536, true)}};
             if (body.contains("testCases")) task["testCases"] = test_cases(body);
             if (body.contains("pitfalls")) task["pitfalls"] = task_pitfalls(body, task);
