@@ -60,8 +60,8 @@
             </fieldset>
             <p id="run-state" role="status">隔离执行器不可用，暂时无法运行代码。</p>
             <section id="run-result" aria-label="自由运行结果" hidden></section>
-            <section class="optcpp-panel" aria-labelledby="optcpp-title">
-              <h3 id="optcpp-title">外部练习</h3>
+            <details id="optcpp-panel" class="optcpp-panel">
+              <summary id="optcpp-title">OPT CPP 外部练习与备用入口</summary>
               <p id="optcpp-privacy">确认后，当前代码和输入会交给外部 OPT CPP 页面，并尝试运行。链接可能留在浏览器记录中，请先移除私人数据。结果只用于练习。</p>
               <button id="open-optcpp" type="button" class="secondary" aria-describedby="optcpp-privacy">在 OPT CPP 打开并运行</button>
               <div id="optcpp-fallback" hidden>
@@ -73,6 +73,15 @@
                 </div>
               </div>
               <p id="optcpp-status" class="inline-status" role="status"></p>
+            </details>
+            <section id="embedded-optcpp" class="optcpp-embed" aria-label="嵌入式 OPT CPP 浏览器运行面板" hidden>
+              <div class="section-heading">
+                <h3>OPT CPP · 浏览器内练习</h3>
+                <button id="close-optcpp" type="button" class="secondary">关闭预览</button>
+              </div>
+              <p>这是嵌入在 ClassLab 中的第三方 OPT CPP 页面；代码和输入由该页面处理，不是 ClassLab 的隔离 Judge，也不会生成正式评分。若浏览器不允许嵌入，请使用下方的新窗口入口。</p>
+              <iframe id="optcpp-frame" title="OPT CPP C++ 执行与可视化" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads" referrerpolicy="no-referrer"></iframe>
+              <a id="optcpp-full-page" href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">在新窗口打开当前练习</a>
             </section>
             <button type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">提交代码</button>
             <small>在编辑器中按 Ctrl + Enter 或 ⌘ + Enter 也可提交。</small>
