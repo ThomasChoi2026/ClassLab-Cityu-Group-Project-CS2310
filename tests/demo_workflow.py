@@ -72,15 +72,35 @@ class ClassroomDemo(unittest.TestCase):
                                           (SUBTRACT, "wrong_answer"), ("int main() {}", "demo_no_fixture")]:
                         _, student = request(base, root + "/students", {"name": outcome})
                         headers = {"X-Student-Key": student["studentKey"]}
-                        self.assertEqual(request(base, root + "/run",
-                            {"taskId": task["id"], "input": "5 3", "code": code}, **headers)[0], 503)
+                        if demo:
+                            status, first = request(base, root + "/run",
+                                {"taskId": task["id"], "input": "", "probe": True, "code": code}, **headers)
+                            self.assertEqual(status, 200)
+                            self.assertTrue(first["demoFixture"])
+                            self.assertEqual(first["status"],
+                                "compilation_error" if code == SYNTAX else
+                                "demo_no_fixture" if code == "int main() {}" else "stdin_required")
+                            if code in (ADD, SUBTRACT):
+                                status, replay = request(base, root + "/run",
+                                    {"taskId": task["id"], "input": "2 3", "probe": False, "code": code}, **headers)
+                                self.assertEqual((status, replay["status"], replay["stdout"]),
+                                    (200, "success", "5\\n" if code == ADD else "-1\\n"))
+                                self.assertTrue(replay["demoFixture"])
+                                self.assertEqual(request(base, root + "/run",
+                                    {"taskId": task["id"], "input": "9 9", "code": code}, **headers)[1]["status"],
+                                    "demo_no_fixture")
+                            self.assertEqual(request(base, root + "/run",
+                                {"taskId": task["id"], "input": "", "probe": True, "code": code})[0], 403)
+                        else:
+                            self.assertEqual(request(base, root + "/run",
+                                {"taskId": task["id"], "input": "2 3", "code": code}, **headers)[0], 503)
                         self.assertEqual(request(base, root + "/submissions",
                             {"taskId": task["id"], "code": code}, **headers)[1]["judgement"], "queued")
                         if demo:
                             state = wait_for(lambda: request(base, root + "/task", **headers)[1],
                                 lambda item: item["latestResult"]["status"] == outcome)
                             self.assertTrue(state["latestResult"]["demoFixture"])
-                            self.assertFalse(state["executionAvailable"])
+                            self.assertTrue(state["executionAvailable"])
                             self.assertNotIn("-4 9", json.dumps(state))
                     report = request(base, root + "/progress", **teacher)[1]
                     self.assertEqual((report["submitted"], report["joined"]), (4, 4))
