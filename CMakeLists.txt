@@ -43,6 +43,8 @@ if(BUILD_TESTING)
     add_test(NAME teaching_workflow
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/teaching_workflow.py"
             $<TARGET_FILE:classlab> "${CMAKE_CXX_COMPILER}")
+    add_test(NAME student_history
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/student_history.py" $<TARGET_FILE:classlab>)
     add_test(NAME judge_protocol
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_protocol.py" $<TARGET_FILE:classlab>)
 endif()

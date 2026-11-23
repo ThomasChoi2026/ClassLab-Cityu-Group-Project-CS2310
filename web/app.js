@@ -806,6 +806,8 @@ function initializeStudent() {
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
     byId("submit").elements.runInput.value = "";
+    byId("optcpp-fallback").hidden = true;
+    byId("optcpp-status").textContent = "";
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -842,17 +844,33 @@ function initializeStudent() {
 
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
 
+  const input = byId("submit").elements.runInput;
+  const fallback = byId("optcpp-fallback");
+  const optStatus = byId("optcpp-status");
   byId("open-optcpp").addEventListener("click", () => {
-    const url =
-      "https://dive4dec.github.io/OPT_CPP/live.html#code="
-      + encodeURIComponent(editor.value)
-      + "&curInstr=0"
-      + "&mode=display"
-      + "&py=cpp"
-      + "&rawInputLstJSON=%5B%5D";
+    fallback.hidden = true;
+    optStatus.textContent = "";
+    if (!editor.reportValidity()) return;
 
+    // OPT CPP joins the raw input array with LF. One entry preserves the whole stdin.
+    const state = new URLSearchParams({
+      code: editor.value,
+      curInstr: "0",
+      mode: "display",
+      py: "cpp",
+      rawInputLstJSON: JSON.stringify(input.value === "" ? [] : [input.value])
+    });
+    const url = "https://dive4dec.github.io/OPT_CPP/visualize.html#" + state;
+    if (url.length > 8192) {
+      fallback.hidden = false;
+      optStatus.textContent = "已显示手动复制方式。";
+      return;
+    }
+    if (!window.confirm("将当前代码和标准输入交给外部 OPT CPP，并在该页面尝试运行？")) return;
     window.open(url, "_blank", "noopener,noreferrer");
   });
+  byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "当前代码已复制。"));
+  byId("copy-opt-input").addEventListener("click", () => copyText(input, "optcpp-status", "标准输入已复制。"));
 
   byId("reset-code").addEventListener("click", () => {
     if (!currentTask) {
@@ -861,8 +879,7 @@ function initializeStudent() {
     }
     if (!window.confirm("确定要放弃当前修改，并恢复教师提供的起始代码吗？")) return;
     editor.value = currentTask.starterCode || "";
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-    byId("editor-feedback").textContent = "已恢复起始代码，草稿也已更新。";
+    saveEditorDraft("已恢复起始代码，草稿也已更新。");
   });
 
   byId("download-code").addEventListener("click", () => {
@@ -893,15 +910,17 @@ function initializeStudent() {
       editor.form.requestSubmit(editor.form.querySelector("button[type=submit]"));
     }
   });
-  editor.addEventListener("input", () => {
+  function saveEditorDraft(message) {
     if (!currentTask) return;
     try {
       localStorage.setItem(draftKey(currentTask.id), editor.value);
-      byId("editor-feedback").textContent = "草稿已保存在此浏览器。";
+      byId("editor-feedback").textContent = message;
     } catch {
       byId("editor-feedback").textContent = "草稿无法保存，请在刷新前复制代码。";
     }
-  });
+  }
+
+  editor.addEventListener("input", () => saveEditorDraft("草稿已保存在此浏览器。"));
 
   byId("run-code").addEventListener("click", async () => {
     if (running || !currentTask || !editor.reportValidity()) return;
