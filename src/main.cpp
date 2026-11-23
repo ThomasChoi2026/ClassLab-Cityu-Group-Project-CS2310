@@ -1,3 +1,4 @@
+
 #include "judge_client.hpp"
 #include "edit_patterns.hpp"
 
@@ -25,7 +26,9 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
@@ -36,7 +39,7 @@ namespace {
 
 struct ApiError {
     int status;
-    const char* message;
+    std::string message;
 };
 
 std::string random_id() {
@@ -169,6 +172,62 @@ std::string require_student(const Json& room, const Request& request) {
 Json active_task(const Json& room) {
     const auto& tasks = room.at("tasks");
     return tasks.empty() ? Json(nullptr) : tasks.back();
+}
+
+struct ClassSlot {
+    std::string id, name;
+    int day; // ISO weekday: Monday = 1, Sunday = 7.
+    std::string start, end;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClassSlot, id, name, day, start, end)
+
+bool valid_time(std::string_view value) {
+    // Zero-padded 24-hour times also sort chronologically as strings.
+    if (value.size() != 5 || value[2] != ':') return false;
+    const auto digits = [](std::string_view part) {
+        return part.find_first_not_of("0123456789") == std::string_view::npos;
+    };
+    const auto hours = value.substr(0, 2);
+    const auto minutes = value.substr(3);
+    return digits(hours) && hours <= "23" && digits(minutes) && minutes <= "59";
+}
+
+ClassSlot parse_slot(const Json& body) {
+    const auto day = body.find("day");
+    if (day == body.end() || !day->is_number_integer() || *day < 1 || *day > 7) {
+        throw ApiError{400, "请选择有效的星期。"};
+    }
+    ClassSlot slot{random_id(), field(body, "name", 160), day->get<int>(),
+                   field(body, "start", 5), field(body, "end", 5)};
+    if (!valid_time(slot.start) || !valid_time(slot.end)) {
+        throw ApiError{400, "请使用 24 小时制 HH:MM 填写时间。"};
+    }
+    if (slot.start >= slot.end) throw ApiError{400, "结束时间必须晚于同一天的开始时间。"};
+    return slot;
+}
+
+bool overlaps(const ClassSlot& a, const ClassSlot& b) {
+    return a.day == b.day && a.start < b.end && b.start < a.end;
+}
+
+void add_slot(Json& room, const ClassSlot& slot) {
+    auto slots = room.value("schedule", std::vector<ClassSlot>{});
+    std::string conflicts;
+    for (const auto& existing : slots) {
+        if (overlaps(slot, existing)) {
+            conflicts += "\n" + existing.name + " · " + std::max(slot.start, existing.start) +
+                         "–" + std::min(slot.end, existing.end);
+        }
+    }
+    if (!conflicts.empty()) {
+        throw ApiError{409, "「" + slot.name + "」时间冲突，请选择其他时段。重叠的课程和时间：" + conflicts};
+    }
+    slots.push_back(slot);
+    std::sort(slots.begin(), slots.end(), [](const ClassSlot& a, const ClassSlot& b) {
+        return std::tie(a.day, a.start) < std::tie(b.day, b.start);
+    });
+    room["schedule"] = slots;
 }
 
 Json test_cases(const Json& body) {
@@ -331,7 +390,8 @@ Json progress(const Json& room) {
         if (left.at("count") != right.at("count")) return left.at("count") > right.at("count");
         return left.at("category") < right.at("category");
     });
-    return {{"name", room.at("name")}, {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
+    return {{"name", room.at("name")}, {"schedule", room.value("schedule", Json::array())},
+            {"task", task}, {"joined", rows.size()}, {"unsubmitted", rows.size() - submitted},
             {"submitted", submitted}, {"attempts", attempts}, {"students", rows},
             {"accepted", accepted}, {"failed", failed}, {"pending", pending}, {"queued", queued}, {"unjudged", unjudged},
             {"caseStats", cases}, {"errorGroups", groups}, {"editPatterns", patterns.summary()}, {"pitfallStats", pitfalls}};
@@ -424,6 +484,7 @@ private:
         if (!slot || !judge_.can_start() || stop.stop_requested()) return false;
 
         const auto request = store_.write([&](Json& rooms) -> Json {
+            if (!rooms.at(job.room).at("students").contains(job.student)) return nullptr;
             auto& saved = queued_submission(rooms, job);
             const auto& tasks = rooms.at(job.room).at("tasks");
             const auto task = std::find_if(tasks.begin(), tasks.end(), [&](const Json& candidate) {
@@ -443,7 +504,9 @@ private:
         while (!stop.stop_requested()) {
             try {
                 store_.write([&](Json& rooms) -> Json {
-                    queued_submission(rooms, job)["judgement"] = result;
+                    if (rooms.at(job.room).at("students").contains(job.student)) {
+                        queued_submission(rooms, job)["judgement"] = result;
+                    }
                     return nullptr;
                 });
                 return true;
@@ -487,12 +550,15 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     });
 
     server.Get("/", [](const Request&, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         response.set_file_content(CLASSLAB_WEB_DIR "/teacher.html", "text/html; charset=utf-8");
     });
     server.Get(R"(/join/[a-f0-9]{32})", [](const Request&, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         response.set_file_content(CLASSLAB_WEB_DIR "/student.html", "text/html; charset=utf-8");
     });
     server.Get(R"(/(app\.js|diff\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
     });
@@ -531,6 +597,29 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             room["tasks"].push_back(task);
             return task;
         }), 201);
+    });
+    server.Post(R"(/api/rooms/([a-f0-9]{32})/schedule)", [&](const Request& request, Response& response) {
+        const auto body = body_of(request);
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            const auto slot = parse_slot(body);
+            add_slot(room, slot);
+            return slot;
+        }), 201);
+    });
+    server.Delete(R"(/api/rooms/([a-f0-9]{32})/schedule/([a-f0-9]{32}))", [&](const Request& request, Response& response) {
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            auto slots = room.value("schedule", std::vector<ClassSlot>{});
+            const auto id = request.matches[2].str();
+            if (!std::erase_if(slots, [&](const ClassSlot& slot) { return slot.id == id; })) {
+                throw ApiError{404, "找不到这个时段，请刷新课表。"};
+            }
+            room["schedule"] = slots;
+            return {{"removed", true}};
+        }));
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/progress)", [&](const Request& request, Response& response) {
         auto result = store.read([&](const Json& rooms) {
@@ -576,9 +665,41 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             auto& room = room_for(rooms, request);
             const auto key = random_id();
             auto& students = room.at("students");
-            const auto number = students.size() + 1;
+            const auto number = room.value("lastStudentNumber", std::uint64_t(students.size())) + 1;
+            room["lastStudentNumber"] = number;
             students[key] = {{"number", number}, {"name", name}, {"submissions", Json::array()}};
             return {{"studentKey", key}};
+        }), 201);
+    });
+    server.Delete(R"(/api/rooms/([a-f0-9]{32})/students/([1-9][0-9]{0,15}))", [&](const Request& request, Response& response) {
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            const auto number = std::stoull(request.matches[2].str());
+            for (auto it = room.at("students").begin(); it != room.at("students").end(); ++it) {
+                if (it.value().at("number") == number) {
+                    if (!room.contains("lastStudentNumber")) {
+                        room["lastStudentNumber"] = room.at("students").size();
+                    }
+                    room.at("students").erase(it);
+                    return {{"removed", number}};
+                }
+            }
+            throw ApiError{404, "没有找到这位学生。"};
+        }));
+    });
+    server.Post(R"(/api/rooms/([a-f0-9]{32})/students/([1-9][0-9]{0,15})/praise)", [&](const Request& request, Response& response) {
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            const auto number = std::stoull(request.matches[2].str());
+            for (auto& student : room.at("students")) {
+                if (student.at("number") == number) {
+                    student["praiseSeq"] = student.value("praiseSeq", 0) + 1;
+                    return {{"praiseSeq", student.at("praiseSeq")}};
+                }
+            }
+            throw ApiError{404, "没有找到这位学生。"};
         }), 201);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/task)", [&](const Request& request, Response& response) {
@@ -595,6 +716,8 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             }
             const auto history = task.is_null() ? Json::array() : judging::history_for(student, task.at("id"));
             return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
+                    {"schedule", room.value("schedule", Json::array())},
+                    {"praiseSeq", student.value("praiseSeq", 0)},
                     {"task", judging::student_task(task)}, {"latestResult", latest_result},
                     {"submissionHistory", history}};
         });

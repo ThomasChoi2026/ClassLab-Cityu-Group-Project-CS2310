@@ -1,3 +1,4 @@
+
 :root {
   color-scheme: light;
   font-family: "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
@@ -53,6 +54,9 @@ table { width: 100%; border-collapse: collapse; text-align: left; }
 th, td { padding: .6rem .35rem; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 th { color: var(--muted); font-size: .85rem; }
 td:first-child { width: 50%; }
+.empty-row td { text-align: center; color: var(--muted); font-style: italic; padding: 1.2rem .35rem; }
+.praise-toast { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%) translateY(-16px); opacity: 0; padding: .7rem 1.4rem; border-radius: 9px; background: #fff8e6; border: 1px solid #e8c877; box-shadow: 0 4px 14px rgb(0 0 0 / .12); font-size: 1.05rem; z-index: 60; pointer-events: none; transition: opacity .3s, transform .3s; }
+.praise-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .description { white-space: pre-wrap; margin-bottom: 1rem; }
 .feedback { width: fit-content; max-width: 100%; margin-top: 1rem; padding: .6rem .9rem; border-radius: 7px; color: #084d43; background: #def4ed; }
 .feedback:empty { display: none; }
@@ -193,3 +197,13 @@ pre {
 .optcpp-panel .lesson-actions { align-items: center; }
 .optcpp-panel a { color: var(--accent); }
 #history-list { padding-inline-start: 1.5rem; }
+
+.timetable { margin-bottom: 1rem; }
+.timetable summary { cursor: pointer; font-weight: 650; }
+.timetable form { margin-block: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); align-items: end; }
+.timetable li { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.timetable li span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.timetable ul { padding: 0; }
+.timetable ul:empty { display: none; }
+#schedule-feedback { white-space: pre-line; }
+[data-preparing] #class-schedule { display: none; }

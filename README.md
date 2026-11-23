@@ -25,6 +25,12 @@ python3 demo/run.py
 
 演示中的加入、源代码和人数都是实时数据，评测使用标明的固定回放。任意新代码不会在演示中执行。普通课堂服务使用下方的启动命令，真实评测仍须通过独立 Judge 的隔离验收。
 
+### 演示每周课表与时间冲突
+
+1. 创建课堂，在教师工作台展开 **每周课表**。加入课堂的学生也可展开课表查看已保存的时段。
+2. 添加 **CS2310 Lecture**，选择星期一 **10:00–12:00**。再添加 **CS2310 Lab**，选择星期一 **11:00–13:00**。提示会列出与 Lecture 重叠的 **11:00–12:00**，并保留 Lab 的输入供修改。
+3. 将 Lab 的开始时间改为 **12:00** 再提交即可保存。课表按星期和开始时间排列。教师可移除时段，学生页面会自动更新。每个课堂独立保存一份每周重复的课表，每个时段须在同一天内结束。
+
 ### 教师如何解读反馈
 
 - 提交详情逐行对齐，保留空格、空行和末尾换行的差异，统一 CRLF/LF。大范围重写超出对齐预算时直接展示完整源码。
@@ -45,6 +51,21 @@ python3 demo/run.py
 | Teaching Workflow | 多单元备课、练习库和预期易错点反馈 | `a7dda84` |
 
 完整提交、作者及分支关系可在 [main 提交历史](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/) 或通过 `git log --graph --oneline --all` 查看。
+
+## Team Contributions
+
+The table records CS2310 team accounts and the work traceable to their original commits and pull requests.
+
+| Team Member | GitHub | Actual Contribution |
+| --- | --- | --- |
+| Thomas | [ThomasChoi2026](https://github.com/ThomasChoi2026) | Developed the classroom MVP and the Notebook lesson preparation workflow. Defined the requirements and prompts for classroom analysis and student code comparison. |
+| aries36white | [aries36white](https://github.com/aries36white) | Linked the student editor to the external OPT CPP tab. [PR #3](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/3) |
+| superlulu77 | [superlulu77](https://github.com/superlulu77) | Added starter-code reset, C++ download, and timestamped submission receipts. [PR #1](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/1) |
+| godferywong098kirito-blip | [godferywong098kirito-blip](https://github.com/godferywong098kirito-blip) | Added student submission history. [PR #2](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/2) |
+| Mizunonamae | [Mizunonamae](https://github.com/Mizunonamae) | Added teacher classroom controls, student removal and praise, and a macOS build fix. [PR #4](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/4) |
+| isferr | [isferr](https://github.com/isferr) | Added the weekly timetable and overlap detection. [PR #5](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/5) |
+
+See the [classroom MVP commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/4fb68b0921305a08e3cad88a62193acf9f17237e) and [Notebook lesson preparation commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/a7dda8450da2b95796ecc2d80550e4aaa537a7d5) for development records.
 
 ## 开发阶段验收与演示
 
