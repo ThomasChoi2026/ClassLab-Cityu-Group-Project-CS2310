@@ -830,6 +830,40 @@ function initializeStudent() {
   });
 
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
+
+  byId("reset-code").addEventListener("click", () => {
+    if (!currentTask) {
+      feedback("目前没有可恢复的任务。", true, "editor-feedback");
+      return;
+    }
+    if (!window.confirm("确定要放弃当前修改，并恢复教师提供的起始代码吗？")) return;
+    editor.value = currentTask.starterCode || "";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    byId("editor-feedback").textContent = "已恢复起始代码，草稿也已更新。";
+  });
+
+  byId("download-code").addEventListener("click", () => {
+    if (!currentTask) {
+      feedback("目前没有可下载的代码。", true, "editor-feedback");
+      return;
+    }
+    const safeName = (currentTask.title || "classlab-code")
+      .trim()
+      .replace(/[<>:"/\\|?*\\u0000-\\u001F]/g, "-")
+      .replace(/\\s+/g, "-")
+      .slice(0, 60) || "classlab-code";
+    const file = new Blob([editor.value], { type: "text/x-c++src;charset=utf-8" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = safeName + ".cpp";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    byId("editor-feedback").textContent = "C++ 代码已下载。";
+  });
+
   editor.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !event.isComposing && !event.repeat) {
       event.preventDefault();
@@ -895,7 +929,15 @@ function initializeStudent() {
             "代码已保存，但评测队列已满。稍后可再次提交。" :
           receipt.judgement ? "代码已保存 · " + (statusText[receipt.judgement] || "状态未知") :
             "代码已提交，教师可以看到收件状态。";
-        feedback(message, false, "submit-feedback");
+        const receivedAt = Number(receipt.receivedAt);
+        const submittedAt = Number.isFinite(receivedAt) && receivedAt > 0
+          ? new Date(receivedAt * 1000)
+          : new Date();
+        const submittedTime = submittedAt.toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short"
+        });
+        feedback(message + " 提交时间：" + submittedTime, false, "submit-feedback");
         await refresh();
       }
     } catch (error) {
