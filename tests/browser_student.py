@@ -41,11 +41,15 @@ def check(browser, base):
     editor = student.locator("#student-code")
     expect(editor).to_have_value(starter)
     stdin = student.locator("[name=runInput]")
+    external_input = student.locator("#optcpp-input")
     expect(student.locator("#stdin-panel")).to_be_hidden()
     expect(stdin).to_be_hidden()
+    expect(external_input).to_be_hidden()
     expect(student.locator("#run-code")).to_be_disabled()
-    student.locator("#manual-external-input").click()
-    expect(stdin).to_be_editable()
+    expect(student.locator(".editor-field #open-optcpp")).to_have_text("抄送至OPT_CPP")
+    student.locator("#optcpp-options summary").click()
+    expect(external_input).to_be_editable()
+    expect(stdin).to_be_hidden()
     assert student.evaluate("document.documentElement.scrollWidth === innerWidth")
     assert student.evaluate("""() => {
         const row = document.querySelector(".editor-field .section-heading");
@@ -54,12 +58,8 @@ def check(browser, base):
     code = "// synthetic 中文 & # + %\nint main() { return 0; }\n"
     supplied = " 5 3\n\n另一个 & # + %\n"
     editor.fill(code)
-    stdin.fill(supplied)
+    external_input.fill(supplied)
     assert not external
-    student.once("dialog", lambda dialog: dialog.dismiss())
-    student.locator("#open-optcpp").click()
-    assert not external
-    student.once("dialog", lambda dialog: dialog.accept())
     with student.expect_popup() as opened:
         student.locator("#open-optcpp").click()
     popup = opened.value
@@ -125,6 +125,6 @@ if __name__ == "__main__":
         browser = getattr(playwright, args.browser).launch(executable_path=args.executable)
         try:
             check(browser, args.url)
-            print("Student browser check passed: stdin, consent, fallback, mobile layout, download, reset and history.")
+            print("Student browser check passed: teammate OPT CPP one-click handoff, optional external stdin, fallback, mobile layout, reset and history.")
         finally:
             browser.close()

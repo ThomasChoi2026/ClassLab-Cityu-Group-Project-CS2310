@@ -28,8 +28,8 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 ### OPT CPP practice
 
-1. Enter sample stdin in **自定义标准输入（stdin）**. This field stays available when the server Judge is disabled. The field is limited to 2,700 characters and is cleared when the page reloads or the active task changes.
-2. Choose **在 OPT CPP 打开并运行** and confirm. ClassLab opens DIVE4DEC's OPT CPP visualizer in a new tab. The encoded fragment carries the current editor contents and the complete stdin text as a single entry in the JSON input array. Blank stdin uses an empty array. The visualizer can attempt to run immediately after opening.
+1. For input-based external exercises, expand **OPT CPP 标准输入（可选）** below the editor. This separate field stays optional and does not activate native Judge input. It is limited to 2,700 characters and resets on task changes.
+2. Click the original teammate-designed **抄送至OPT_CPP** button next to **复制代码**. It opens DIVE4DEC's OPT CPP visualizer in a new tab with one click. The encoded fragment carries the current editor contents and the complete stdin text as a single entry in the JSON input array. Blank stdin uses an empty array. The visualizer can attempt to run immediately after opening.
 3. Use the visualizer's step controls to inspect the trace. **Last** shows the final step and output. If the generated URL exceeds ClassLab's 8,192-character threshold, ClassLab shows **打开空白 OPT CPP** and separate copy buttons for the code and stdin. Use those controls to open a clean page and transfer the material manually.
 4. If the external page or its runtime cannot load, keep editing, download a .cpp copy, or submit to ClassLab. Submission and classroom feedback remain available without the external tool. Judge results require an independently verified server installation.
 

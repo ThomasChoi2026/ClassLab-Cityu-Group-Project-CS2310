@@ -92,13 +92,13 @@ ctest --test-dir build --output-on-failure
 
 The student editor initially hides stdin. When the isolated ClassLab Judge is available, the first **运行代码** click runs a disposable probe with a one-byte stdin file. The trusted wrapper checks whether the program **actually consumed stdin**, supporting ordinary C++ `cin`, `getline`, C `scanf` and POSIX `read(0,...)` without inspecting source text. If stdin was consumed, ClassLab shows the input box and the student clicks Run again; this performs a **fresh execution from the start** with the supplied input, not a live resumable session. If no stdin was read, the first run's output appears immediately. Compilation errors and execution-limit errors appear normally. Input is reset when the task changes.
 
-This feature does **not** enable or weaken the native Judge: without a separately configured and security-accepted Docker/gVisor worker, the native Run button stays disabled and official grading remains unavailable. OPT CPP remains only a separate, consent-based external link, not an embedded runtime. For external practice only, students may expand the optional input box manually.
+This feature does **not** enable or weaken the native Judge: without a separately configured and security-accepted Docker/gVisor worker, the native Run button stays disabled and official grading remains unavailable. OPT CPP remains a separate external link, not an embedded runtime. The teammate's original **抄送至OPT_CPP** button sits beside Copy Code for a single-click external tab. An optional collapsed OPT CPP input field is independent from native Judge stdin.
 
 The new trusted-fixture test `tests/stdin_probe.py` runs only hard-coded C++20 programs on the host. It does not certify untrusted-code isolation, which still requires the checks in `docs/PHASE_4.md`.
 
 ## Student editor and external practice
 
-Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The optional OPT CPP link opens a separate visualizer with the code and stdin after confirmation. It is available even when the ClassLab Judge is disabled.
+Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The original **抄送至OPT_CPP** control opens the external visualizer in one click with the current code and optional external-practice stdin. It is available even when the ClassLab Judge is disabled.
 
 See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
 
