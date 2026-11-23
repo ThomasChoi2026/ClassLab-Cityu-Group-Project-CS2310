@@ -876,6 +876,7 @@ function initializeStudent() {
   let resultSignature;
   let pendingSubmission;
   let running = false;
+  let executionAvailable = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -906,10 +907,13 @@ function initializeStudent() {
     }
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
-    byId("run-controls").disabled = !state.executionAvailable || running;
+    executionAvailable = !state.demo && Boolean(state.executionAvailable);
+    byId("run-controls").disabled = !state.task || running;
+    byId("run-code").textContent = executionAvailable ? "运行代码" : "在页面内运行（OPT CPP）";
     const runStatus = byId("run-state");
-    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : (state.executionAvailable ?
-      "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
+    const runMessage = running ? "正在编译和运行…" : executionAvailable ?
+      "ClassLab 正在使用已验收的独立 Judge，自定义输入不计入正式提交。" :
+      "ClassLab 隔离执行器尚未启用；可在确认后通过嵌入式 OPT CPP 练习。此路径不属于正式评测。";
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
     const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
@@ -924,6 +928,7 @@ function initializeStudent() {
     byId("submit").elements.runInput.value = "";
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
+    hideEmbeddedOptcpp();
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -967,7 +972,16 @@ function initializeStudent() {
   const input = byId("submit").elements.runInput;
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
-  byId("open-optcpp").addEventListener("click", () => {
+  const embeddedOptcpp = byId("embedded-optcpp");
+  const optcppFrame = byId("optcpp-frame");
+  function hideEmbeddedOptcpp() {
+    if (!embeddedOptcpp.hidden) {
+      embeddedOptcpp.hidden = true;
+      optcppFrame.removeAttribute("src");
+    }
+  }
+  byId("close-optcpp").addEventListener("click", () => hideEmbeddedOptcpp());
+  function openOptcpp(embedded = false) {
     fallback.hidden = true;
     optStatus.textContent = "";
     if (!editor.reportValidity()) return;
@@ -983,12 +997,21 @@ function initializeStudent() {
     const url = "https://dive4dec.github.io/OPT_CPP/visualize.html#" + state;
     if (url.length > 8192) {
       fallback.hidden = false;
-      optStatus.textContent = "已显示手动复制方式。";
+      byId("optcpp-panel").open = true;
+      optStatus.textContent = "代码或输入超出外部链接长度限制。请复制内容并使用空白 OPT CPP。";
       return;
     }
-    if (!window.confirm("将当前代码和标准输入交给外部 OPT CPP，并在该页面尝试运行？")) return;
-    window.open(url, "_blank", "noopener,noreferrer");
-  });
+    if (!window.confirm("是否允许外部 OPT CPP 读取当前代码和标准输入？它将作为第三方工具运行，结果不会进入 ClassLab 正式评分。")) return;
+    if (embedded) {
+      byId("optcpp-full-page").href = url;
+      optcppFrame.src = url;
+      embeddedOptcpp.hidden = false;
+      embeddedOptcpp.scrollIntoView({ block: "nearest" });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+  byId("open-optcpp").addEventListener("click", () => openOptcpp(false));
   byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "当前代码已复制。"));
   byId("copy-opt-input").addEventListener("click", () => copyText(input, "optcpp-status", "标准输入已复制。"));
 
@@ -999,6 +1022,7 @@ function initializeStudent() {
     }
     if (!window.confirm("确定要放弃当前修改，并恢复教师提供的起始代码吗？")) return;
     editor.value = currentTask.starterCode || "";
+    hideEmbeddedOptcpp();
     saveEditorDraft("已恢复起始代码，草稿也已更新。");
   });
 
@@ -1040,10 +1064,18 @@ function initializeStudent() {
     }
   }
 
-  editor.addEventListener("input", () => saveEditorDraft("草稿已保存在此浏览器。"));
+  editor.addEventListener("input", () => {
+    hideEmbeddedOptcpp();
+    saveEditorDraft("草稿已保存在此浏览器。");
+  });
+  input.addEventListener("input", hideEmbeddedOptcpp);
 
   byId("run-code").addEventListener("click", async () => {
     if (running || !currentTask || !editor.reportValidity()) return;
+    if (!executionAvailable) {
+      openOptcpp(true);
+      return;
+    }
     const taskId = currentTask.id;
     const panel = byId("run-result");
     const input = byId("submit").elements.runInput.value;
