@@ -46,6 +46,16 @@ python3 demo/run.py
 
 完整提交、作者及分支关系可在 [main 提交历史](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/) 或通过 `git log --graph --oneline --all` 查看。
 
+## Team Contributions
+
+This table lists confirmed CS2310 team members and their documented work. The roster is being verified.
+
+| Team Member | GitHub | Actual Contribution |
+| --- | --- | --- |
+| Thomas Choi | [ThomasChoi2026](https://github.com/ThomasChoi2026) | Developed the classroom MVP and the Notebook lesson preparation workflow. Defined the requirements and prompts for classroom analysis and student code comparison. |
+
+See the [classroom MVP commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/4fb68b0921305a08e3cad88a62193acf9f17237e) and [Notebook lesson preparation commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/a7dda84) for development records.
+
 ## 开发阶段验收与演示
 
 GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。课堂分析阶段在 WSL 完成构建和测试。课堂演示可直接使用本机浏览器，也可使用已有的临时私有预览。
