@@ -38,8 +38,9 @@ def rehearse(browser, base):
     expect(starter).to_have_value(original)
     teacher.locator("[name=title]").fill("Fix addition")
     teacher.locator("[name=description]").fill("Return the sum.")
+    teacher.locator("#teacher-optional-settings").evaluate("(element) => element.open = true")
     teacher.locator("#demo-cases").click()
-    teacher.locator("#publish button:not([type])").click()
+    teacher.locator("#publish-task").click()
     expect(teacher.locator("#current-task")).to_contain_text("Fix addition")
 
     for index, change in enumerate((False, True, True), 1):
