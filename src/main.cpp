@@ -1,3 +1,4 @@
+
 #include "judge_client.hpp"
 #include "edit_patterns.hpp"
 
@@ -487,12 +488,15 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     });
 
     server.Get("/", [](const Request&, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         response.set_file_content(CLASSLAB_WEB_DIR "/teacher.html", "text/html; charset=utf-8");
     });
     server.Get(R"(/join/[a-f0-9]{32})", [](const Request&, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         response.set_file_content(CLASSLAB_WEB_DIR "/student.html", "text/html; charset=utf-8");
     });
     server.Get(R"(/(app\.js|diff\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
+        response.set_header("Cache-Control", "no-store");
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
     });
@@ -581,6 +585,34 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             return {{"studentKey", key}};
         }), 201);
     });
+    server.Delete(R"(/api/rooms/([a-f0-9]{32})/students/([1-9][0-9]{0,15}))", [&](const Request& request, Response& response) {
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            const auto number = std::stoull(request.matches[2].str());
+            for (auto it = room.at("students").begin(); it != room.at("students").end(); ++it) {
+                if (it.value().at("number") == number) {
+                    room.at("students").erase(it);
+                    return {{"removed", number}};
+                }
+            }
+            throw ApiError{404, "没有找到这位学生。"};
+        }));
+    });
+    server.Post(R"(/api/rooms/([a-f0-9]{32})/students/([1-9][0-9]{0,15})/praise)", [&](const Request& request, Response& response) {
+        reply(response, store.write([&](Json& rooms) -> Json {
+            auto& room = room_for(rooms, request);
+            require_teacher(room, request);
+            const auto number = std::stoull(request.matches[2].str());
+            for (auto& student : room.at("students")) {
+                if (student.at("number") == number) {
+                    student["praiseSeq"] = student.value("praiseSeq", 0) + 1;
+                    return {{"praiseSeq", student.at("praiseSeq")}};
+                }
+            }
+            throw ApiError{404, "没有找到这位学生。"};
+        }), 201);
+    });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/task)", [&](const Request& request, Response& response) {
         auto result = store.read([&](const Json& rooms) -> Json {
             const auto& room = room_for(rooms, request);
@@ -594,6 +626,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 }
             }
             return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
+                    {"praiseSeq", student.value("praiseSeq", 0)},
                     {"task", judging::student_task(task)}, {"latestResult", latest_result}};
         });
         result["demo"] = judge.demo();
