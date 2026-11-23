@@ -50,4 +50,6 @@ if(BUILD_TESTING)
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/student_history.py" $<TARGET_FILE:classlab>)
     add_test(NAME judge_protocol
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_protocol.py" $<TARGET_FILE:classlab>)
+    add_test(NAME native_stdin_probe
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/stdin_probe.py" "${CMAKE_CXX_COMPILER}")
 endif()

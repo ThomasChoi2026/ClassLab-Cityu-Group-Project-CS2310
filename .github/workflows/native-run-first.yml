@@ -1,0 +1,40 @@
+name: ClassLab native Run-first verification
+
+on:
+  push:
+    branches:
+      - feature/native-judge-run-first-stdin-20261124
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build C++20 server
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+      - name: Full native CTest regression
+        run: ctest --test-dir build --output-on-failure
+      - name: Install browser-test dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install playwright
+          .venv/bin/python -m playwright install --with-deps chromium
+      - name: Browser regression with unavailable Judge
+        run: |
+          CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=18080 CLASSLAB_DATA="$RUNNER_TEMP/classlab-browser.json" ./build/classlab >"$RUNNER_TEMP/classlab-server.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:18080/api/health >/dev/null 2>&1; then break; fi
+            sleep 0.25
+          done
+          .venv/bin/python tests/browser_student.py http://127.0.0.1:18080
+      - name: Native Judge Run-first browser flow (mock Unix socket)
+        run: .venv/bin/python tests/browser_run_first.py ./build/classlab

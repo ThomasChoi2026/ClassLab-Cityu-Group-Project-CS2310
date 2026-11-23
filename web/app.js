@@ -876,6 +876,8 @@ function initializeStudent() {
   let resultSignature;
   let pendingSubmission;
   let running = false;
+  let stdinPending = null;
+  let manualStdinOpen = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -908,8 +910,9 @@ function initializeStudent() {
     byId("assignment").hidden = !state.task;
     byId("run-controls").disabled = !state.executionAvailable || running;
     const runStatus = byId("run-state");
-    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : (state.executionAvailable ?
-      "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
+    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : stdinPending ?
+      "程序已请求标准输入。填写后再次点击运行，将从头执行程序。" : (state.executionAvailable ?
+      "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
     const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
@@ -921,7 +924,7 @@ function initializeStudent() {
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
-    byId("submit").elements.runInput.value = "";
+    clearStdinPrompt(true);
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
@@ -965,8 +968,21 @@ function initializeStudent() {
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
 
   const input = byId("submit").elements.runInput;
+  function clearStdinPrompt(clearInput = false) {
+    const wasWaitingForInput = stdinPending !== null;
+    stdinPending = null;
+    if (clearInput) manualStdinOpen = false;
+    byId("stdin-panel").hidden = !manualStdinOpen;
+    if (clearInput || wasWaitingForInput) input.value = "";
+    byId("run-code").textContent = "运行代码";
+  }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
+  byId("manual-external-input").addEventListener("click", () => {
+    manualStdinOpen = true;
+    byId("stdin-panel").hidden = false;
+    input.focus();
+  });
   byId("open-optcpp").addEventListener("click", () => {
     fallback.hidden = true;
     optStatus.textContent = "";
@@ -1040,21 +1056,37 @@ function initializeStudent() {
     }
   }
 
-  editor.addEventListener("input", () => saveEditorDraft("草稿已保存在此浏览器。"));
+  editor.addEventListener("input", () => {
+    clearStdinPrompt();
+    saveEditorDraft("草稿已保存在此浏览器。");
+  });
 
   byId("run-code").addEventListener("click", async () => {
     if (running || !currentTask || !editor.reportValidity()) return;
     const taskId = currentTask.id;
     const panel = byId("run-result");
-    const input = byId("submit").elements.runInput.value;
+    const provideInput = stdinPending?.taskId === taskId && stdinPending.code === editor.value;
+    const runInput = provideInput ? input.value : "";
     running = true;
     byId("run-controls").disabled = true;
     byId("run-state").textContent = "正在编译和运行…";
     panel.hidden = true;
     try {
       const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
-        data: { taskId, code: editor.value, input } });
+        data: { taskId, code: editor.value, input: runInput, probe: !provideInput } });
       if (taskId !== currentTask?.id) return;
+      if (result.status === "stdin_required") {
+        stdinPending = { taskId, code: editor.value };
+        byId("stdin-panel").hidden = false;
+        byId("run-code").textContent = "提供输入并重新运行";
+        panel.replaceChildren(element("p", "程序实际读取了标准输入，请提供输入后重新运行。"));
+        if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
+        if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
+        panel.hidden = false;
+        input.focus();
+        return;
+      }
+      clearStdinPrompt();
       displayResult(panel, result);
       if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
       if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || "（空）"));

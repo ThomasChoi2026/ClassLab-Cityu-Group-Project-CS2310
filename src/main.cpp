@@ -727,6 +727,10 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
+        if (body.contains("probe") && !body.at("probe").is_boolean()) {
+            throw ApiError{400, "输入检测参数必须是布尔值。"};
+        }
+        const bool probe = body.value("probe", false);
         store.read([&](const Json& rooms) -> Json {
             const auto& room = room_for(rooms, request);
             require_student(room, request);
@@ -735,7 +739,10 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 throw ApiError{409, "教师已更新任务，请刷新后再运行。"};
             }
             field(body, "code", 65536);
-            field(body, "input", 8192, true);
+            const auto input_text = field(body, "input", 8192, true);
+            if (probe && !input_text.empty()) {
+                throw ApiError{400, "输入检测不能同时提供标准输入。"};
+            }
             return nullptr;
         });
         if (judge.demo()) {
@@ -754,7 +761,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             return !queue_state(rooms).submission.empty();
         });
         if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
-        reply(response, judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>()));
+        reply(response, judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe));
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);

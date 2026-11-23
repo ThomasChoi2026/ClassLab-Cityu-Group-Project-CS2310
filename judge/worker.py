@@ -43,6 +43,33 @@ printf "CLASSLAB_BOOTSTRAP_V1\\n" >&2
 exec /work/program
 """
 
+# The first Run uses a disposable one-byte stdin file to detect an actual read.
+# A duplicated fd in the trusted wrapper retains the file offset after the
+# untrusted program exits. Unlike scanning source for cin, this also detects
+# scanf, getchar, getline, and ordinary read(0, ...). The first run is discarded
+# when stdin was consumed, then the browser can supply input for a fresh run.
+# The same isolated Docker/gVisor runtime and limits are used on both runs.
+STDIN_PROBE_MARKER = b"CLASSLAB_STDIN_CONSUMED_V1\n"
+STDIN_PROBE_EXIT = 97
+EXECUTE_PROBE = """set -eu
+IFS= read -r binary
+printf '%s' "$binary" | base64 -d > /work/program
+chmod 500 /work/program
+printf '\\n' > /work/probe-input
+exec 3</work/probe-input
+printf "CLASSLAB_BOOTSTRAP_V1\\n" >&2
+set +e
+/work/program 0<&3 3<&-
+exit_code=$?
+set -e
+position=$(awk '$1 == "pos:" {print $2}' /proc/self/fdinfo/3)
+if [ "$position" -gt 0 ]; then
+    printf "CLASSLAB_STDIN_CONSUMED_V1\\n" >&2
+    exit 97
+fi
+exit "$exit_code"
+"""
+
 BOUNDARY_PROBE = """set -eu
 test "$(id -u)" = 65534
 grep -q 'CapEff:[[:space:]]*0000000000000000' /proc/self/status
@@ -199,10 +226,18 @@ def compile_source(code):
     return None, binary
 
 
-def run_case(binary, input_text):
-    failure, exit_code, streams = sandbox(EXECUTE, binary + b"\n" + input_text.encode(), 3, OUTPUT, expect_ready=True)
+def run_case(binary, input_text, *, probe=False):
+    if probe and input_text:
+        return {"status": "judge_error"}
+    script = EXECUTE_PROBE if probe else EXECUTE
+    payload = binary + b"\n" + (b"" if probe else input_text.encode())
+    failure, exit_code, streams = sandbox(script, payload, 3, OUTPUT, expect_ready=True)
     if failure == "judge_error":
         return {"status": failure}
+    if (probe and failure is None and exit_code == STDIN_PROBE_EXIT
+            and streams["stderr"].endswith(STDIN_PROBE_MARKER)):
+        return {"status": "stdin_required", "stdoutHex": streams["stdout"].hex(),
+                "stderr": text(streams["stderr"][:-len(STDIN_PROBE_MARKER)])}
     status = failure or ("success" if exit_code == 0 else "runtime_error")
     result = {"status": status, "stdoutHex": streams["stdout"].hex(), "stderr": text(streams["stderr"])}
     if exit_code is not None:
@@ -219,9 +254,12 @@ def evaluate(code, inputs, mode):
     for item in inputs:
         if time.monotonic() >= job_deadline:
             return {"status": "judge_error"}
-        result = run_case(binary, item)
+        result = run_case(binary, item, probe=(mode == "probe"))
         if result["status"] == "judge_error":
             return {"status": "judge_error"}
+        if mode == "probe" and result["status"] == "stdin_required":
+            return {"status": "stdin_required", "stdoutHex": result["stdoutHex"],
+                    "stderr": result["stderr"]}
         if mode == "grade":
             result.pop("stderr", None)
         outcomes.append(result)
@@ -327,9 +365,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 raise ValueError("invalid request size")
             payload = json.loads(self.rfile.read(size))
             code, inputs, mode = payload["code"], payload["inputs"], payload["mode"]
-            if (payload["version"] != 1 or mode not in ("run", "grade") or not isinstance(code, str) or not 0 < len(code.encode()) <= 65536
+            if (payload["version"] != 1 or mode not in ("run", "grade", "probe") or not isinstance(code, str) or not 0 < len(code.encode()) <= 65536
                     or not isinstance(inputs, list) or not 1 <= len(inputs) <= 12
-                    or (mode == "run" and len(inputs) != 1)
+                    or (mode in ("run", "probe") and len(inputs) != 1)
+                    or (mode == "probe" and inputs != [""])
                     or not all(isinstance(item, str) and len(item.encode()) <= 8192 for item in inputs)):
                 raise ValueError("invalid payload")
         except (ValueError, KeyError, TypeError):

@@ -54,6 +54,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         assert set(packet) == {"version", "code", "inputs", "mode"}
         assert packet["version"] == 1
         code = packet["code"]
+        if packet["mode"] == "probe":
+            assert packet["inputs"] == [""]
+            if code == "READS_INPUT":
+                self.reply({"status": "stdin_required",
+                            "stdoutHex": b"Enter a value: ".hex(), "stderr": ""})
+                return
+            if code == "NO_STDIN":
+                self.reply({"status": "success",
+                            "cases": [{"status": "success", "stdoutHex": b"Hello\n".hex(),
+                                       "exitCode": 0, "stderr": ""}]})
+                return
         if packet["mode"] == "grade":
             self.server.evaluated.append(code)
         if code == "HOLD":
@@ -95,6 +106,38 @@ def mock(path):
 
 
 class JudgeProtocol(unittest.TestCase):
+    def test_native_run_first_requires_input_only_after_actual_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            socket = Path(directory) / "judge.sock"
+            with mock(socket), server(Path(directory) / "state.json", socket) as base:
+                _, room = request(base, "/api/rooms", {"name": "Run-first"})
+                root = "/api/rooms/" + room["id"]
+                teacher = {"X-Teacher-Key": room["teacherKey"]}
+                _, task = request(base, root + "/tasks",
+                                  {"title": "Practice", "description": "",
+                                   "starterCode": "int main(){}"}, **teacher)
+                _, student = request(base, root + "/students", {"name": "Ada"})
+                key = {"X-Student-Key": student["studentKey"]}
+                def run(code, input_text="", probe=False, **headers):
+                    return request(base, root + "/run",
+                                   {"taskId": task["id"], "code": code,
+                                    "input": input_text, "probe": probe}, **headers)
+                status, result = run("READS_INPUT", probe=True, **key)
+                self.assertEqual(status, 200)
+                self.assertEqual(result, {"status": "stdin_required",
+                                          "stdout": "Enter a value: ", "stderr": ""})
+                status, result = run("NO_STDIN", probe=True, **key)
+                self.assertEqual(status, 200)
+                self.assertEqual(result["status"], "success")
+                status, result = run("CORRECT", "5 3", probe=False, **key)
+                self.assertEqual(status, 200)
+                self.assertEqual(result["stdout"], "8\r\n")
+                self.assertEqual(run("READS_INPUT", "5 3", probe=True, **key)[0], 400)
+                self.assertEqual(run("READS_INPUT", probe=True)[0], 403)
+                self.assertEqual(request(base, root + "/run",
+                                  {"taskId": task["id"], "code": "READS_INPUT",
+                                   "input": "", "probe": "yes"}, **key)[0], 400)
+
     def test_mock_full_flow(self):
         with tempfile.TemporaryDirectory() as directory:
             socket = Path(directory) / "judge.sock"
