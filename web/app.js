@@ -1,3 +1,4 @@
+
 "use strict";
 
 const byId = (id) => document.getElementById(id);
@@ -10,14 +11,14 @@ class RequestError extends Error {
   }
 }
 
-async function api(path, { data, headers = {}, timeoutMs = 8000 } = {}) {
+async function api(path, { data, headers = {}, method, timeoutMs = 8000 } = {}) {
   let response;
   let result;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const { signal } = controller;
   try {
-    response = await fetch("/api" + path, data === undefined ? { headers, signal } : {
+    response = await fetch("/api" + path, data === undefined ? { headers, signal, method } : {
       signal,
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
@@ -388,6 +389,10 @@ function initializeLessonLibrary(serialize, load) {
       feedback("这份草稿已删除，可另存为新练习。", true, "draft-feedback");
       return;
     }
+    if (!existing && values.some(draft => draft.lesson.title.trim().toLowerCase() === lesson.title.trim().toLowerCase())) {
+      feedback("已有同名练习，请更改名称后保存。", true, "draft-feedback");
+      return;
+    }
     if (!existing && values.length >= 25) {
       feedback("练习库最多保留 25 份草稿。", true, "draft-feedback");
       return;
@@ -473,6 +478,18 @@ function initializeTeacher() {
   byId("open-preparation").addEventListener("click", () => prepare(true));
   byId("exit-preparation").addEventListener("click", () => prepare(false));
 
+  byId("new-classroom").addEventListener("click", () => {
+    if (credentials && !confirm("将离开当前课堂，并清除本浏览器保存的教师访问密钥（不可恢复）。确定创建新课堂？")) return;
+    localStorage.removeItem(storageKey);
+    credentials = null;
+    byId("setup").hidden = false;
+    if (qrDialog.open) qrDialog.close();
+    if (submissionDialog.open) submissionDialog.close();
+    project(false);
+    byId("dashboard").hidden = true;
+    byId("create").reset();
+  });
+
   function rowData(rows) {
     return Array.from(rows.children, row => Object.fromEntries(
       Array.from(row.querySelectorAll("[data-field]"), field => [field.dataset.field, field.value])
@@ -544,6 +561,25 @@ function initializeTeacher() {
     ]) appendCase({name, input, expectedOutput, visibility});
     feedback("已填入三个演示用例。", false, "publish-feedback");
   });
+
+  async function praiseStudent(name, number) {
+    try {
+      await api(endpoint("/students/" + number + "/praise"), { method: "POST", headers: headers() });
+      feedback("已嘉奖 " + name + "，其学生页面会收到提醒。");
+    } catch (error) {
+      feedback(error.message, true);
+    }
+  }
+
+  async function removeStudent(student) {
+    if (!confirm("将 " + student.name + " 移出课堂？其提交记录会一并删除且不可恢复。")) return;
+    try {
+      await api(endpoint("/students/" + student.number), { method: "DELETE", headers: headers() });
+      await refresh();
+    } catch (error) {
+      feedback(error.message, true);
+    }
+  }
 
   function detailButton(number, taskId) {
     const button = element("button", "查看提交");
@@ -700,8 +736,26 @@ function initializeTeacher() {
       row.insertCell().textContent = student.count;
       const detail = row.insertCell();
       if (student.count) detail.append(detailButton(student.number, state.task.id));
+      const actions = row.insertCell();
+      const praise = element("button", "嘉奖");
+      praise.type = "button";
+      praise.className = "secondary";
+      praise.addEventListener("click", () => praiseStudent(student.name, student.number));
+      const remove = element("button", "移出");
+      remove.type = "button";
+      remove.className = "secondary";
+      remove.addEventListener("click", () => removeStudent(student));
+      actions.append(praise, remove);
       return row;
     });
+    if (!rows.length) {
+      const empty = document.createElement("tr");
+      empty.classList.add("empty-row");
+      const cell = empty.insertCell();
+      cell.colSpan = 5;
+      cell.textContent = "当前暂时无学生加入";
+      rows.push(empty);
+    }
     byId("students").replaceChildren(...rows);
   }
 
@@ -766,6 +820,8 @@ function initializeStudent() {
   let pendingSubmission;
   let running = false;
   const editor = byId("submit").elements.code;
+  let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
+  let praiseTimer;
   const endpoint = (suffix) => "/rooms/" + room + suffix;
   const headers = () => ({ "X-Student-Key": key });
   const draftKey = (id) => storageKey + ".draft." + id;
@@ -778,6 +834,17 @@ function initializeStudent() {
     feedback("");
     byId("room-name").textContent = state.roomName;
     byId("student-name").textContent = state.studentName;
+    const praiseSeq = Number(state.praiseSeq || 0);
+    if (praiseSeq > praiseSeqSeen) {
+      praiseSeqSeen = praiseSeq;
+      localStorage.setItem(storageKey + ".praiseSeq", String(praiseSeq));
+      const toast = byId("praise-toast");
+      toast.classList.remove("show");
+      void toast.offsetWidth;
+      toast.classList.add("show");
+      clearTimeout(praiseTimer);
+      praiseTimer = setTimeout(() => toast.classList.remove("show"), 4000);
+    }
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
     byId("run-controls").disabled = !state.executionAvailable || running;
