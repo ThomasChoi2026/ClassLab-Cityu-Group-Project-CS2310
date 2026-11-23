@@ -48,4 +48,11 @@ jobs:
           done
           curl -fsS http://127.0.0.1:18082/demo-lecture.ipynb >"$RUNNER_TEMP/lecture.ipynb"
           .venv/bin/python -m json.tool "$RUNNER_TEMP/lecture.ipynb" >/dev/null
-          .venv/bin/python tests/browser_demo.py http://127.0.0.1:18082
+          .venv/bin/python tests/browser_demo.py http://127.0.0.1:18082 --evidence-dir demo-evidence
+      - name: Upload verified browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: classlab-demo-evidence
+          path: demo-evidence/*.png
+          if-no-files-found: warn
