@@ -51,9 +51,12 @@
               <textarea id="student-code" class="editor" name="code" required rows="14" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
               <p id="editor-feedback" class="inline-status" role="status"></p>
             </div>
-            <label>自定义标准输入（stdin）
-              <textarea name="runInput" rows="3" maxlength="2700" spellcheck="false"></textarea>
-            </label>
+            <div id="stdin-panel" hidden>
+              <label for="run-stdin">程序正在读取标准输入（stdin）
+                <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false" placeholder="在这里输入程序需要的数据，例如 5 3"></textarea>
+              </label>
+              <p id="stdin-hint" class="inline-status">填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。</p>
+            </div>
             <fieldset id="run-controls" class="run-controls" disabled aria-describedby="run-state">
               <legend>ClassLab 自由运行</legend>
               <button id="run-code" type="button" class="secondary">运行代码</button>
