@@ -58,9 +58,19 @@ public:
 
     std::unique_lock<std::mutex> reserve() { return std::unique_lock(slot_, std::try_to_lock); }
 
-    Json run(const std::string& code, const std::string& input) const {
-        const auto reply = request(code, Json::array({input}), "run");
+    Json run(const std::string& code, const std::string& input, bool probe = false) const {
+        const auto reply = request(code, Json::array({probe ? std::string{} : input}),
+                                   probe ? "probe" : "run");
         const auto status = reply.value("status", "");
+        if (probe && status == "stdin_required") {
+            try {
+                return {{"status", "stdin_required"},
+                        {"stdout", public_text(decode_output(reply.at("stdoutHex").get<std::string>()))},
+                        {"stderr", limited_text(reply, "stderr", 16384)}};
+            } catch (const std::exception&) {
+                return judge_error();
+            }
+        }
         if (status != "success") return failure(reply);
         try {
             if (!reply.at("cases").is_array() || reply.at("cases").size() != 1) return judge_error();
