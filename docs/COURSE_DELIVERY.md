@@ -27,10 +27,10 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 ### OPT CPP practice
 
-1. Enter sample stdin in **自定义标准输入（stdin）** (maximum 2,700 characters). If a verified ClassLab Judge is available, **运行代码** uses its isolated internal `/run` route, displaying stdout, stderr and diagnostics inside ClassLab.
-2. If no Judge is available, the primary button becomes **在页面内运行（OPT CPP）** instead of remaining disabled. After explicit consent, it embeds an external OPT CPP visualizer in the student page. Code and stdin travel via the URL fragment, and the external visualizer can run or step through the program inside the frame. This path does not constitute ClassLab grading.
-3. If the iframe is blocked by browser privacy settings or upstream runtime issues, use **在新窗口打开当前练习** or expand **OPT CPP 外部练习与备用入口** and click **在 OPT CPP 打开并运行**. Editing the code or stdin closes the old embedded result to avoid stale output.
-4. If the transfer URL exceeds 8,192 characters, ClassLab expands the manual fallback and does not transfer the code. Use **打开空白 OPT CPP** and copy buttons. Student submission, history and download continue to work independently of the external tool.
+1. Enter sample stdin in **自定义标准输入（stdin）**. This field stays available when the server Judge is disabled. The field is limited to 2,700 characters and is cleared when the page reloads or the active task changes.
+2. Choose **在 OPT CPP 打开并运行** and confirm. ClassLab opens DIVE4DEC's OPT CPP visualizer in a new tab. The encoded fragment carries the current editor contents and the complete stdin text as a single entry in the JSON input array. Blank stdin uses an empty array. The visualizer can attempt to run immediately after opening.
+3. Use the visualizer's step controls to inspect the trace. **Last** shows the final step and output. If the generated URL exceeds ClassLab's 8,192-character threshold, ClassLab shows **打开空白 OPT CPP** and separate copy buttons for the code and stdin. Use those controls to open a clean page and transfer the material manually.
+4. If the external page or its runtime cannot load, keep editing, download a .cpp copy, or submit to ClassLab. Submission and classroom feedback remain available without the external tool. Judge results require an independently verified server installation.
 
 **Privacy.** The address fragment is not included in the initial HTTP request, but the external page can read the code and input, and the link may appear in local browser history or be shared. Do not pass passwords, tokens, personal data or private course materials. The external site's handling and policies apply. ClassLab does not receive the external output or award a score from it.
 
@@ -39,11 +39,11 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 | Path | Execution and results |
 | --- | --- |
 | ClassLab Judge | The separately configured server Judge uses pinned GCC 14.3.0 in C++20 mode. It processes formal test outcomes only after the execution host passes the documented isolation acceptance. |
-| Embedded OPT CPP / new-tab link | DIVE4DEC's upstream documents an instrumented in-browser xeus-cpp / Clang-REPL WebAssembly runtime. Its trace, C++ features, diagnostics and I/O behavior can differ from GCC. For example, it exposes recorded steps and selected state, with limits on global tracing and debugger operations. See the [upstream documentation](https://github.com/dive4dec/OPT_CPP#limitations). |
+| OPT CPP link | DIVE4DEC's upstream documents an instrumented in-browser xeus-cpp / Clang-REPL WebAssembly runtime. Its trace, C++ features, diagnostics and I/O behavior can differ from GCC. For example, it exposes recorded steps and selected state, with limits on global tracing and debugger operations. See the [upstream documentation](https://github.com/dive4dec/OPT_CPP#limitations). |
 | Official Python Tutor C++ service | The official [C++ Visualizer](https://pythontutor.com/cpp.html) is a separate endpoint. The reported GCC 9.3.0 / C++17 environment could not be independently confirmed against the live official service from the development environment. That version claim is not applied to OPT CPP. |
 | ClassLab demo | The demonstration uses clearly labelled fixed outcomes for bundled exercises. Classroom joins and submissions are real records in temporary storage. |
 
-The Chromium handoff test intercepts embedded and new-tab external requests, checks consent and code/stdin transfer, and does not test the real external compiler. With the regular ClassLab service running and Python Playwright installed, run:
+The Chromium handoff test intercepts the external request. With the regular ClassLab service running and Python Playwright installed, run:
 
 ~~~sh
 python3 tests/browser_student.py http://127.0.0.1:8080 --executable /usr/bin/chromium

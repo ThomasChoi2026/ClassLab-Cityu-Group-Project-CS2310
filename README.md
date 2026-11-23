@@ -90,7 +90,7 @@ ctest --test-dir build --output-on-failure
 
 ## Student editor and external practice
 
-Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. With a verified ClassLab Judge, **运行代码** executes code via the existing isolated backend. Without one, the primary control becomes **在页面内运行（OPT CPP）**, embedding the external browser-based C++ visualizer in the ClassLab student page only after explicit consent. It is not formal grading, and a full-page fallback is available if iframe execution is blocked.
+Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The optional OPT CPP link opens a separate visualizer with the code and stdin after confirmation. It is available even when the ClassLab Judge is disabled.
 
 See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
 
