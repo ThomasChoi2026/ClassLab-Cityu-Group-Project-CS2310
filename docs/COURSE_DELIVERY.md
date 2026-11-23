@@ -6,7 +6,7 @@ ClassLab helps a teacher turn a C++ example from a notebook into a classroom deb
 
 ## Install and run
 
-Use `feature/classlab-teaching-workflow` as the current shared development baseline. Choose `feature/classlab-classroom-analysis` to reproduce that feature stage. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
+Use `main` to review the latest verified version and as the baseline for new work. Use the corresponding feature branch to review a specific development stage. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
 
 ~~~sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -52,7 +52,7 @@ For an optional automated browser rehearsal, leave the demo running and use a se
 | Innovative | The contribution is the lesson workflow from a notebook cell to immediate participation to class-level feedback. QR codes, compilation and test judging are established techniques. |
 | Teamwork | Assign reviewers for the Notebook workflow, privacy checks, and rehearsal. Record only actual contributions. The Phase 5 baseline's Git author labels list seven commits under Thomas CAI and one under ThomasChoi2026. This establishes commit attribution only. Record any confirmed offline work separately. |
 
-Start each task from the agreed baseline on a separate feature branch. Commit and push that branch, then share its GitHub compare link for review. The team decides when reviewed changes are integrated into the shared baseline. Keep the existing history and author metadata. Record only confirmed contributors and reviewers.
+Start each task from the latest `main` on a separate feature branch. Commit and push that branch, then share its GitHub compare link for review. Merge verified and reviewed changes into `main` with their history intact. Keep the existing history and author metadata. Record only confirmed contributors and reviewers.
 
 ## 60-second English demo script
 

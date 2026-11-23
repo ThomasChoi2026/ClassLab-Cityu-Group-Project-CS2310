@@ -8,12 +8,12 @@ ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers can pu
 
 ## 当前开发与快速验收
 
-ClassLab 持续开发。最新教学功能以 `feature/classlab-teaching-workflow` 为开发基线。要复现课堂分析阶段，选择 `feature/classlab-classroom-analysis`。
+ClassLab 持续开发。`main` 保留最近经过验证的版本，是复现和后续开发的起点。新任务从最新 `main` 创建独立功能分支，经测试和审核后合并。各阶段分支保留供查阅和协作。
 
 在 Linux 或 WSL 中运行下列命令。需要 Git、CMake 3.24+、C++20 编译器和 Python 3；首次构建需联网。
 
 ~~~sh
-git clone --branch feature/classlab-teaching-workflow https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
@@ -30,6 +30,21 @@ python3 demo/run.py
 - 提交详情逐行对齐，保留空格、空行和末尾换行的差异，统一 CRLF/LF。大范围重写超出对齐预算时直接展示完整源码。
 - 共同修改按每人本题最后一次提交计数。仅收录去除相同首尾后，原文和新文各不超过三行、每行不超过 240 字节的修改。相同位置和内容至少出现两次才显示，按人数取前六组。
 - 每组直接列出这些学生的评测状态。教师可结合各用例的失败类型、编译器诊断原文和示例提交判断是否重讲。相同修改或共同失败本身不能确定学生的思路。
+
+## 开发记录
+
+| 阶段 | 主要变化 | 代表提交 |
+| --- | --- | --- |
+| Initial / MVP | 项目初始化、课堂发布、学生提交和教师统计 | `19b0c3d`、`4fb68b0` |
+| Phase 2 | 二维码加入和跨设备体验 | `0c76b02` |
+| Phase 3 | 公开与隐藏测试、评测反馈和课堂统计 | `92a93ef` |
+| Phase 4 | 独立 C++ Judge 与判题接入 | `1b27053` |
+| Phase 5 | 持久化评测队列与限额检查 | `4bcae25` |
+| Phase 6 | Notebook 导入、投影和受限演示 | `f9ae94f`、`4bfc3e8` |
+| Classroom Analysis | 代码逐行对比、全班共性和诊断分组 | `959e256` |
+| Teaching Workflow | 多单元备课、练习库和预期易错点反馈 | `a7dda84` |
+
+完整提交、作者及分支关系可在 [main 提交历史](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/) 或通过 `git log --graph --oneline --all` 查看。
 
 ## 开发阶段验收与演示
 
