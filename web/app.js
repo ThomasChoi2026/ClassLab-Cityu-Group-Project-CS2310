@@ -590,6 +590,7 @@ function initializeTeacher() {
     byId("exit-preparation").hidden = !enabled;
     publishTask.disabled = enabled;
     if (enabled) {
+      selectComposeMode("prep");
       byId("room-name").textContent = "课前备课";
       byId("save-draft").focus();
     } else {
@@ -645,6 +646,46 @@ function initializeTeacher() {
     for (const test of lesson.testCases || []) appendCase(test, false);
     for (const pitfall of lesson.pitfalls || []) appendPitfall(pitfall, false);
   });
+
+  // Keep quick paste and lesson preparation drafts independent while switching tabs.
+  // This only affects the teacher form; the existing local lesson library is unchanged.
+  let composeMode = "quick";
+  const composeBuffers = {quick: null, prep: null};
+
+  function restoreCompose(values = null) {
+    for (const name of ["title", "description", "starterCode"]) {
+      form.elements[name].value = values?.[name] || "";
+    }
+    caseRows.replaceChildren();
+    pitfallRows.replaceChildren();
+    addCase.disabled = addPitfall.disabled = false;
+    for (const test of values?.testCases || []) appendCase(test, false);
+    for (const pitfall of values?.pitfalls || []) appendPitfall(pitfall, false);
+  }
+
+  function selectComposeMode(next) {
+    if (next !== "quick" && next !== "prep") return;
+    if (next !== composeMode) {
+      composeBuffers[composeMode] = draftValues();
+      composeMode = next;
+      restoreCompose(composeBuffers[next]);
+    }
+    const preparing = next === "prep";
+    byId("compose-quick").setAttribute("aria-pressed", String(!preparing));
+    byId("compose-prep").setAttribute("aria-pressed", String(preparing));
+    byId("compose-quick").classList.toggle("secondary", preparing);
+    byId("compose-prep").classList.toggle("secondary", !preparing);
+    byId("prep-library").hidden = !preparing;
+    byId("notebook-import").hidden = !preparing;
+    byId("teacher-optional-settings").open = preparing;
+    byId("compose-hint").textContent = preparing
+      ? "导入并整理 Notebook 单元、保存练习，再发布给学生。课前准备时不能直接发布。"
+      : "临时粘贴 C++ 代码，填写标题即可发布；说明和测试用例均可选。";
+  }
+
+  byId("compose-quick").addEventListener("click", () => selectComposeMode("quick"));
+  byId("compose-prep").addEventListener("click", () => selectComposeMode("prep"));
+  selectComposeMode("quick");
 
   function project(enabled) {
     if (qrDialog.open) qrDialog.close();
@@ -922,12 +963,14 @@ function initializeTeacher() {
     if (cases.length) data.testCases = cases;
     if (pitfalls.length) data.pitfalls = pitfalls;
     await api(endpoint("/tasks"), { data, headers: headers() });
-    form.reset();
-    clearNotebook();
-    caseRows.replaceChildren();
-    pitfallRows.replaceChildren();
-    addCase.disabled = addPitfall.disabled = false;
-    detachDraft();
+    // Only clear the published workspace; leave the other tab's draft intact.
+    composeBuffers[composeMode] = null;
+    restoreCompose();
+    if (composeMode === "prep") {
+      byId("notebook-file").value = "";
+      clearNotebook();
+      detachDraft();
+    }
     feedback("任务已发布。", false, "publish-feedback");
     await refresh();
   }, "publish-feedback");
