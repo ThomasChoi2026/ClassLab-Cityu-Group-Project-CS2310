@@ -80,9 +80,14 @@
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <div class="layout">
-        <section class="panel">
-          <h2>发布任务</h2>
-          <p>发布后，学生页面会自动切换到这项任务。</p>
+        <section class="panel" id="teacher-composer">
+          <h2>创建 C++ 练习</h2>
+          <div class="compose-switch" role="group" aria-label="练习创建方式">
+            <button type="button" id="compose-quick" aria-pressed="true">快速课堂</button>
+            <button type="button" id="compose-prep" class="secondary" aria-pressed="false">课前备课</button>
+          </div>
+          <p id="compose-hint" role="status">临时粘贴 C++ 代码，填写标题即可直接发布；说明和测试用例均可选。</p>
+          <div id="prep-library" hidden>
           <fieldset class="case-editor">
             <legend>备课练习库</legend>
             <p>草稿保存在当前浏览器。载入草稿会替换当前编辑器。</p>
@@ -95,16 +100,31 @@
             </div>
             <p id="draft-feedback" class="inline-status" role="status"></p>
           </fieldset>
+          </div>
           <form id="publish">
             <label>标题<input name="title" required maxlength="53"></label>
             <label>任务说明（可选）<textarea name="description" maxlength="3000" rows="4"></textarea></label>
-            <details class="notebook-import">
+            <details id="notebook-import" class="notebook-import" hidden>
               <summary>从 Notebook 导入代码</summary>
               <p>选择的文件只在本浏览器读取。可将相关代码单元按 Notebook 顺序合并，再补上 main 或整理重复定义。选中的 Markdown 可追加到题目说明。</p>
               <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
               <div id="notebook-cells" hidden>
-                <label>Notebook 单元<select id="notebook-cell"></select></label>
-                <pre id="notebook-preview"></pre>
+                <div class="notebook-search-row">
+                  <label>搜索单元<input type="search" id="notebook-search" placeholder="编号或源码关键词" autocomplete="off"></label>
+                  <label>筛选类型<select id="notebook-filter">
+                    <option value="all">全部单元</option>
+                    <option value="cpp">C++ 代码</option>
+                    <option value="other">其他代码</option>
+                    <option value="markdown">Markdown</option>
+                  </select></label>
+                </div>
+                <div class="notebook-browser">
+                  <div id="notebook-list" class="notebook-list" role="group" aria-label="Notebook 单元列表"></div>
+                  <div class="notebook-detail">
+                    <strong id="notebook-current-label"></strong>
+                    <pre id="notebook-preview"></pre>
+                  </div>
+                </div>
                 <div class="lesson-actions">
                   <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
                   <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
@@ -116,6 +136,8 @@
               <p id="notebook-status" class="inline-status" role="status"></p>
             </details>
             <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+            <details id="teacher-optional-settings" class="teacher-optional-settings">
+              <summary>测试用例与预期易错点（可选）</summary>
             <fieldset class="case-editor">
               <legend>自动评测用例</legend>
               <p>每题最多 12 项。未添加用例时只收集提交。发布后，用例随任务保存。</p>
@@ -129,6 +151,7 @@
               <div id="pitfall-rows"></div>
               <button id="add-pitfall" type="button" class="secondary">添加易错点</button>
             </fieldset>
+            </details>
             <button id="publish-task">发布为当前任务</button>
             <p id="publish-feedback" role="status" class="feedback"></p>
           </form>
