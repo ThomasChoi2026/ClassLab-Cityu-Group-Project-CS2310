@@ -207,3 +207,29 @@ pre {
 .timetable ul:empty { display: none; }
 #schedule-feedback { white-space: pre-line; }
 [data-preparing] #class-schedule { display: none; }
+
+
+/* Teacher composition workflows: compact temporary paste versus lesson preparation. */
+.compose-switch { display: flex; flex-wrap: wrap; gap: .55rem; margin: .75rem 0; }
+.compose-switch button { flex: 1 1 10rem; }
+.compose-switch button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #fff; }
+#compose-hint { margin-bottom: .85rem; }
+.teacher-optional-settings { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .65rem .75rem; }
+.teacher-optional-settings summary { cursor: pointer; font-weight: 650; }
+.teacher-optional-settings[open] > summary { margin-bottom: .65rem; }
+#prep-library { width: 100%; }
+.notebook-search-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr); gap: .65rem; margin-block: .85rem; }
+.notebook-search-row select { width: 100%; }
+.notebook-browser { display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr); gap: .75rem; }
+.notebook-list { display: grid; align-content: start; gap: .3rem; max-height: 24rem; overflow-y: auto; padding: .25rem; border: 1px solid var(--line); border-radius: 8px; background: #f8fbfa; }
+.notebook-cell-entry { min-height: 2.5rem; padding: .45rem .6rem; text-align: left; border: 1px solid #c9d9d7; border-radius: 6px; background: #fff; color: #243d45; font-weight: 500; overflow-wrap: anywhere; }
+.notebook-cell-entry.active { border: 2px solid var(--accent); background: #e3f5ef; }
+.notebook-cell-entry.chosen::before { content: "✓ 已选 · "; color: var(--accent); font-weight: 700; }
+.notebook-detail { min-width: 0; }
+.notebook-detail strong { display: block; margin: .25rem 0 .5rem; }
+#notebook-preview { max-height: 24rem; min-height: 12rem; white-space: pre; overflow-wrap: normal; font-size: .85rem; line-height: 1.5; }
+@media (max-width: 860px) {
+  .notebook-browser { grid-template-columns: 1fr; }
+  .notebook-list { max-height: 13rem; }
+  .notebook-search-row { grid-template-columns: 1fr; }
+}
