@@ -18,6 +18,14 @@ from demo.run import ADD, INPUTS, SUBTRACT, SYNTAX, fixture_socket
 
 
 class ClassroomDemo(unittest.TestCase):
+    def test_full_lecture_matches_fixed_demo_fixtures(self):
+        lecture = json.loads((Path(__file__).resolve().parents[1] /
+                              "examples/CS2310_ClassLab_Demo_Lecture.ipynb").read_text())
+        self.assertEqual(lecture["nbformat"], 4)
+        self.assertEqual("".join(lecture["cells"][1]["source"]), SUBTRACT)
+        self.assertEqual("".join(lecture["cells"][4]["source"]), ADD)
+        self.assertEqual("".join(lecture["cells"][6]["source"]).strip(), SYNTAX.strip())
+
     def test_launcher_keeps_normal_data_and_cleans_up(self):
         launcher = Path(__file__).resolve().parents[1] / "demo/run.py"
         with tempfile.TemporaryDirectory() as directory:
@@ -60,6 +68,7 @@ class ClassroomDemo(unittest.TestCase):
                 with fixture_socket(socket), server(data, socket, demo=demo) as base:
                     self.assertEqual(request(base, "/api/health")[1].get("demo", False), demo)
                     self.assertEqual(request(base, "/demo-notebook.ipynb")[0], 200 if demo else 404)
+                    self.assertEqual(request(base, "/demo-lecture.ipynb")[0], 200 if demo else 404)
                     _, room = request(base, "/api/rooms", {"name": "Demo Class"})
                     root = "/api/rooms/" + room["id"]
                     teacher = {"X-Teacher-Key": room["teacherKey"]}
