@@ -679,7 +679,7 @@ function initializeTeacher() {
     byId("notebook-import").hidden = !preparing;
     byId("teacher-optional-settings").open = preparing;
     byId("compose-hint").textContent = preparing
-      ? "导入并整理 Notebook 单元、保存练习，再发布给学生。课前准备时不能直接发布。"
+      ? "导入并整理 Notebook 单元、保存练习；创建课堂后也可以直接发布。"
       : "临时粘贴 C++ 代码，填写标题即可发布；说明和测试用例均可选。";
   }
 
