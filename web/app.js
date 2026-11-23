@@ -830,6 +830,19 @@ function initializeStudent() {
   });
 
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
+  
+  byId("open-optcpp").addEventListener("click", () => {
+    const url =
+      "https://dive4dec.github.io/OPT_CPP/live.html#code="
+      + encodeURIComponent(editor.value)
+      + "&curInstr=0"
+      + "&mode=display"
+      + "&py=cpp"
+      + "&rawInputLstJSON=%5B%5D";
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
+
   editor.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !event.isComposing && !event.repeat) {
       event.preventDefault();
