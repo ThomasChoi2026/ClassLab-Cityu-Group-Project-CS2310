@@ -757,6 +757,16 @@ function initializeTeacher() {
   }
 }
 
+function renderHistory(history) {
+  byId("submission-history").hidden = history.length === 0;
+  const rows = history.map(item => {
+    const time = new Date(item.receivedAt * 1000).toLocaleString();
+    const score = item.total === undefined ? "" : " (" + item.passed + "/" + item.total + ")";
+    return element("li", time + " · " + (statusText[item.status] || "状态未知") + score);
+  });
+  byId("history-list").replaceChildren(...rows);
+}
+
 function initializeStudent() {
   const room = location.pathname.split("/").pop();
   const storageKey = "classlab.student." + room;
@@ -785,11 +795,12 @@ function initializeStudent() {
     const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : (state.executionAvailable ?
       "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
-    const signature = JSON.stringify([state.task?.id, state.latestResult]);
+    const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
       resultSignature = signature;
       byId("latest-result").hidden = !state.latestResult;
       displayResult(byId("student-result"), state.latestResult);
+      renderHistory(state.submissionHistory || []);
     }
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
