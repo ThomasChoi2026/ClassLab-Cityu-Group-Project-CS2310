@@ -29,11 +29,12 @@ def rehearse(browser, base):
     teacher.locator(".notebook-import summary").click()
     notebook = Path(__file__).resolve().parents[1] / "examples/classlab-demo.ipynb"
     teacher.locator("#notebook-file").set_input_files(notebook)
+    teacher.get_by_role("button", name=re.compile(r"^Cell 2 ·")).click()
     teacher.locator("#use-notebook-cell").click()
     starter = teacher.locator("[name=starterCode]")
     original = starter.input_value()
     assert "a - b" in original
-    teacher.get_by_role("button", name=re.compile(r"^Cell 2 ·")).click()
+    teacher.get_by_role("button", name=re.compile(r"^Cell 3 ·")).click()
     expect(starter).to_have_value(original)
     teacher.locator("[name=title]").fill("Fix addition")
     teacher.locator("[name=description]").fill("Return the sum.")
