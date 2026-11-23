@@ -17,7 +17,7 @@ def rehearse(browser, base):
     teacher.goto(base)
     expect(teacher.locator("#demo-banner")).to_be_visible()
     teacher.locator("#create input").fill("CS2310 rehearsal")
-    teacher.locator("#create button").click()
+    teacher.get_by_role("button", name="创建课堂", exact=True).click()
     qr = teacher.locator("#show-qr")
     expect(qr).to_be_visible()
     image = Image.open(BytesIO(qr.screenshot()))
