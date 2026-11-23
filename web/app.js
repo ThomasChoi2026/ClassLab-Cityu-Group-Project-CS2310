@@ -221,46 +221,132 @@ function displayResult(container, result, teacherCases) {
 
 function initializeNotebookImport(form) {
   const picker = byId("notebook-file");
-  const chooser = byId("notebook-cell");
+  const list = byId("notebook-list");
+  const search = byId("notebook-search");
+  const filter = byId("notebook-filter");
+  const currentLabel = byId("notebook-current-label");
   const status = byId("notebook-status");
   const preview = byId("notebook-preview");
   const fields = byId("notebook-cells");
   const use = byId("use-notebook-cell");
-  let cells = [];
-  let version = 0;
-
-  const selected = new Set();
   const toggleCell = byId("toggle-prep-cell");
   const assemble = byId("assemble-notebook");
   const appendText = byId("append-notebook-text");
   const selection = byId("selected-prep-cells");
+  const selected = new Set();
+  let cells = [];
+  let current = 0;
+  let version = 0;
+
+  function kindOf(cell) {
+    if (cell.kind === "markdown") return "markdown";
+    const source = cell.code.trimStart();
+    const magic = source.match(/^%%([\w-]+)/)?.[1]?.toLowerCase();
+    if (magic) return magic === "cpp" || magic === "hermes" ? "cpp" : "other";
+    if (/^(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\()/m.test(source)) return "other";
+    return /(?:#\s*include\s*[<"]|\bstd::|\b(?:int\s+main|class|struct|template|constexpr|using\s+namespace)\b)/.test(source)
+      ? "cpp" : "other";
+  }
+
+  function summaryOf(cell) {
+    const lines = cell.code.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    return (lines.find(line => !/^(?:%%|#\s*include\b|using\s+namespace\b)/.test(line)) || lines[0] || "（空单元）").slice(0, 100);
+  }
 
   function showSelection() {
-    const positions = cells.filter((_, index) => selected.has(index)).map(cell => cell.index + 1);
-    selection.textContent = positions.length ? "组合顺序：单元 " + positions.join(" → ") : "尚未选择组合依赖。";
-    assemble.disabled = !positions.length;
+    const numbers = cells.filter((_, position) => selected.has(position)).map(cell => cell.index + 1);
+    selection.textContent = numbers.length
+      ? "已选 " + numbers.length + " 个单元（按 Notebook 原始顺序组合）： " + numbers.join(" → ")
+      : "尚未选择代码单元。";
+    assemble.disabled = !numbers.length;
+  }
+
+  function renderList() {
+    const term = search.value.trim().toLowerCase();
+    const selectedType = filter.value;
+    const matches = cells.map((cell, position) => ({cell, position})).filter(({cell}) => {
+      const typeMatches = selectedType === "all" || kindOf(cell) === selectedType;
+      const searchMatches = !term || String(cell.index + 1).includes(term) || cell.code.toLowerCase().includes(term);
+      return typeMatches && searchMatches;
+    });
+    const entries = matches.map(({cell, position}) => {
+      const label = kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
+      const button = element("button", "Cell " + (cell.index + 1) + " · " + label + " · " + summaryOf(cell));
+      button.type = "button";
+      button.className = "notebook-cell-entry" + (position === current ? " active" : "");
+      button.setAttribute("aria-pressed", String(position === current));
+      if (selected.has(position)) button.classList.add("chosen");
+      button.addEventListener("click", () => {
+        current = position;
+        showCell();
+      });
+      return button;
+    });
+    list.replaceChildren(...entries);
+    if (!entries.length) list.append(element("p", "没有匹配的单元，可修改搜索或筛选条件。"));
+  }
+
+  function showCell() {
+    const cell = cells[current];
+    if (!cell) return;
+    currentLabel.textContent = "Cell " + (cell.index + 1) + " · " +
+      (kindOf(cell) === "cpp" ? "C++ 代码" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码");
+    preview.textContent = cell.code;
+    const isCode = cell.kind === "code";
+    use.hidden = toggleCell.hidden = !isCode;
+    appendText.hidden = isCode;
+    toggleCell.textContent = selected.has(current) ? "从组合移除" : "加入代码组合";
+    toggleCell.setAttribute("aria-pressed", String(selected.has(current)));
+    status.textContent = "预览不会改变编辑器；Notebook 魔法指令需单独检查。";
+    renderList();
   }
 
   function clear() {
     ++version;
     cells = [];
+    current = 0;
     selected.clear();
-    showSelection();
-    fields.hidden = true;
-    chooser.replaceChildren();
+    search.value = "";
+    filter.value = "all";
+    list.replaceChildren();
     preview.textContent = "";
+    currentLabel.textContent = "";
+    fields.hidden = true;
     status.textContent = "";
+    showSelection();
   }
 
-  function showCell() {
-    const position = Number(chooser.value);
-    const { code, kind } = cells[position];
-    preview.textContent = code.length > 4000 ? code.slice(0, 4000) + "\n…" : code;
-    use.hidden = toggleCell.hidden = kind !== "code";
-    appendText.hidden = kind !== "markdown";
-    toggleCell.textContent = selected.has(position) ? "从组合移除" : "加入代码组合";
-    toggleCell.setAttribute("aria-pressed", String(selected.has(position)));
-    status.textContent = "预览不会改动编辑器。";
+  function preparedSource(cell) {
+    if (cell.kind !== "code") return {error: "只能将代码单元放入 C++ 起始代码。"};
+    let code = cell.code;
+    const notes = [];
+    const magic = code.match(/^\s*%%([\w-]+)[^\r\n]*(?:\r?\n|$)/);
+    if (magic) {
+      const name = magic[1].toLowerCase();
+      if (name !== "cpp") return {error: "Cell " + (cell.index + 1) +
+        " 使用 %%" + name + "，不是标准 C++；请在预览中核对并手动转换。"};
+      code = code.slice(magic[0].length);
+      notes.push("Cell " + (cell.index + 1) + "：已移除 %%cpp 魔法指令，请检查生成的 C++。");
+    }
+    if (/^\s*(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\()/m.test(code)) {
+      return {error: "Cell " + (cell.index + 1) + " 疑似 Python 代码，不会作为 C++ 起始代码插入。"};
+    }
+    if (/(?:^|\n)\s*[%!](?![%=])/.test(code)) {
+      return {error: "Cell " + (cell.index + 1) + " 包含未处理的 Notebook 指令，请手动转换。"};
+    }
+    return {code, notes};
+  }
+
+  function fillCode(code, notes = []) {
+    if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
+      status.textContent = "所选代码超过起始代码长度限制。";
+      return;
+    }
+    const mainCount = (code.match(/\bmain\s*\(/g) || []).length;
+    if (mainCount === 0) notes.push("未发现 main()：代码可能只是定义或片段，请补齐入口和依赖。");
+    if (mainCount > 1) notes.push("检测到多个 main()：请保留一个入口并手动整理。");
+    form.elements.starterCode.value = code;
+    status.textContent = ["已填入起始代码。", ...notes, "请检查缺失的头文件、类和函数依赖。"].join(" ");
   }
 
   picker.addEventListener("change", async () => {
@@ -280,57 +366,54 @@ function initializeNotebookImport(form) {
         if (!["code", "markdown"].includes(cell?.cell_type)) return [];
         const source = cell.source;
         const code = typeof source === "string" ? source :
-          Array.isArray(source) && source.every((line) => typeof line === "string") ? source.join("") : null;
-        return code === null ? [] : [{ index, code, kind: cell.cell_type }];
+          Array.isArray(source) && source.every(line => typeof line === "string") ? source.join("") : null;
+        return code === null ? [] : [{index, code, kind: cell.cell_type}];
       });
-      cells.sort((left, right) => Number(left.kind === "markdown") - Number(right.kind === "markdown"));
       if (!cells.length) {
         status.textContent = "此 Notebook 没有可读取的代码或 Markdown 单元。";
         return;
       }
-      const options = cells.map(({index, code, kind}, position) => {
-        const first = code.split("\n").find((line) => line.trim())?.trim().slice(0, 60) || "（空）";
-        const option = element("option", "单元 " + (index + 1) + " · " + (kind === "code" ? "代码" : "Markdown") + " · " + first);
-        option.value = position;
-        return option;
-      });
-      chooser.replaceChildren(...options);
       fields.hidden = false;
       showCell();
+      showSelection();
     } catch {
       if (readVersion === version) status.textContent = "无法读取此文件，请选择有效的 Notebook v4。";
     }
   });
 
-  function fillCode(code) {
-    if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
-      status.textContent = "所选代码超过起始代码长度限制。";
-      return;
-    }
-    form.elements.starterCode.value = code;
-    status.textContent = "代码已填入。请补齐依赖、保留一个 main，并检查 Notebook 专用语法。";
-  }
-
-  chooser.addEventListener("change", showCell);
-  use.addEventListener("click", () => fillCode(cells[Number(chooser.value)].code));
+  search.addEventListener("input", renderList);
+  filter.addEventListener("change", renderList);
+  use.addEventListener("click", () => {
+    const result = preparedSource(cells[current]);
+    if (result.error) return void (status.textContent = result.error);
+    fillCode(result.code, result.notes);
+  });
   toggleCell.addEventListener("click", () => {
-    const position = Number(chooser.value);
-    if (!selected.delete(position)) selected.add(position);
-    showCell();
+    if (!selected.delete(current)) selected.add(current);
     showSelection();
+    showCell();
   });
   assemble.addEventListener("click", () => {
-    fillCode(cells.filter((_, index) => selected.has(index)).map(cell => cell.code.trimEnd()).join("\n\n"));
+    const parts = [], notes = [];
+    for (const [position, cell] of cells.entries()) {
+      if (!selected.has(position)) continue;
+      const result = preparedSource(cell);
+      if (result.error) return void (status.textContent = result.error);
+      parts.push(result.code.trimEnd());
+      notes.push(...result.notes);
+    }
+    if (parts.length) fillCode(parts.join("\n\n"), notes);
   });
   appendText.addEventListener("click", () => {
+    if (!cells[current] || cells[current].kind !== "markdown") return;
     const field = form.elements.description;
-    const next = [field.value, cells[Number(chooser.value)].code.trim()].filter(Boolean).join("\n\n");
+    const next = [field.value, cells[current].code.trim()].filter(Boolean).join("\n\n");
     if (next.length > field.maxLength || new TextEncoder().encode(next).length > 10000) {
       status.textContent = "追加后说明过长，请在预览中复制需要的部分。";
       return;
     }
     field.value = next;
-    status.textContent = "已追加为纯文字，可继续修改。";
+    status.textContent = "Markdown 已追加为纯文字，可继续修改。";
   });
   return clear;
 }
