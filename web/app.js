@@ -1007,7 +1007,6 @@ function initializeStudent() {
   let pendingSubmission;
   let running = false;
   let stdinPending = null;
-  let manualStdinOpen = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -1057,6 +1056,8 @@ function initializeStudent() {
     clearStdinPrompt(true);
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
+    byId("optcpp-options").open = false;
+    byId("optcpp-input").value = "";
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -1101,18 +1102,14 @@ function initializeStudent() {
   function clearStdinPrompt(clearInput = false) {
     const wasWaitingForInput = stdinPending !== null;
     stdinPending = null;
-    if (clearInput) manualStdinOpen = false;
-    byId("stdin-panel").hidden = !manualStdinOpen;
+    byId("stdin-panel").hidden = true;
     if (clearInput || wasWaitingForInput) input.value = "";
     byId("run-code").textContent = "运行代码";
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
-  byId("manual-external-input").addEventListener("click", () => {
-    manualStdinOpen = true;
-    byId("stdin-panel").hidden = false;
-    input.focus();
-  });
+  // External OPT CPP input is independent from ClassLab's Run-first Judge prompt.
+  const optInput = byId("optcpp-input");
   byId("open-optcpp").addEventListener("click", () => {
     fallback.hidden = true;
     optStatus.textContent = "";
@@ -1124,7 +1121,7 @@ function initializeStudent() {
       curInstr: "0",
       mode: "display",
       py: "cpp",
-      rawInputLstJSON: JSON.stringify(input.value === "" ? [] : [input.value])
+      rawInputLstJSON: JSON.stringify(optInput.value === "" ? [] : [optInput.value])
     });
     const url = "https://dive4dec.github.io/OPT_CPP/visualize.html#" + state;
     if (url.length > 8192) {
@@ -1132,11 +1129,11 @@ function initializeStudent() {
       optStatus.textContent = "已显示手动复制方式。";
       return;
     }
-    if (!window.confirm("将当前代码和标准输入交给外部 OPT CPP，并在该页面尝试运行？")) return;
+    // Preserve the teammate's one-click external tab flow; never embed OPT CPP.
     window.open(url, "_blank", "noopener,noreferrer");
   });
   byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "当前代码已复制。"));
-  byId("copy-opt-input").addEventListener("click", () => copyText(input, "optcpp-status", "标准输入已复制。"));
+  byId("copy-opt-input").addEventListener("click", () => copyText(optInput, "optcpp-status", "标准输入已复制。"));
 
   byId("reset-code").addEventListener("click", () => {
     if (!currentTask) {
