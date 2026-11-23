@@ -127,4 +127,20 @@ inline bool case_failed(const Json& status) {
     return status == "wrong_answer" || status == "runtime_error" ||
            status == "time_limit" || status == "resource_limit";
 }
+inline Json history_for(const Json& student, const Json& task_id) {
+    Json history = Json::array();
+    constexpr std::size_t limit = 50;
+    const auto& submissions = student.at("submissions");
+    for (auto it = submissions.rbegin(); it != submissions.rend() && history.size() < limit; ++it) {
+        if (it->at("taskId") != task_id) continue;
+        const auto result = result_for(*it);
+        Json item = {{"receivedAt", it->at("receivedAt")}, {"status", result.at("status")}};
+        if (result.contains("passed") && result.contains("total")) {
+            item["passed"] = result.at("passed");
+            item["total"] = result.at("total");
+        }
+        history.push_back(std::move(item));
+    }
+    return history;
+}
 } // namespace judging

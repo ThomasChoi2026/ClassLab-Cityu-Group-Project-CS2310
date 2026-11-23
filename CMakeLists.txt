@@ -19,6 +19,9 @@ FetchContent_Declare(json
     URL_HASH SHA256=4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187)
 FetchContent_MakeAvailable(httplib json)
 target_link_libraries(classlab PRIVATE httplib::httplib nlohmann_json::nlohmann_json)
+if(APPLE)
+    target_link_libraries(classlab PRIVATE "-framework CoreFoundation" "-framework CFNetwork")
+endif()
 target_compile_definitions(classlab PRIVATE CLASSLAB_WEB_DIR="${CMAKE_CURRENT_SOURCE_DIR}/web")
 
 include(CTest)
@@ -43,6 +46,8 @@ if(BUILD_TESTING)
     add_test(NAME teaching_workflow
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/teaching_workflow.py"
             $<TARGET_FILE:classlab> "${CMAKE_CXX_COMPILER}")
+    add_test(NAME student_history
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/student_history.py" $<TARGET_FILE:classlab>)
     add_test(NAME judge_protocol
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_protocol.py" $<TARGET_FILE:classlab>)
 endif()

@@ -2,7 +2,7 @@
 
 ClassLab 是 CityUHK CS2310 的 C++ Agentic Coding Project。教师可以在课堂上发布 C++ 练习，学生通过链接获取题目、编辑并提交代码，教师可以看到班级的参与和提交进度。
 
-ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers can publish exercises from Notebook code cells, students join through a QR code, and teachers can follow class-wide submission and test results.
+ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers prepare exercises from Notebook cells, add public or hidden tests and anticipated pitfalls, and publish to a classroom. Students join by QR code, edit and submit code, and review their own attempts. Teachers can inspect per-student diffs and class-wide submission and test evidence.
 
 [English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
 
@@ -25,6 +25,12 @@ python3 demo/run.py
 
 演示中的加入、源代码和人数都是实时数据，评测使用标明的固定回放。任意新代码不会在演示中执行。普通课堂服务使用下方的启动命令，真实评测仍须通过独立 Judge 的隔离验收。
 
+### 演示每周课表与时间冲突
+
+1. 创建课堂，在教师工作台展开 **每周课表**。加入课堂的学生也可展开课表查看已保存的时段。
+2. 添加 **CS2310 Lecture**，选择星期一 **10:00–12:00**。再添加 **CS2310 Lab**，选择星期一 **11:00–13:00**。提示会列出与 Lecture 重叠的 **11:00–12:00**，并保留 Lab 的输入供修改。
+3. 将 Lab 的开始时间改为 **12:00** 再提交即可保存。课表按星期和开始时间排列。教师可移除时段，学生页面会自动更新。每个课堂独立保存一份每周重复的课表，每个时段须在同一天内结束。
+
 ### 教师如何解读反馈
 
 - 提交详情逐行对齐，保留空格、空行和末尾换行的差异，统一 CRLF/LF。大范围重写超出对齐预算时直接展示完整源码。
@@ -46,6 +52,21 @@ python3 demo/run.py
 
 完整提交、作者及分支关系可在 [main 提交历史](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/) 或通过 `git log --graph --oneline --all` 查看。
 
+## Team Contributions
+
+The table records CS2310 team accounts and the work traceable to their original commits and pull requests.
+
+| Team Member | GitHub | Actual Contribution |
+| --- | --- | --- |
+| Thomas | [ThomasChoi2026](https://github.com/ThomasChoi2026) | Developed the classroom MVP and the Notebook lesson preparation workflow. Defined the requirements and prompts for classroom analysis and student code comparison. |
+| aries36white | [aries36white](https://github.com/aries36white) | Linked the student editor to the external OPT CPP tab. [PR #3](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/3) |
+| superlulu77 | [superlulu77](https://github.com/superlulu77) | Added starter-code reset, C++ download, and timestamped submission receipts. [PR #1](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/1) |
+| godferywong098kirito-blip | [godferywong098kirito-blip](https://github.com/godferywong098kirito-blip) | Added student submission history. [PR #2](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/2) |
+| Mizunonamae | [Mizunonamae](https://github.com/Mizunonamae) | Added teacher classroom controls, student removal and praise, and a macOS build fix. [PR #4](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/4) |
+| isferr | [isferr](https://github.com/isferr) | Added the weekly timetable and overlap detection. [PR #5](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/5) |
+
+See the [classroom MVP commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/4fb68b0921305a08e3cad88a62193acf9f17237e) and [Notebook lesson preparation commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/a7dda8450da2b95796ecc2d80550e4aaa537a7d5) for development records.
+
 ## 开发阶段验收与演示
 
 GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。课堂分析阶段在 WSL 完成构建和测试。课堂演示可直接使用本机浏览器，也可使用已有的临时私有预览。
@@ -66,6 +87,12 @@ ctest --test-dir build --output-on-failure
 从仓库根目录启动后，在同一台机器的浏览器打开 http://127.0.0.1:8080 。教师创建课堂后可以复制加入链接，也可以点击二维码放大投影。发布标题、说明和 C++ 起始代码后，学生可扫码或打开链接填写昵称、编辑并提交。可以在同一浏览器的另一个标签页扮演学生。
 
 课堂进度每两秒刷新，显示全班加入人数、当前任务已提交人数、提交总次数，以及每位学生的提交状态和次数。发布新任务后统计切换为新任务，历史任务和提交仍保存在数据文件中。学生页面会自动接收新任务。身份及各题草稿保存在此浏览器和站点地址下，刷新页面可恢复当前任务的未提交草稿。
+
+## Student editor and external practice
+
+Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The optional OPT CPP link opens a separate visualizer with the code and stdin after confirmation. It is available even when the ClassLab Judge is disabled.
+
+See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
 
 ## Notebook 备课与易错点
 
@@ -128,6 +155,26 @@ Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续�
 - C++ 服务保存课堂、任务、学生身份和提交源代码。一个数据文件仅供一个进程使用，进程内通过互斥锁保护读写。每次写入先完成同目录临时文件，再原子替换数据文件。写入失败会向客户端报错，内存状态保留上一次成功保存的版本。
 - 教师在创建课堂时获得独立访问密钥，发布任务和读取进度都需要该密钥。知道加入链接的人可以用昵称加入，学生使用独立随机会话密钥访问题目和提交。教师密钥、学生会话和草稿保存在浏览器本地。清除浏览器数据会丢失相应访问权限和草稿。每个浏览器来源的教师页面目前保留一个课堂，没有课堂列表、教师账号或密钥恢复功能。
 - MVP 用于小规模、受信任的课堂演示。昵称未验证，加入链接可转发。数据文件需由运行者妥善保护。每次写入会重写数据快照，尚无跨进程扩容、断电持久性保证、数据清理策略或公网运营所需的登录、限流和 HTTPS。跨设备演示所用的 HTTPS 应由外部代理提供。
-- 提交成功表示服务器已收件。默认配置只保存提交。自动评测需要独立且验收合格的 Judge。学生账号、完整历史提交网页及 Jupyter 扩展尚未实现。
+- 提交成功表示服务器已收件。默认配置只保存提交。自动评测需要独立且验收合格的 Judge。学生能查看本题最近 50 次提交。跨任务归档、学生账号及 Jupyter 扩展尚未实现。
+
+## Acknowledgements and third-party tools
+
+We thank our CS2310 instructor, **Professor Chung Chan**, for developing **OPT CPP** [1], the external C++ visualizer that ClassLab links to for student practice. OPT CPP runs C++ programs and shows execution steps, stack frames, variables and heap state. It is published under the DIVE4DEC GitHub account.
+
+OPT CPP builds on the visualization work of **Philip J. Guo**, who created **Python Tutor**, originally **Online Python Tutor** [2–5]. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
+
+| Component | Use in ClassLab | Source and licensing scope |
+| --- | --- | --- |
+| OPT CPP and Python Tutor | External reference and browser link to OPT CPP | ClassLab ships no visualizer source or WASM assets. The link does not establish the external site's privacy or usage terms. |
+| qrcode-generator 1.4.4 | Bundled JavaScript for join QR codes | MIT. The notice is included in [web/vendor/qrcode.LICENSE](web/vendor/qrcode.LICENSE). |
+| cpp-httplib v0.28.0 and nlohmann/json v3.12.0 | Build-time dependencies fetched by CMake at pinned versions | MIT. See the source notices for [cpp-httplib](https://github.com/yhirose/cpp-httplib/tree/v0.28.0) and [nlohmann/json](https://github.com/nlohmann/json/tree/v3.12.0). |
+
+### References
+
+1. Chan, C. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP). See the [initial OPT_CPP commit](https://github.com/dive4dec/OPT_CPP/commit/f8b60a93e15139831546a4e4d7c37a39fe217354) for the author credit.
+2. Python Tutor. [Official website](https://pythontutor.com/).
+3. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
+4. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
+5. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
 
 项目交接背景见 [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)。交接文档包含规划，当前功能以本页为准。

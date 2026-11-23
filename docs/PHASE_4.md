@@ -1,10 +1,12 @@
 # Phase 4 执行与部署验收
 
+> This guide covers the ClassLab server-side Judge. The optional [OPT CPP handoff](COURSE_DELIVERY.md#opt-cpp-practice) is a browser link. It does not provide formal judging or change the server's isolation requirements.
+
 ## 路线与边界
 
 ClassLab 保留原 C++20 Web 服务和教室数据。独立 Python 3 Judge 通过本机 Unix socket 接收源码和标准输入，使用 Docker + gVisor 在独立进程中执行 GCC 14.3.0（-std=c++20）。镜像按摘要固定，执行时禁止拉取。编译用一个容器，每项测试使用新容器、新工作区。教师预期输出留在 C++ 服务中，比较沿用 Phase 3 的换行规则。隐藏用例的运行输出不落库，学生只收到隐藏用例的编号及状态。
 
-考察了三条路线。独立服务器执行器需要可验证的 cgroup v2、容器文件系统和运行时，当前 Codex Cloud 缺少有效控制器。独立 Judge 路线保持权限边界，可接自托管组件。Judge0 等方案还需要额外服务及其自己的隔离前提，本项目选用只依赖 Python 标准库的本机 Worker。浏览器 WASM 可用于自由练习，但需要固定并分发可在浏览器内使用的 C++20 工具链和标准库，还要验证 cin/cout、内存和浏览器兼容性。浏览器结果不能作为可信课堂成绩，本轮未实现该路线。
+考察了三条路线。独立服务器执行器需要可验证的 cgroup v2、容器文件系统和运行时，当前 Codex Cloud 缺少有效控制器。独立 Judge 路线保持权限边界，可接自托管组件。Judge0 等方案还需要额外服务及其自己的隔离前提，本项目选用只依赖 Python 标准库的本机 Worker。浏览器 WASM 可用于自由练习，但需要固定并分发可在浏览器内使用的 C++20 工具链和标准库，还要验证 cin/cout、内存和浏览器兼容性。浏览器结果不能作为可信课堂成绩，Phase 4 未实现该路线。后续 OPT CPP 的浏览器功能由外部工具提供。
 
 ## 运行配置
 
