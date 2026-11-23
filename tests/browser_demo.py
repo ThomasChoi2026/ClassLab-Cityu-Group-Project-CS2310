@@ -74,7 +74,7 @@ def rehearse(browser, base, evidence_dir=None):
         code.press("Control+Enter")
         result = page.locator("#student-result")
         expect(result).to_contain_text("全部通过" if change else "输出不符", timeout=15000)
-        expect(result).to_contain_text("预置演示结果")
+        expect(result).to_contain_text("预置演示回放：没有编译或执行当前 C++ 代码。")
         assert "-4 9" not in result.inner_text()
         page.close()
 
