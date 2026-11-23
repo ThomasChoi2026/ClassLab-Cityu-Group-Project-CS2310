@@ -187,3 +187,13 @@ pre {
 .case-editor select { width: 100%; min-width: 0; }
 [data-preparing] .share, [data-preparing] #toggle-classroom, [data-preparing] #classroom-progress { display: none; }
 [data-preparing] .layout { grid-template-columns: minmax(0, 1fr); }
+
+.timetable { margin-bottom: 1rem; }
+.timetable summary { cursor: pointer; font-weight: 650; }
+.timetable form { margin-block: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); align-items: end; }
+.timetable li { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.timetable li span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.timetable ul { padding: 0; }
+.timetable ul:empty { display: none; }
+#schedule-feedback { white-space: pre-line; }
+[data-preparing] #class-schedule { display: none; }

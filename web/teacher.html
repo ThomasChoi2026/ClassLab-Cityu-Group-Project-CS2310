@@ -59,6 +59,24 @@
           <p id="copy-feedback" class="inline-status" role="status"></p>
         </div>
       </section>
+      <details id="class-schedule" class="panel timetable">
+        <summary>每周课表</summary>
+        <form id="add-slot">
+          <label>课程名称<input name="name" required maxlength="40" placeholder="例如 CS2310 Lecture"></label>
+          <label>星期<select name="day">
+            <option value="1">星期一</option><option value="2">星期二</option>
+            <option value="3">星期三</option><option value="4">星期四</option>
+            <option value="5">星期五</option><option value="6">星期六</option>
+            <option value="7">星期日</option>
+          </select></label>
+          <label>开始时间<input type="time" name="start" required></label>
+          <label>结束时间<input type="time" name="end" required></label>
+          <button>添加时段</button>
+        </form>
+        <p id="schedule-feedback" class="feedback" role="status"></p>
+        <p id="schedule-empty">暂无课程时段。</p>
+        <ul id="schedule-list" class="case-results"></ul>
+      </details>
       <div class="layout">
         <section class="panel">
           <h2>发布任务</h2>

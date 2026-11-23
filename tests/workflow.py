@@ -44,11 +44,11 @@ def server(data, judge_socket=None, *, demo=False):
                     process.wait()
 
 
-def request(base, path, data=None, *, timeout=5, **headers):
+def request(base, path, data=None, *, timeout=5, method=None, **headers):
     payload = None if data is None else json.dumps(data).encode()
     if payload is not None:
         headers["Content-Type"] = "application/json"
-    call = urllib.request.Request(base + path, data=payload, headers=headers)
+    call = urllib.request.Request(base + path, data=payload, headers=headers, method=method)
     try:
         response = urllib.request.urlopen(call, timeout=timeout)
     except urllib.error.HTTPError as error:
@@ -61,6 +61,70 @@ def request(base, path, data=None, *, timeout=5, **headers):
 
 
 class ClassroomWorkflow(unittest.TestCase):
+    def test_weekly_schedule(self):
+        lecture = {"name": "CS2310 Lecture", "day": 1, "start": "10:00", "end": "12:00"}
+        lab = dict(lecture, name="CS2310 Lab", start="11:00", end="13:00")
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory) / "rooms.json"
+            with server(data) as base:
+                _, room = request(base, "/api/rooms", {"name": "CS2310"})
+                root = "/api/rooms/" + room["id"]
+                path = root + "/schedule"
+                teacher = {"X-Teacher-Key": room["teacherKey"]}
+                _, joined = request(base, root + "/students", {"name": "Ada"})
+                student = {"X-Student-Key": joined["studentKey"]}
+                self.assertEqual(request(base, root + "/task", **student)[1]["schedule"], [])
+                self.assertEqual(request(base, path, lecture, **student)[0], 403)
+                for change in [dict(day=0), dict(day=8), dict(day="1"), dict(day=1.5),
+                               dict(name=" "), dict(start="9:00"), dict(start="09:0a"),
+                               dict(start="24:00"), dict(end="12:60"), dict(end="10:00"),
+                               dict(start="23:00", end="01:00")]:
+                    with self.subTest(change=change):
+                        self.assertEqual(request(base, path, dict(lecture, **change), **teacher)[0], 400)
+
+                # These writes race for exactly the same slot. Only one may be stored.
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as workers:
+                    replies = list(workers.map(lambda _: request(base, path, lecture, **teacher), range(2)))
+                self.assertEqual(sorted(status for status, _ in replies), [201, 409])
+                saved = next(slot for status, slot in replies if status == 201)
+                for start, end, overlap in [("11:00", "13:00", "11:00–12:00"),
+                                            ("09:00", "11:15", "10:00–11:15"),
+                                            ("10:15", "10:30", "10:15–10:30"),
+                                            ("09:00", "14:00", "10:00–12:00")]:
+                    status, result = request(base, path, dict(lab, start=start, end=end), **teacher)
+                    self.assertEqual(status, 409)
+                    for text in [lecture["name"], lab["name"], overlap]:
+                        self.assertIn(text, result["error"])
+
+                sunday = dict(lab, day=7)
+                later = dict(lab, start="12:00")
+                early = dict(lab, name="Tutorial", start="09:00", end="10:00")
+                slots = []
+                for item in [sunday, later, early]:
+                    status, slot = request(base, path, item, **teacher)
+                    self.assertEqual(status, 201)
+                    slots.append(slot)
+                expected = [slots[2], saved, slots[1], slots[0]]
+                self.assertEqual(request(base, root + "/progress", **teacher)[1]["schedule"], expected)
+                status, result = request(base, path, dict(lab, start="11:45", end="12:15"), **teacher)
+                self.assertEqual(status, 409)
+                for overlap in ["11:45–12:00", "12:00–12:15"]:
+                    self.assertIn(overlap, result["error"])
+
+                _, other = request(base, "/api/rooms", {"name": "Other classroom"})
+                other_root = "/api/rooms/" + other["id"]
+                other_teacher = {"X-Teacher-Key": other["teacherKey"]}
+                self.assertEqual(request(base, other_root + "/schedule", lab, **other_teacher)[0], 201)
+                self.assertEqual(request(base, path, lab, **other_teacher)[0], 403)
+
+            with server(data) as base:
+                self.assertEqual(request(base, root + "/task", **student)[1]["schedule"], expected)
+                delete = path + "/" + saved["id"]
+                self.assertEqual(request(base, delete, method="DELETE", **student)[0], 403)
+                self.assertEqual(request(base, delete, method="DELETE", **teacher)[0], 200)
+                self.assertEqual(request(base, delete, method="DELETE", **teacher)[0], 404)
+                self.assertEqual(request(base, path, lecture, **teacher)[0], 201)
+
     def test_classroom_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:
             data = Path(directory) / "classrooms.json"

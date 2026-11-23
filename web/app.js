@@ -10,16 +10,16 @@ class RequestError extends Error {
   }
 }
 
-async function api(path, { data, headers = {}, timeoutMs = 8000 } = {}) {
+async function api(path, { data, headers = {}, timeoutMs = 8000, method = data === undefined ? "GET" : "POST" } = {}) {
   let response;
   let result;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const { signal } = controller;
   try {
-    response = await fetch("/api" + path, data === undefined ? { headers, signal } : {
+    response = await fetch("/api" + path, data === undefined ? { method, headers, signal } : {
       signal,
-      method: "POST",
+      method,
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
@@ -149,6 +149,40 @@ function element(tag, text) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+function scheduleView(onRemove) {
+  const days = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"];
+  let signature;
+  return (slots) => {
+    const next = JSON.stringify(slots);
+    if (signature === next) return;
+    signature = next;
+    byId("schedule-empty").hidden = slots.length > 0;
+    byId("schedule-list").replaceChildren(...slots.map(slot => {
+      const label = days[slot.day - 1] + " " + slot.start + "–" + slot.end;
+      const row = element("li");
+      row.append(element("strong", slot.name), element("span", label));
+      if (onRemove) {
+        const remove = element("button", "移除");
+        remove.type = "button";
+        remove.className = "secondary";
+        remove.setAttribute("aria-label", "移除 " + slot.name + " " + label);
+        remove.addEventListener("click", async () => {
+          remove.disabled = true;
+          try {
+            await onRemove(slot);
+          } catch (error) {
+            feedback(error.message, true, "schedule-feedback");
+          } finally {
+            remove.disabled = false;
+          }
+        });
+        row.append(remove);
+      }
+      return row;
+    }));
+  };
 }
 
 function sampleBlock(test) {
@@ -437,6 +471,11 @@ function initializeTeacher() {
   let credentials = JSON.parse(localStorage.getItem(storageKey) || "null");
   const headers = () => ({ "X-Teacher-Key": credentials.teacherKey });
   const endpoint = (suffix) => "/rooms/" + credentials.id + suffix;
+  const renderSchedule = scheduleView(async slot => {
+    await api(endpoint("/schedule/" + slot.id), { method: "DELETE", headers: headers() });
+    feedback("已移除「" + slot.name + "」。", false, "schedule-feedback");
+    await refresh();
+  });
   const link = byId("join-link");
   const qrButton = byId("show-qr");
   const qrDialog = byId("qr-dialog");
@@ -663,6 +702,7 @@ function initializeTeacher() {
 
   function showProgress(state) {
     showDemoBanner(state);
+    renderSchedule(state.schedule);
     byId("projection-task").textContent = state.task?.title || "尚未发布任务";
     for (const metric of ["joined", "submitted", "accepted"]) {
       byId("projection-" + metric).textContent = state[metric];
@@ -731,6 +771,13 @@ function initializeTeacher() {
     await refresh();
   });
 
+  onSubmit("add-slot", async data => {
+    await api(endpoint("/schedule"), { headers: headers(), data: { ...data, day: Number(data.day) } });
+    byId("add-slot").reset();
+    feedback("已添加「" + data.name + "」。", false, "schedule-feedback");
+    await refresh();
+  }, "schedule-feedback");
+
   onSubmit("publish", async (data) => {
     if (!credentials) return;
     const cases = rowData(caseRows);
@@ -769,9 +816,11 @@ function initializeStudent() {
   const endpoint = (suffix) => "/rooms/" + room + suffix;
   const headers = () => ({ "X-Student-Key": key });
   const draftKey = (id) => storageKey + ".draft." + id;
+  const renderSchedule = scheduleView();
 
   function showTask(state) {
     showDemoBanner(state);
+    renderSchedule(state.schedule);
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
     byId("connection").textContent = "";
