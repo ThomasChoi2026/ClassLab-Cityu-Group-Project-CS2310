@@ -138,20 +138,22 @@ Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续�
 
 ## Acknowledgements and third-party tools
 
-Philip J. Guo created **Python Tutor**, originally **Online Python Tutor** [1–4]. ClassLab's external-practice button links to **OPT CPP** [5], a C++ visualizer developed by **Chung Chan** and published under the DIVE4DEC GitHub account. OPT CPP builds on Python Tutor's visualization work and runs C++ programs. OPT CPP provides the execution trace and its views of stack frames, variables and heap state. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
+We thank our CS2310 instructor, **Professor Chung Chan**, for developing **OPT CPP** [1], the external C++ visualizer that ClassLab links to for student practice. OPT CPP runs C++ programs and shows execution steps, stack frames, variables and heap state. It is published under the DIVE4DEC GitHub account.
+
+OPT CPP builds on the visualization work of **Philip J. Guo**, who created **Python Tutor**, originally **Online Python Tutor** [2–5]. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
 
 | Component | Use in ClassLab | Source and licensing scope |
 | --- | --- | --- |
-| Python Tutor and OPT CPP | External reference and browser link to OPT CPP | ClassLab ships no visualizer source or WASM assets. The link does not establish the external site's privacy or usage terms. |
+| OPT CPP and Python Tutor | External reference and browser link to OPT CPP | ClassLab ships no visualizer source or WASM assets. The link does not establish the external site's privacy or usage terms. |
 | qrcode-generator 1.4.4 | Bundled JavaScript for join QR codes | MIT. The notice is included in [web/vendor/qrcode.LICENSE](web/vendor/qrcode.LICENSE). |
 | cpp-httplib v0.28.0 and nlohmann/json v3.12.0 | Build-time dependencies fetched by CMake at pinned versions | MIT. See the source notices for [cpp-httplib](https://github.com/yhirose/cpp-httplib/tree/v0.28.0) and [nlohmann/json](https://github.com/nlohmann/json/tree/v3.12.0). |
 
 ### References
 
-1. Python Tutor. [Official website](https://pythontutor.com/).
-2. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
-3. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
-4. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
-5. Chan, C. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP). See the [initial OPT_CPP commit](https://github.com/dive4dec/OPT_CPP/commit/f8b60a93e15139831546a4e4d7c37a39fe217354) for the author credit.
+1. Chan, C. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP). See the [initial OPT_CPP commit](https://github.com/dive4dec/OPT_CPP/commit/f8b60a93e15139831546a4e4d7c37a39fe217354) for the author credit.
+2. Python Tutor. [Official website](https://pythontutor.com/).
+3. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
+4. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
+5. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
 
 项目交接背景见 [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)。交接文档包含规划，当前功能以本页为准。
