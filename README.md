@@ -2,7 +2,7 @@
 
 ClassLab 是 CityUHK CS2310 的 C++ Agentic Coding Project。教师可以在课堂上发布 C++ 练习，学生通过链接获取题目、编辑并提交代码，教师可以看到班级的参与和提交进度。
 
-ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers can publish exercises from Notebook code cells, students join through a QR code, and teachers can follow class-wide submission and test results.
+ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers prepare exercises from Notebook cells, add public or hidden tests and anticipated pitfalls, and publish to a classroom. Students join by QR code, edit and submit code, and review their own attempts. Teachers can inspect per-student diffs and class-wide submission and test evidence.
 
 [English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
 
@@ -67,12 +67,11 @@ ctest --test-dir build --output-on-failure
 
 课堂进度每两秒刷新，显示全班加入人数、当前任务已提交人数、提交总次数，以及每位学生的提交状态和次数。发布新任务后统计切换为新任务，历史任务和提交仍保存在数据文件中。学生页面会自动接收新任务。身份及各题草稿保存在此浏览器和站点地址下，刷新页面可恢复当前任务的未提交草稿。
 
-## 学生编辑器与外部练习
+## Student editor and external practice
 
-- 学生可恢复教师起始代码、下载当前内容为 .cpp，或查看本题自己的最近 50 次正式提交。历史仅显示时间、状态及已有的分数。更换当前题目后会切换到该题的记录。
-- 即使 ClassLab Judge 不可用，标准输入也可以编辑。选择 **在 OPT CPP 打开并运行** 并确认后，浏览器将当前源码及 stdin 放在外站逐步可视化入口的链接片段中。OPT CPP 可读取这些内容并尝试运行。链接可能留在浏览器记录中，请先移除私人数据。ClassLab 不接收外部运行结果，也不会增加正式提交次数。
-- 完整链接超过 8192 字符时，页面提供空白 OPT CPP 链接，以及分别复制代码和 stdin 的按钮，供手动粘贴。浏览器拦截弹窗时，可检查浏览器提示后重试。外部运行依赖 OPT CPP 和浏览器能否加载其运行组件。打开逐步执行视图后，可点击 Last 查看最终输出。
-- 有 Python Playwright 和 Chromium 时，可在普通 ClassLab 服务运行后执行 python3 tests/browser_student.py http://127.0.0.1:8080 --executable /usr/bin/chromium。该测试拦截离站请求，独立验证交接内容及后备路径。
+Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The optional OPT CPP link opens a separate visualizer with the code and stdin after confirmation. It is available even when the ClassLab Judge is disabled.
+
+See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
 
 ## Notebook 备课与易错点
 
@@ -135,6 +134,24 @@ Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续�
 - C++ 服务保存课堂、任务、学生身份和提交源代码。一个数据文件仅供一个进程使用，进程内通过互斥锁保护读写。每次写入先完成同目录临时文件，再原子替换数据文件。写入失败会向客户端报错，内存状态保留上一次成功保存的版本。
 - 教师在创建课堂时获得独立访问密钥，发布任务和读取进度都需要该密钥。知道加入链接的人可以用昵称加入，学生使用独立随机会话密钥访问题目和提交。教师密钥、学生会话和草稿保存在浏览器本地。清除浏览器数据会丢失相应访问权限和草稿。每个浏览器来源的教师页面目前保留一个课堂，没有课堂列表、教师账号或密钥恢复功能。
 - MVP 用于小规模、受信任的课堂演示。昵称未验证，加入链接可转发。数据文件需由运行者妥善保护。每次写入会重写数据快照，尚无跨进程扩容、断电持久性保证、数据清理策略或公网运营所需的登录、限流和 HTTPS。跨设备演示所用的 HTTPS 应由外部代理提供。
-- 提交成功表示服务器已收件。默认配置只保存提交。自动评测需要独立且验收合格的 Judge。学生账号、完整历史提交网页及 Jupyter 扩展尚未实现。
+- 提交成功表示服务器已收件。默认配置只保存提交。自动评测需要独立且验收合格的 Judge。学生能查看本题最近 50 次提交。跨任务归档、学生账号及 Jupyter 扩展尚未实现。
+
+## Acknowledgements and third-party tools
+
+Philip J. Guo created **Python Tutor**, originally **Online Python Tutor** [1–4]. ClassLab's external-practice button links to **DIVE4DEC's OPT CPP** [5], a separate C++ visualizer derived from Python Tutor. OPT CPP provides the execution trace and its views of stack frames, variables and heap state. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
+
+| Component | Use in ClassLab | Source and licensing scope |
+| --- | --- | --- |
+| Python Tutor and OPT CPP | External reference and browser link to OPT CPP | ClassLab ships no visualizer source or WASM assets. The link does not establish the external site's privacy or usage terms. |
+| qrcode-generator 1.4.4 | Bundled JavaScript for join QR codes | MIT. The notice is included in [web/vendor/qrcode.LICENSE](web/vendor/qrcode.LICENSE). |
+| cpp-httplib v0.28.0 and nlohmann/json v3.12.0 | Build-time dependencies fetched by CMake at pinned versions | MIT. See the source notices for [cpp-httplib](https://github.com/yhirose/cpp-httplib/tree/v0.28.0) and [nlohmann/json](https://github.com/nlohmann/json/tree/v3.12.0). |
+
+### References
+
+1. Python Tutor. [Official website](https://pythontutor.com/).
+2. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
+3. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
+4. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
+5. DIVE4DEC. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP).
 
 项目交接背景见 [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)。交接文档包含规划，当前功能以本页为准。

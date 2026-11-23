@@ -1,5 +1,7 @@
 # Phase 3 验收与评测边界
 
+> Historical Phase 3 record. For the later Judge adapter and its deployment requirements, see [Phase 4](PHASE_4.md). For current student features, see the [student workflow](COURSE_DELIVERY.md#student-workflow).
+
 ## 当前可演示的课堂流程
 
 教师创建课堂、投影二维码，在发布任务前添加公开或隐藏用例。学生进入课堂后可以展开公开样例、编辑代码并提交。教师在仪表板看到未提交、已提交和未评测人数，并可用教师权限打开当前任务中任一学生的最新提交。切换任务会创建新快照，旧任务和提交仍在原数据文件中。学生刷新页面时可以恢复身份、草稿和当前任务的最新提交状态。
