@@ -60,6 +60,22 @@ class ClassroomDemo(unittest.TestCase):
             self.assertEqual(process.returncode, 0)
             self.assertEqual(list(root.iterdir()), [existing])
 
+    def test_unavailable_production_judge_cannot_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with server(Path(directory) / "rooms.json") as base:
+                _, room = request(base, "/api/rooms", {"name": "No Judge"})
+                root = "/api/rooms/" + room["id"]
+                teacher = {"X-Teacher-Key": room["teacherKey"]}
+                _, task = request(base, root + "/tasks",
+                                  {"title": "No judge", "starterCode": SUBTRACT}, **teacher)
+                _, student = request(base, root + "/students", {"name": "Student"})
+                headers = {"X-Student-Key": student["studentKey"]}
+                state = request(base, root + "/task", **headers)[1]
+                self.assertFalse(state["executionAvailable"])
+                self.assertEqual(request(base, root + "/run",
+                    {"taskId": task["id"], "input": "", "probe": True,
+                     "code": SUBTRACT}, **headers)[0], 503)
+
     def test_replay_and_isolation(self):
         for demo in (True, False):
             with self.subTest(demo=demo), tempfile.TemporaryDirectory() as directory:
@@ -93,16 +109,13 @@ class ClassroomDemo(unittest.TestCase):
                                 status, replay = request(base, root + "/run",
                                     {"taskId": task["id"], "input": "2 3", "probe": False, "code": code}, **headers)
                                 self.assertEqual((status, replay["status"], replay["stdout"]),
-                                    (200, "success", "5\\n" if code == ADD else "-1\\n"))
+                                    (200, "success", "5\n" if code == ADD else "-1\n"))
                                 self.assertTrue(replay["demoFixture"])
                                 self.assertEqual(request(base, root + "/run",
                                     {"taskId": task["id"], "input": "9 9", "code": code}, **headers)[1]["status"],
                                     "demo_no_fixture")
                             self.assertEqual(request(base, root + "/run",
                                 {"taskId": task["id"], "input": "", "probe": True, "code": code})[0], 403)
-                        else:
-                            self.assertEqual(request(base, root + "/run",
-                                {"taskId": task["id"], "input": "2 3", "code": code}, **headers)[0], 503)
                         self.assertEqual(request(base, root + "/submissions",
                             {"taskId": task["id"], "code": code}, **headers)[1]["judgement"], "queued")
                         if demo:
