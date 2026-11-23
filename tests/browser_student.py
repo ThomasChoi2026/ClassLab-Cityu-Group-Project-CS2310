@@ -42,7 +42,9 @@ def check(browser, base):
     expect(editor).to_have_value(starter)
     stdin = student.locator("[name=runInput]")
     expect(stdin).to_be_editable()
-    expect(student.locator("#run-code")).to_be_disabled()
+    expect(student.locator("#run-code")).to_be_enabled()
+    expect(student.locator("#run-code")).to_have_text("在页面内运行（OPT CPP）")
+    expect(student.locator("#embedded-optcpp")).to_be_hidden()
     assert student.evaluate("document.documentElement.scrollWidth === innerWidth")
     assert student.evaluate("""() => {
         const row = document.querySelector(".editor-field .section-heading");
@@ -54,8 +56,23 @@ def check(browser, base):
     stdin.fill(supplied)
     assert not external
     student.once("dialog", lambda dialog: dialog.dismiss())
-    student.locator("#open-optcpp").click()
+    student.locator("#run-code").click()
     assert not external
+    student.once("dialog", lambda dialog: dialog.accept())
+    student.locator("#run-code").click()
+    expect(student.locator("#embedded-optcpp")).to_be_visible()
+    embedded_url = student.locator("#optcpp-frame").get_attribute("src")
+    assert embedded_url and embedded_url.split("#", 1)[0] == EXTERNAL
+    embedded_state = parse_qs(urlsplit(embedded_url).fragment)
+    assert embedded_state["code"] == [code]
+    assert json.loads(embedded_state["rawInputLstJSON"][0]) == [supplied]
+    student.locator("#close-optcpp").click()
+    expect(student.locator("#embedded-optcpp")).to_be_hidden()
+    assert not student.locator("#optcpp-frame").get_attribute("src")
+    student.locator("#optcpp-panel").evaluate("(el) => el.open = true")
+    student.once("dialog", lambda dialog: dialog.dismiss())
+    student.locator("#open-optcpp").click()
+    assert len(external) == 1
     student.once("dialog", lambda dialog: dialog.accept())
     with student.expect_popup() as opened:
         student.locator("#open-optcpp").click()
@@ -78,7 +95,7 @@ def check(browser, base):
     editor.fill("// long " + "中" * 3000)
     student.locator("#open-optcpp").click()
     expect(student.locator("#optcpp-fallback")).to_be_visible()
-    assert len(external) == 1
+    assert len(external) == 2
     if browser.browser_type.name == "chromium":
         context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
         student.locator("#copy-opt-input").click()
