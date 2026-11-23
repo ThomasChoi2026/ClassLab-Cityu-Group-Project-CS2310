@@ -41,8 +41,11 @@ def check(browser, base):
     editor = student.locator("#student-code")
     expect(editor).to_have_value(starter)
     stdin = student.locator("[name=runInput]")
-    expect(stdin).to_be_editable()
+    expect(student.locator("#stdin-panel")).to_be_hidden()
+    expect(stdin).to_be_hidden()
     expect(student.locator("#run-code")).to_be_disabled()
+    student.locator("#manual-external-input").click()
+    expect(stdin).to_be_editable()
     assert student.evaluate("document.documentElement.scrollWidth === innerWidth")
     assert student.evaluate("""() => {
         const row = document.querySelector(".editor-field .section-heading");
