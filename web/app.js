@@ -756,6 +756,41 @@ function initializeTeacher() {
     void refresh();
   }
 }
+function renderHistory(history) {
+
+    const container =
+        byId("history-list");
+
+    container.replaceChildren();
+
+    history.forEach(item => {
+
+        const row = element("div");
+
+        const score =
+            item.total === undefined
+                ? ""
+                : ` (${item.passed}/${item.total})`;
+
+        const time =
+            new Date(
+                item.receivedAt * 1000
+            ).toLocaleString();
+
+        row.append(
+            element(
+                "p",
+                `${time} · ${
+                    statusText[item.status]
+                    || item.status
+                }${score}`
+            )
+        );
+
+        container.append(row);
+    });
+}
+
 
 function initializeStudent() {
   const room = location.pathname.split("/").pop();
@@ -771,40 +806,109 @@ function initializeStudent() {
   const draftKey = (id) => storageKey + ".draft." + id;
 
   function showTask(state) {
+
     showDemoBanner(state);
+
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
+
     byId("connection").textContent = "";
     feedback("");
+
     byId("room-name").textContent = state.roomName;
     byId("student-name").textContent = state.studentName;
+
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
-    byId("run-controls").disabled = !state.executionAvailable || running;
+
+    byId("run-controls").disabled =
+        !state.executionAvailable || running;
+
     const runStatus = byId("run-state");
-    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : (state.executionAvailable ?
-      "自由运行使用自定义输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
-    if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
-    const signature = JSON.stringify([state.task?.id, state.latestResult]);
+
+    const runMessage =
+        state.demo
+            ? "演示模式只回放預置評測，無法自由運行。"
+            : running
+                ? "正在編譯和運行…"
+                : (
+                    state.executionAvailable
+                        ? "自由運行使用自訂輸入，不計入正式提交。"
+                        : "隔離執行器不可用，暫時無法運行代碼。"
+                );
+
+    if (runStatus.textContent !== runMessage)
+        runStatus.textContent = runMessage;
+
+    const signature = JSON.stringify([
+        state.task?.id,
+        state.latestResult,
+        state.submissionHistory
+    ]);
+
     if (signature !== resultSignature) {
-      resultSignature = signature;
-      byId("latest-result").hidden = !state.latestResult;
-      displayResult(byId("student-result"), state.latestResult);
+
+        resultSignature = signature;
+
+        byId("latest-result").hidden =
+            !state.latestResult;
+
+        displayResult(
+            byId("student-result"),
+            state.latestResult
+        );
+
+        const history =
+            state.submissionHistory || [];
+
+        byId("submission-history").hidden =
+            history.length === 0;
+
+        renderHistory(history);
     }
-    if (!state.task || state.task.id === currentTask?.id) return;
+
+    if (!state.task ||
+        state.task.id === currentTask?.id)
+        return;
+
     feedback("", false, "submit-feedback");
+
     byId("run-result").hidden = true;
+
     byId("submit").elements.runInput.value = "";
-    byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
+
+    byId("editor-feedback").textContent =
+        currentTask
+            ? "教師已發布新任務。"
+            : "";
+
     currentTask = state.task;
-    byId("task-title").textContent = currentTask.title;
-    byId("task-description").textContent = currentTask.description;
-    const tests = currentTask.testCases || [];
-    byId("public-tests").hidden = !tests.length;
+
+    byId("task-title").textContent =
+        currentTask.title;
+
+    byId("task-description").textContent =
+        currentTask.description;
+
+    const tests =
+        currentTask.testCases || [];
+
+    byId("public-tests").hidden =
+        !tests.length;
+
     byId("public-tests").open = false;
-    byId("student-public-tests").replaceChildren(...tests.map(sampleBlock));
-    editor.value = localStorage.getItem(draftKey(currentTask.id)) ?? currentTask.starterCode;
-  }
+
+    byId("student-public-tests")
+        .replaceChildren(
+            ...tests.map(sampleBlock)
+        );
+
+    editor.value =
+        localStorage.getItem(
+            draftKey(currentTask.id)
+        )
+        ?? currentTask.starterCode;
+}
 
   const refresh = poll(async () => {
     if (key) showTask(await api(endpoint("/task"), { headers: headers() }));

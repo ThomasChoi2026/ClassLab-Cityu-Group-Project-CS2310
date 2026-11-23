@@ -593,9 +593,12 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     latest_result = judging::student_result(*latest, task);
                 }
             }
-            return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
-                    {"task", judging::student_task(task)}, {"latestResult", latest_result}};
-        });
+            Json history;
+
+            if (!task.is_null()){
+            history = judging::history_for(student,task.at("id"));}
+
+            return {{"roomName", room.at("name")},{"studentName", student.at("name")},{"task", judging::student_task(task)},{"latestResult", latest_result},{"submissionHistory", history}};});
         result["demo"] = judge.demo();
         result["executionAvailable"] = !judge.demo() && judge.available();
         reply(response, result);
