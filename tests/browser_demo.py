@@ -1,5 +1,6 @@
 """Optional smoke test against demo/run.py, using fresh headless Chromium contexts."""
 import argparse
+import re
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse
@@ -24,6 +25,7 @@ def rehearse(browser, base):
     assert decoded and decoded.text == teacher.locator("#join-link").input_value()
     assert urlparse(decoded.text).netloc == urlparse(base).netloc
 
+    teacher.locator("#compose-prep").click()
     teacher.locator(".notebook-import summary").click()
     notebook = Path(__file__).resolve().parents[1] / "examples/classlab-demo.ipynb"
     teacher.locator("#notebook-file").set_input_files(notebook)
@@ -31,7 +33,7 @@ def rehearse(browser, base):
     starter = teacher.locator("[name=starterCode]")
     original = starter.input_value()
     assert "a - b" in original
-    teacher.locator("#notebook-cell").select_option("1")
+    teacher.get_by_role("button", name=re.compile(r"^Cell 2 ·")).click()
     expect(starter).to_have_value(original)
     teacher.locator("[name=title]").fill("Fix addition")
     teacher.locator("[name=description]").fill("Return the sum.")
