@@ -138,7 +138,7 @@ Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续�
 
 ## Acknowledgements and third-party tools
 
-Philip J. Guo created **Python Tutor**, originally **Online Python Tutor** [1–4]. ClassLab's external-practice button links to **DIVE4DEC's OPT CPP** [5], a separate C++ visualizer derived from Python Tutor. OPT CPP provides the execution trace and its views of stack frames, variables and heap state. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
+Philip J. Guo created **Python Tutor**, originally **Online Python Tutor** [1–4]. ClassLab's external-practice button links to **OPT CPP** [5], a C++ visualizer developed by **Chung Chan** and published under the DIVE4DEC GitHub account. OPT CPP builds on Python Tutor's visualization work and runs C++ programs. OPT CPP provides the execution trace and its views of stack frames, variables and heap state. The ClassLab team develops the classroom workflow, editor handoff, submission history, teacher analytics and Judge integration. ClassLab is an independent project. This attribution does not imply participation, sponsorship or endorsement.
 
 | Component | Use in ClassLab | Source and licensing scope |
 | --- | --- | --- |
@@ -152,6 +152,6 @@ Philip J. Guo created **Python Tutor**, originally **Online Python Tutor** [1–
 2. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
 3. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
 4. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
-5. DIVE4DEC. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP).
+5. Chan, C. [OPT_CPP source, runtime documentation and references](https://github.com/dive4dec/OPT_CPP). See the [initial OPT_CPP commit](https://github.com/dive4dec/OPT_CPP/commit/f8b60a93e15139831546a4e4d7c37a39fe217354) for the author credit.
 
 项目交接背景见 [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)。交接文档包含规划，当前功能以本页为准。
