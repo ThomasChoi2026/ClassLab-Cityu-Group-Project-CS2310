@@ -44,6 +44,7 @@
                 <label for="student-code">你的 C++ 代码</label>
                 <div class="lesson-actions">
                   <button id="copy-code" type="button" class="secondary">复制代码</button>
+                  <button id="open-optcpp" type="button" class="secondary" title="在新标签页打开外部 OPT CPP 可视化工具">抄送至OPT_CPP</button>
                   <button id="reset-code" type="button" class="secondary">恢复起始代码</button>
                   <button id="download-code" type="button" class="secondary">下载 .cpp</button>
                 </div>
@@ -63,21 +64,21 @@
             </fieldset>
             <p id="run-state" role="status">隔离执行器不可用，暂时无法运行代码。</p>
             <section id="run-result" aria-label="自由运行结果" hidden></section>
-            <section class="optcpp-panel" aria-labelledby="optcpp-title">
-              <h3 id="optcpp-title">外部练习</h3>
-              <button id="manual-external-input" type="button" class="secondary">手动填写外部练习输入（可选）</button>
-              <p id="optcpp-privacy">确认后，当前代码和输入会交给外部 OPT CPP 页面，并尝试运行。链接可能留在浏览器记录中，请先移除私人数据。结果只用于练习。</p>
-              <button id="open-optcpp" type="button" class="secondary" aria-describedby="optcpp-privacy">在 OPT CPP 打开并运行</button>
-              <div id="optcpp-fallback" hidden>
-                <p>内容太长，已取消链接传递。可打开空白工具，再手动粘贴代码和输入。</p>
-                <div class="lesson-actions">
-                  <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">打开空白 OPT CPP</a>
-                  <button id="copy-opt-code" type="button" class="secondary">复制当前代码</button>
-                  <button id="copy-opt-input" type="button" class="secondary">复制标准输入</button>
-                </div>
+            <details id="optcpp-options" class="optcpp-options">
+              <summary>OPT CPP 标准输入（可选）</summary>
+              <label for="optcpp-input">传递给外部 OPT CPP 的输入
+                <textarea id="optcpp-input" rows="2" maxlength="2700" spellcheck="false" placeholder="例如 5 3"></textarea>
+              </label>
+            </details>
+            <div id="optcpp-fallback" hidden>
+              <p>代码或输入过长，无法直接传递。请打开空白 OPT CPP 并自行复制。</p>
+              <div class="lesson-actions">
+                <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">打开空白 OPT CPP</a>
+                <button id="copy-opt-code" type="button" class="secondary">复制当前代码</button>
+                <button id="copy-opt-input" type="button" class="secondary">复制标准输入</button>
               </div>
-              <p id="optcpp-status" class="inline-status" role="status"></p>
-            </section>
+            </div>
+            <p id="optcpp-status" class="inline-status" role="status"></p>
             <button type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">提交代码</button>
             <small>在编辑器中按 Ctrl + Enter 或 ⌘ + Enter 也可提交。</small>
             <p id="submit-feedback" role="status" class="feedback"></p>
