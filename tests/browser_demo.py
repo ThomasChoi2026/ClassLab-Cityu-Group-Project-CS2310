@@ -55,6 +55,17 @@ def rehearse(browser, base):
             code.fill(revised)
             page.reload()
             expect(code).to_have_value(revised)
+        # Demonstrate the Run-first UI without executing arbitrary student C++.
+        expect(page.locator("#run-code")).to_be_enabled()
+        expect(page.locator("#stdin-panel")).to_be_hidden()
+        page.locator("#run-code").click()
+        expect(page.locator("#stdin-panel")).to_be_visible()
+        expect(page.locator("#run-result")).to_contain_text("不会执行当前代码")
+        page.locator("[name=runInput]").fill("2 3")
+        page.locator("#run-code").click()
+        expect(page.locator("#run-result")).to_contain_text("预置演示回放")
+        expect(page.locator("#run-result")).to_contain_text("5" if change else "-1")
+        expect(page.locator("#stdin-panel")).to_be_hidden()
         code.press("Control+Enter")
         result = page.locator("#student-result")
         expect(result).to_contain_text("全部通过" if change else "输出不符", timeout=15000)
@@ -83,6 +94,6 @@ if __name__ == "__main__":
         browser = playwright.chromium.launch(executable_path=args.chromium)
         try:
             rehearse(browser, args.url)
-            print("Browser demo passed: decoded QR, Notebook, three students, replay results, counts and diff.")
+            print("Browser demo passed: QR, Notebook, labeled Run-first fixture playback, three student submissions, teacher counts and diff.")
         finally:
             browser.close()
