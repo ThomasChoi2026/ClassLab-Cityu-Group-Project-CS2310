@@ -722,7 +722,8 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     {"submissionHistory", history}};
         });
         result["demo"] = judge.demo();
-        result["executionAvailable"] = !judge.demo() && judge.available();
+        // Demo mode exposes only an explicit prerecorded, allowlisted playback.
+        result["executionAvailable"] = judge.available();
         reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
@@ -745,11 +746,6 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             }
             return nullptr;
         });
-        if (judge.demo()) {
-            reply(response, {{"status", "judge_unavailable"},
-                             {"error", "演示模式仅回放预置评测结果。"}}, 503);
-            return;
-        }
         auto slot = judge.reserve();
         if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
         if (!judge.available()) {
@@ -761,7 +757,9 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             return !queue_state(rooms).submission.empty();
         });
         if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
-        reply(response, judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe));
+        auto result = judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe);
+        if (judge.demo()) result["demoFixture"] = true;
+        reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
