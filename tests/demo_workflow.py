@@ -18,6 +18,14 @@ from demo.run import ADD, INPUTS, SUBTRACT, SYNTAX, fixture_socket
 
 
 class ClassroomDemo(unittest.TestCase):
+    def test_full_lecture_matches_fixed_demo_fixtures(self):
+        lecture = json.loads((Path(__file__).resolve().parents[1] /
+                              "examples/CS2310_ClassLab_Demo_Lecture.ipynb").read_text())
+        self.assertEqual(lecture["nbformat"], 4)
+        self.assertEqual("".join(lecture["cells"][1]["source"]), SUBTRACT)
+        self.assertEqual("".join(lecture["cells"][4]["source"]), ADD)
+        self.assertEqual("".join(lecture["cells"][6]["source"]).strip(), SYNTAX.strip())
+
     def test_launcher_keeps_normal_data_and_cleans_up(self):
         launcher = Path(__file__).resolve().parents[1] / "demo/run.py"
         with tempfile.TemporaryDirectory() as directory:
@@ -52,6 +60,22 @@ class ClassroomDemo(unittest.TestCase):
             self.assertEqual(process.returncode, 0)
             self.assertEqual(list(root.iterdir()), [existing])
 
+    def test_unavailable_production_judge_cannot_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with server(Path(directory) / "rooms.json") as base:
+                _, room = request(base, "/api/rooms", {"name": "No Judge"})
+                root = "/api/rooms/" + room["id"]
+                teacher = {"X-Teacher-Key": room["teacherKey"]}
+                _, task = request(base, root + "/tasks",
+                                  {"title": "No judge", "starterCode": SUBTRACT}, **teacher)
+                _, student = request(base, root + "/students", {"name": "Student"})
+                headers = {"X-Student-Key": student["studentKey"]}
+                state = request(base, root + "/task", **headers)[1]
+                self.assertFalse(state["executionAvailable"])
+                self.assertEqual(request(base, root + "/run",
+                    {"taskId": task["id"], "input": "", "probe": True,
+                     "code": SUBTRACT}, **headers)[0], 503)
+
     def test_replay_and_isolation(self):
         for demo in (True, False):
             with self.subTest(demo=demo), tempfile.TemporaryDirectory() as directory:
@@ -60,6 +84,7 @@ class ClassroomDemo(unittest.TestCase):
                 with fixture_socket(socket), server(data, socket, demo=demo) as base:
                     self.assertEqual(request(base, "/api/health")[1].get("demo", False), demo)
                     self.assertEqual(request(base, "/demo-notebook.ipynb")[0], 200 if demo else 404)
+                    self.assertEqual(request(base, "/demo-lecture.ipynb")[0], 200 if demo else 404)
                     _, room = request(base, "/api/rooms", {"name": "Demo Class"})
                     root = "/api/rooms/" + room["id"]
                     teacher = {"X-Teacher-Key": room["teacherKey"]}
@@ -72,15 +97,32 @@ class ClassroomDemo(unittest.TestCase):
                                           (SUBTRACT, "wrong_answer"), ("int main() {}", "demo_no_fixture")]:
                         _, student = request(base, root + "/students", {"name": outcome})
                         headers = {"X-Student-Key": student["studentKey"]}
-                        self.assertEqual(request(base, root + "/run",
-                            {"taskId": task["id"], "input": "5 3", "code": code}, **headers)[0], 503)
+                        if demo:
+                            status, first = request(base, root + "/run",
+                                {"taskId": task["id"], "input": "", "probe": True, "code": code}, **headers)
+                            self.assertEqual(status, 200)
+                            self.assertTrue(first["demoFixture"])
+                            self.assertEqual(first["status"],
+                                "compilation_error" if code == SYNTAX else
+                                "demo_no_fixture" if code == "int main() {}" else "stdin_required")
+                            if code in (ADD, SUBTRACT):
+                                status, replay = request(base, root + "/run",
+                                    {"taskId": task["id"], "input": "2 3", "probe": False, "code": code}, **headers)
+                                self.assertEqual((status, replay["status"], replay["stdout"]),
+                                    (200, "success", "5\n" if code == ADD else "-1\n"))
+                                self.assertTrue(replay["demoFixture"])
+                                self.assertEqual(request(base, root + "/run",
+                                    {"taskId": task["id"], "input": "9 9", "code": code}, **headers)[1]["status"],
+                                    "demo_no_fixture")
+                            self.assertEqual(request(base, root + "/run",
+                                {"taskId": task["id"], "input": "", "probe": True, "code": code})[0], 403)
                         self.assertEqual(request(base, root + "/submissions",
                             {"taskId": task["id"], "code": code}, **headers)[1]["judgement"], "queued")
                         if demo:
                             state = wait_for(lambda: request(base, root + "/task", **headers)[1],
                                 lambda item: item["latestResult"]["status"] == outcome)
                             self.assertTrue(state["latestResult"]["demoFixture"])
-                            self.assertFalse(state["executionAvailable"])
+                            self.assertTrue(state["executionAvailable"])
                             self.assertNotIn("-4 9", json.dumps(state))
                     report = request(base, root + "/progress", **teacher)[1]
                     self.assertEqual((report["submitted"], report["joined"]), (4, 4))

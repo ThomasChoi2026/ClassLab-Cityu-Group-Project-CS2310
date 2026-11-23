@@ -54,7 +54,7 @@ The integration check also ran the actual upstream assets from revision 654cd74 
 
 ## Repeatable classroom demo
 
-1. Start python3 demo/run.py in the repository root. Use --port 8081 if 8080 is in use. Open the matching private preview. The demo generates a fresh temporary store for each launch. Press Ctrl+C to stop and remove it. The regular classroom data file is untouched.
+1. Run `bash demo/start_coursework.sh 8082` in the repository root (or `python3 demo/run.py --port 8082` if built). Use the matching **Private** port preview. The demo generates a fresh temporary store for each launch. Press Ctrl+C to stop and remove it. The regular classroom data file is untouched. The student **演示 Run（回放）** path supports only the original fixed synthetic addition/subtraction source and three predefined stdin cases; the UI clearly labels results as prerecorded and does not compile arbitrary C++.
 2. Download the synthetic Notebook from the demo banner. Create a classroom and expand the Notebook importer. Choose the first code cell, then fill the starter code. Add title **Fix the addition** and instruction **Replace subtraction with addition**.
 3. Click **填入三个演示用例** to load the three cases below. Publish the task and open Classroom View.
 

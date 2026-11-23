@@ -203,7 +203,7 @@ function displayResult(container, result, teacherCases) {
   if (!result) return;
   const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " 通过";
   container.append(element("p", (statusText[result.status] || "结果未知") + score));
-  if (result.demoFixture) container.append(element("p", "预置演示结果"));
+  if (result.demoFixture) container.append(element("p", "预置演示回放：没有编译或执行当前 C++ 代码。"));
   if (result.diagnostic) container.append(element("pre", result.diagnostic));
   if (teacherCases) {
     for (const test of result.cases || []) {
@@ -1007,6 +1007,7 @@ function initializeStudent() {
   let pendingSubmission;
   let running = false;
   let stdinPending = null;
+  let demoMode = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -1016,6 +1017,7 @@ function initializeStudent() {
   const renderSchedule = scheduleView();
 
   function showTask(state) {
+    demoMode = Boolean(state.demo);
     showDemoBanner(state);
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
@@ -1039,9 +1041,11 @@ function initializeStudent() {
     byId("assignment").hidden = !state.task;
     byId("run-controls").disabled = !state.executionAvailable || running;
     const runStatus = byId("run-state");
-    const runMessage = state.demo ? "演示模式只回放预置评测，无法自由运行。" : running ? "正在编译和运行…" : stdinPending ?
-      "程序已请求标准输入。填写后再次点击运行，将从头执行程序。" : (state.executionAvailable ?
-      "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" : "隔离执行器不可用，暂时无法运行代码。");
+    const runMessage = running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
+      stdinPending ? (demoMode ? "输入预置测试数据后，可再次点击回放。" : "程序已请求标准输入。填写后再次点击运行，将从头执行程序。") :
+      state.demo ? "仅回放预置代码和测试输入（2 3、0 0、-4 9）；不编译或运行任意 C++。" :
+      state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
+      "隔离执行器不可用，暂时无法运行代码。";
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
     const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
@@ -1104,7 +1108,7 @@ function initializeStudent() {
     stdinPending = null;
     byId("stdin-panel").hidden = true;
     if (clearInput || wasWaitingForInput) input.value = "";
-    byId("run-code").textContent = "运行代码";
+    byId("run-code").textContent = demoMode ? "演示 Run（回放）" : "运行代码";
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
@@ -1196,7 +1200,7 @@ function initializeStudent() {
     const runInput = provideInput ? input.value : "";
     running = true;
     byId("run-controls").disabled = true;
-    byId("run-state").textContent = "正在编译和运行…";
+    byId("run-state").textContent = demoMode ? "正在读取预置演示结果…" : "正在编译和运行…";
     panel.hidden = true;
     try {
       const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
@@ -1205,8 +1209,10 @@ function initializeStudent() {
       if (result.status === "stdin_required") {
         stdinPending = { taskId, code: editor.value };
         byId("stdin-panel").hidden = false;
-        byId("run-code").textContent = "提供输入并重新运行";
-        panel.replaceChildren(element("p", "程序实际读取了标准输入，请提供输入后重新运行。"));
+        byId("run-code").textContent = demoMode ? "输入并查看预置结果" : "提供输入并重新运行";
+        panel.replaceChildren(element("p", demoMode ?
+          "预置演示：本例包含标准输入。请输入 2 3、0 0 或 -4 9；本流程不会执行当前代码。" :
+          "程序实际读取了标准输入，请提供输入后重新运行。"));
         if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
         if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
         panel.hidden = false;
@@ -1218,6 +1224,7 @@ function initializeStudent() {
       if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
       if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || "（空）"));
       if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
+      if (result.error) panel.append(element("p", result.error));
       panel.hidden = false;
     } catch (error) {
       if (taskId === currentTask?.id) {
