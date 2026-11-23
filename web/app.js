@@ -877,6 +877,7 @@ function initializeStudent() {
   let pendingSubmission;
   let running = false;
   let stdinPending = null;
+  let manualStdinOpen = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -970,13 +971,15 @@ function initializeStudent() {
   function clearStdinPrompt(clearInput = false) {
     const wasWaitingForInput = stdinPending !== null;
     stdinPending = null;
-    byId("stdin-panel").hidden = true;
+    if (clearInput) manualStdinOpen = false;
+    byId("stdin-panel").hidden = !manualStdinOpen;
     if (clearInput || wasWaitingForInput) input.value = "";
     byId("run-code").textContent = "运行代码";
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
   byId("manual-external-input").addEventListener("click", () => {
+    manualStdinOpen = true;
     byId("stdin-panel").hidden = false;
     input.focus();
   });
