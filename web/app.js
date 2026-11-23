@@ -975,6 +975,10 @@ function initializeStudent() {
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
+  byId("manual-external-input").addEventListener("click", () => {
+    byId("stdin-panel").hidden = false;
+    input.focus();
+  });
   byId("open-optcpp").addEventListener("click", () => {
     fallback.hidden = true;
     optStatus.textContent = "";
