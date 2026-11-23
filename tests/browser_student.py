@@ -61,6 +61,7 @@ def check(browser, base):
     student.once("dialog", lambda dialog: dialog.accept())
     student.locator("#run-code").click()
     expect(student.locator("#embedded-optcpp")).to_be_visible()
+    expect(student.frame_locator("#optcpp-frame").locator("title")).to_have_text("Handoff test")
     embedded_url = student.locator("#optcpp-frame").get_attribute("src")
     assert embedded_url and embedded_url.split("#", 1)[0] == EXTERNAL
     embedded_state = parse_qs(urlsplit(embedded_url).fragment)
