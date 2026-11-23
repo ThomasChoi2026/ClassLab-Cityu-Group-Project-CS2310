@@ -382,6 +382,10 @@ function initializeNotebookImport(form) {
   });
 
   search.addEventListener("input", renderList);
+  // Enter in cell search must never submit or publish the teacher form.
+  search.addEventListener("keydown", event => {
+    if (event.key === "Enter") event.preventDefault();
+  });
   filter.addEventListener("change", renderList);
   use.addEventListener("click", () => {
     const result = preparedSource(cells[current]);
