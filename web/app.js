@@ -849,8 +849,8 @@ function initializeStudent() {
     }
     const safeName = (currentTask.title || "classlab-code")
       .trim()
-      .replace(/[<>:"/\\|?*\\u0000-\\u001F]/g, "-")
-      .replace(/\\s+/g, "-")
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")
+      .replace(/\s+/g, "-")
       .slice(0, 60) || "classlab-code";
     const file = new Blob([editor.value], { type: "text/x-c++src;charset=utf-8" });
     const url = URL.createObjectURL(file);
@@ -860,7 +860,7 @@ function initializeStudent() {
     document.body.append(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     byId("editor-feedback").textContent = "C++ 代码已下载。";
   });
 
