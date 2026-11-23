@@ -118,7 +118,7 @@ See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-wor
 
 教师可直接粘贴 C++，也可选择本地的 Notebook v4 文件并将一个代码单元填入任务编辑器。Notebook 只在浏览器解析。教师切换到课堂投影后，屏幕只保留课堂名称、加入二维码、任务标题与汇总进度。
 
-构建完成后，运行临时演示。此命令使用独立的临时存储、固定评测回放，并关闭自由运行。页面会明确标识回放结果。用 Ctrl+C 停止并清理演示数据。
+构建完成后，可运行 `bash demo/start_coursework.sh 8082` 进行完整作业演示；它先执行 CTest，再启动临时课堂。演示模式可在学生页面点击「演示 Run（回放）」、输入预置 stdin 并查看明确标注的结果，但**不会编译或执行任意学生 C++**，也不开放正式 Judge。三个合成用例和课程教学 Notebook 可用于 QR 加入、提交与教师统计演示。用 Ctrl+C 停止并清理演示数据；完整 60 秒流程见 [作业 Demo 指南](docs/COURSEWORK_DEMO.md)。
 
 ~~~sh
 python3 demo/run.py
