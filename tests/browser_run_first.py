@@ -22,6 +22,7 @@ def check(browser):
             teacher.goto(base)
             teacher.locator("#create input").fill("Run-first class")
             teacher.locator("#create button:not([type])").click()
+            expect(teacher.locator("#join-link")).not_to_have_value("")
             join = teacher.locator("#join-link").input_value()
             teacher.locator("[name=title]").fill("Native run")
             teacher.locator("[name=starterCode]").fill("NO_STDIN")
