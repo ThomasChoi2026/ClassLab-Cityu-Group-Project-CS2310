@@ -50,17 +50,40 @@ class FixtureHandler(BaseHTTPRequestHandler):
                 return
             payload = json.loads(self.rfile.read(size))
             code = payload["code"].strip()
-            if payload["version"] != 1 or payload["mode"] != "grade" or payload["inputs"] != INPUTS:
+            mode = payload["mode"]
+            inputs = payload["inputs"]
+            if payload["version"] != 1 or mode not in ("grade", "probe", "run") or not isinstance(inputs, list):
+                self.send_json(400, {"status": "judge_error"})
+            elif code not in FIXTURE_OUTPUTS and code != SYNTAX.strip():
+                self.send_json(200, {"status": "demo_no_fixture"})
+            elif mode == "probe":
+                if inputs != [""]:
+                    self.send_json(400, {"status": "judge_error"})
+                elif code == SYNTAX.strip():
+                    self.send_json(200, {"status": "compilation_error",
+                        "diagnostic": "main.cpp:5: error: expected ';' before 'std' (preloaded demo diagnostic)"})
+                else:
+                    self.send_json(200, {"status": "stdin_required", "stdoutHex": "", "stderr": ""})
+            elif mode == "run":
+                if len(inputs) != 1 or inputs[0] not in INPUTS:
+                    self.send_json(200, {"status": "demo_no_fixture"})
+                elif code == SYNTAX.strip():
+                    self.send_json(200, {"status": "compilation_error",
+                        "diagnostic": "main.cpp:5: error: expected ';' before 'std' (preloaded demo diagnostic)"})
+                else:
+                    output = FIXTURE_OUTPUTS[code][INPUTS.index(inputs[0])]
+                    self.send_json(200, {"status": "success",
+                        "cases": [{"status": "success", "stdoutHex": output.encode().hex(), "exitCode": 0,
+                                   "stderr": ""}]})
+            elif inputs != INPUTS:
                 self.send_json(200, {"status": "demo_no_fixture"})
             elif code == SYNTAX.strip():
                 self.send_json(200, {"status": "compilation_error",
                     "diagnostic": "main.cpp:5: error: expected ';' before 'std' (preloaded demo diagnostic)"})
-            elif code in FIXTURE_OUTPUTS:
+            else:
                 cases = [{"status": "success", "stdoutHex": output.encode().hex(), "exitCode": 0}
                          for output in FIXTURE_OUTPUTS[code]]
                 self.send_json(200, {"status": "success", "cases": cases})
-            else:
-                self.send_json(200, {"status": "demo_no_fixture"})
         except (ValueError, KeyError, TypeError, AttributeError):
             self.send_json(400, {"status": "judge_error"})
 
