@@ -572,6 +572,10 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             response.set_header("Content-Disposition", "attachment; filename=classlab-demo.ipynb");
             response.set_file_content(CLASSLAB_WEB_DIR "/../examples/classlab-demo.ipynb", "application/json");
         });
+        server.Get("/demo-lecture.ipynb", [](const Request&, Response& response) {
+            response.set_header("Content-Disposition", "attachment; filename=CS2310_ClassLab_Demo_Lecture.ipynb");
+            response.set_file_content(CLASSLAB_WEB_DIR "/../examples/CS2310_ClassLab_Demo_Lecture.ipynb", "application/json");
+        });
     }
 
     server.Post("/api/rooms", [&](const Request& request, Response& response) {
