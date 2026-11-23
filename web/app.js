@@ -923,7 +923,7 @@ function initializeStudent() {
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
-    clearStdinPrompt();
+    clearStdinPrompt(true);
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
     byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
@@ -967,10 +967,11 @@ function initializeStudent() {
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
 
   const input = byId("submit").elements.runInput;
-  function clearStdinPrompt() {
+  function clearStdinPrompt(clearInput = false) {
+    const wasWaitingForInput = stdinPending !== null;
     stdinPending = null;
     byId("stdin-panel").hidden = true;
-    input.value = "";
+    if (clearInput || wasWaitingForInput) input.value = "";
     byId("run-code").textContent = "运行代码";
   }
   const fallback = byId("optcpp-fallback");
