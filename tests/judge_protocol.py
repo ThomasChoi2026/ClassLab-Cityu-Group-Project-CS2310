@@ -62,7 +62,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return
             if code == "NO_STDIN":
                 self.reply({"status": "success",
-                            "cases": [{"status": "success", "stdoutHex": b"Hello\\n".hex(),
+                            "cases": [{"status": "success", "stdoutHex": b"Hello\n".hex(),
                                        "exitCode": 0, "stderr": ""}]})
                 return
         if packet["mode"] == "grade":
@@ -131,7 +131,7 @@ class JudgeProtocol(unittest.TestCase):
                 self.assertEqual(result["status"], "success")
                 status, result = run("CORRECT", "5 3", probe=False, **key)
                 self.assertEqual(status, 200)
-                self.assertEqual(result["stdout"], "8\\r\\n")
+                self.assertEqual(result["stdout"], "8\r\n")
                 self.assertEqual(run("READS_INPUT", "5 3", probe=True, **key)[0], 400)
                 self.assertEqual(run("READS_INPUT", probe=True)[0], 403)
                 self.assertEqual(request(base, root + "/run",
