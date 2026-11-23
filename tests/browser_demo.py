@@ -10,7 +10,9 @@ from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
 
-def rehearse(browser, base):
+def rehearse(browser, base, evidence_dir=None):
+    if evidence_dir is not None:
+        evidence_dir.mkdir(parents=True, exist_ok=True)
     teacher = browser.new_page()
     errors = []
     teacher.on("pageerror", lambda error: errors.append(str(error)))
@@ -67,6 +69,8 @@ def rehearse(browser, base):
         expect(page.locator("#run-result")).to_contain_text("预置演示回放")
         expect(page.locator("#run-result")).to_contain_text("5" if change else "-1")
         expect(page.locator("#stdin-panel")).to_be_hidden()
+        if evidence_dir is not None and index == 2:
+            page.screenshot(path=str(evidence_dir / "student-run-replay.png"), full_page=True)
         code.press("Control+Enter")
         result = page.locator("#student-result")
         expect(result).to_contain_text("全部通过" if change else "输出不符", timeout=15000)
@@ -77,12 +81,16 @@ def rehearse(browser, base):
     expect(teacher.locator("#submitted")).to_have_text("3", timeout=8000)
     expect(teacher.locator("#accepted")).to_have_text("2")
     expect(teacher.locator("#failed")).to_have_text("1")
+    if evidence_dir is not None:
+        teacher.screenshot(path=str(evidence_dir / "teacher-dashboard.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")
     expect(patterns).to_contain_text("全部通过 2 人")
     patterns.get_by_role("button").click()
     expect(teacher.locator("#diff-summary")).to_contain_text("新增 1 行，删除 1 行")
     expect(teacher.locator(".diff-del")).to_contain_text("a - b")
     expect(teacher.locator(".diff-add")).to_contain_text("a + b")
+    if evidence_dir is not None:
+        teacher.screenshot(path=str(evidence_dir / "teacher-common-edit.png"), full_page=True)
     assert not errors, errors
 
 
@@ -90,11 +98,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("--chromium", help="path to an installed Chromium-family browser")
+    parser.add_argument("--evidence-dir", type=Path, help="save genuine browser screenshots")
     args = parser.parse_args()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=args.chromium)
         try:
-            rehearse(browser, args.url)
+            rehearse(browser, args.url, args.evidence_dir)
             print("Browser demo passed: QR, Notebook, labeled Run-first fixture playback, three student submissions, teacher counts and diff.")
         finally:
             browser.close()
