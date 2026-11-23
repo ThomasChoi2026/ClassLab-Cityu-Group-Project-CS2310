@@ -58,7 +58,7 @@ def check(browser, base):
 
     page.get_by_role("button", name=re.compile(r"^Cell 2 ·")).click()
     page.locator("#use-notebook-cell").click()
-    expect(page.locator("[name=starterCode]")).to_contain_text("#include <iostream>")
+    expect(page.locator("[name=starterCode]")).to_have_value(re.compile(r"#include <iostream>"))
     assert not page.locator("[name=starterCode]").input_value().startswith("%%cpp")
     page.locator("#toggle-prep-cell").click()
     page.get_by_role("button", name=re.compile(r"^Cell 125 ·")).click()
