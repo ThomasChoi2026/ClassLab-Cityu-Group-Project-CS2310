@@ -262,15 +262,18 @@ function initializeNotebookImport(form, loadExercise) {
     assemble.disabled = !numbers.length;
   }
 
-  function renderList() {
+  function matchingCells() {
     const term = search.value.trim().toLowerCase();
     const selectedType = filter.value;
-    const matches = cells.map((cell, position) => ({cell, position})).filter(({cell}) => {
+    return cells.map((cell, position) => ({cell, position})).filter(({cell}) => {
       const typeMatches = selectedType === "all" || (selectedType === "exercise" ? Boolean(cell.exercise) : kindOf(cell) === selectedType);
       const searchMatches = !term || String(cell.index + 1).includes(term) || cell.code.toLowerCase().includes(term) || (cell.exercise?.title || "").toLowerCase().includes(term);
       return typeMatches && searchMatches;
     });
-    const entries = matches.map(({cell, position}) => {
+  }
+
+  function renderList() {
+    const entries = matchingCells().map(({cell, position}) => {
       const label = cell.exercise ? "课堂互动练习" : cell.protected ? "仅教师预览 / 不可载入" : kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
       const button = element("button", "Cell " + (cell.index + 1) + " · " + label + " · " + (cell.exercise?.title || summaryOf(cell)));
       button.type = "button";
@@ -390,18 +393,38 @@ function initializeNotebookImport(form, loadExercise) {
     }
   });
 
-  search.addEventListener("input", renderList);
+  function refreshFilter() {
+    const matches = matchingCells();
+    if (matches.some(entry => entry.position === current)) {
+      renderList();
+    } else if (matches.length) {
+      current = matches[0].position;
+      showCell(); // Preview only, never load or publish on filtering.
+    } else {
+      current = -1;
+      currentLabel.textContent = "没有匹配的单元";
+      preview.textContent = "";
+      use.hidden = toggleCell.hidden = appendText.hidden = true;
+      status.textContent = "没有匹配的单元，可修改搜索或筛选条件。";
+      renderList();
+    }
+  }
+
+  search.addEventListener("input", refreshFilter);
   // Enter in cell search must never submit or publish the teacher form.
   search.addEventListener("keydown", event => {
     if (event.key === "Enter") event.preventDefault();
   });
-  filter.addEventListener("change", renderList);
+  filter.addEventListener("change", refreshFilter);
   function importExercise(cell) {
     if (!cell?.exercise || cell.protected) return;
     if (!loadExercise(cell.exercise)) {
       status.textContent = "保留了当前编辑内容；可点击载入互动练习再次选择。";
       return;
     }
+    selected.clear();
+    showSelection();
+    renderList();
     status.textContent = "已载入互动练习，尚未发布。请核对说明和用例。" + (cell.warning ? " " + cell.warning : "");
   }
   use.addEventListener("click", () => {
