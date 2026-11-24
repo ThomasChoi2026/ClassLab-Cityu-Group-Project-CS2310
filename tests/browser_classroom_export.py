@@ -19,7 +19,7 @@ def check(browser, base):
     teacher = context.new_page()
     teacher.goto(base)
     teacher.locator("#create input").fill('Class, "CSV"')
-    teacher.get_by_role("button", name="创建课堂", exact=True).click()
+    teacher.get_by_role("button", name="Create classroom", exact=True).click()
     join_link = teacher.locator("#join-link")
     expect(join_link).not_to_have_value("")
     join_url = join_link.input_value()
@@ -27,12 +27,12 @@ def check(browser, base):
 
     # No task: give a clear message and do not create an empty file.
     teacher.locator("#export-current-csv").click()
-    expect(teacher.locator("#export-feedback")).to_contain_text("请先发布任务")
+    expect(teacher.locator("#export-feedback")).to_contain_text("Publish a task")
 
     teacher.locator("[name=title]").fill('Task, "CSV"')
     teacher.locator("[name=starterCode]").fill("int main() { return 0; }")
     teacher.locator("#publish-task").click()
-    expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+    expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
     # One student submits with no Judge configured, so no score must be invented.
     student = context.new_page()
@@ -41,10 +41,10 @@ def check(browser, base):
     student.locator("#join button").click()
     student.locator("#student-code").fill("int main() { return 0; }")
     student.locator("#submit-code").click()
-    expect(student.locator("#submit-feedback")).to_contain_text("代码已提交")
+    expect(student.locator("#submit-feedback")).to_contain_text("Code submitted")
 
     # Add students with CSV-special names through the regular public join endpoint.
-    for name in ['张三, "第二位"', "多行\n学生"]:
+    for name in ['Zoë, "Second student"', "Multiline\nstudent"]:
         created = teacher.evaluate(
             """async ({roomId, name}) => {
                 const response = await fetch(`/api/rooms/${roomId}/students`, {
@@ -75,8 +75,8 @@ def check(browser, base):
     by_name = {row["Student Name"]: row for row in rows}
     assert set(by_name) == {
         formula_name,
-        '张三, "第二位"',
-        "多行\n学生",
+        'Zoë, "Second student"',
+        "Multiline\nstudent",
     }, by_name
     formula_row = by_name[formula_name]
     assert formula_row["Classroom Name"] == 'Class, "CSV"'
@@ -89,7 +89,7 @@ def check(browser, base):
                if name != formula_name)
     assert all(row["Passed Test Cases"] == "" and row["Total Test Cases"] == "" for row in rows)
     assert all(row["Exported At (UTC)"].endswith("Z") for row in rows)
-    expect(teacher.locator("#export-feedback")).to_contain_text("已导出 3 名学生")
+    expect(teacher.locator("#export-feedback")).to_contain_text("Exported current task results for 3 students")
 
     # After the next task is published, old submissions must not carry into its CSV.
     teacher.locator("[name=title]").fill("Second task")
@@ -160,19 +160,19 @@ def check(browser, base):
     empty_teacher = empty_context.new_page()
     empty_teacher.goto(base)
     empty_teacher.locator("#create input").fill("Empty classroom")
-    empty_teacher.get_by_role("button", name="创建课堂", exact=True).click()
+    empty_teacher.get_by_role("button", name="Create classroom", exact=True).click()
     empty_teacher.locator("[name=title]").fill("No students yet")
     empty_teacher.locator("[name=starterCode]").fill("int main() {}")
     empty_teacher.locator("#publish-task").click()
-    expect(empty_teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+    expect(empty_teacher.locator("#publish-feedback")).to_contain_text("Task published")
     empty_teacher.locator("#export-current-csv").click()
-    expect(empty_teacher.locator("#export-feedback")).to_contain_text("还没有学生")
+    expect(empty_teacher.locator("#export-feedback")).to_contain_text("No students have joined")
     empty_context.close()
 
     # Network/API failures should be reported and the button should recover.
     teacher.route("**/api/rooms/*/progress*", lambda route: route.abort())
     teacher.locator("#export-current-csv").click()
-    expect(teacher.locator("#export-feedback")).to_contain_text("导出失败", timeout=5000)
+    expect(teacher.locator("#export-feedback")).to_contain_text("Export failed", timeout=5000)
     expect(teacher.locator("#export-current-csv")).to_be_enabled()
     context.close()
 
@@ -187,6 +187,6 @@ if __name__ == "__main__":
         browser = getattr(playwright, args.browser).launch(executable_path=args.executable)
         try:
             check(browser, args.url)
-            print("Classroom CSV browser check passed: current-task-only data, unsubmitted students, status mapping, UTF-8 BOM, CSV quoting, formula protection, score blanks, Trusted Native mode, empty states and request failures.")
+            print("Classroom CSV browser check passed: current-task-only data, unsubmitted students, status mapping, UTF-8 BOM, CSV quoting, formula protection, score blanks, Normal mode, empty states and request failures.")
         finally:
             browser.close()

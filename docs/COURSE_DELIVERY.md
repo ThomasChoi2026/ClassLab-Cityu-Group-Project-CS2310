@@ -20,17 +20,17 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 | Control | What it does |
 | --- | --- |
-| **恢复起始代码** (Restore starter code) | Confirm to replace the current editor contents with the teacher's starter for this task. The page also attempts to save the restored draft in this browser. |
-| **下载 .cpp** (Download .cpp) | Save the current editor contents in a local .cpp file, named from the task title. |
-| **运行代码** (Native Run-first) | Requires an available, security-accepted ClassLab Judge. Initially stdin stays hidden. The first run detects actual stdin consumption; if needed, the student enters the complete input and runs the program again from the beginning. This is not a live interactive terminal and does not count as a formal submission. |
-| **提交代码** (Submit code) | Save a formal attempt. Ctrl+Enter or Command+Enter also submits from the editor. The receipt shows the submission time in the browser's local format and the initial status. A queued or ungraded receipt does not award a score. |
-| **本题提交历史（最近 50 次）** (Current task submission history) | Expand to see your latest 50 attempts, newest first, with time, status and a score when available. The list follows the active task. The latest submission's details remain separate from the history. |
+| **Restore starter code** (Restore starter code) | Confirm to replace the current editor contents with the teacher's starter for this task. The page also attempts to save the restored draft in this browser. |
+| **Download .cpp** (Download .cpp) | Save the current editor contents in a local .cpp file, named from the task title. |
+| **Run code** | With an available Judge, use a persistent execution session if interactive acceptance has passed, or enter complete stdin before batch Run. Run is independent of formal submissions. |
+| **Submit code** (Submit code) | Save a formal attempt. Ctrl+Enter or Command+Enter also submits from the editor. The receipt shows the submission time in the browser's local format and the initial status. A queued or ungraded receipt does not award a score. |
+| **Current task submission history (last 50 attempts)** (Current task submission history) | Expand to see your latest 50 attempts, newest first, with time, status and a score when available. The list follows the active task. The latest submission's details remain separate from the history. |
 
 ### OPT CPP practice
 
-1. Click the original teammate-designed **抄送至OPT_CPP** button next to **复制代码**. It opens DIVE4DEC's OPT CPP visualizer in a new tab with the current editor contents and an empty input array. Its existing automatic display-mode behavior is unchanged.
-2. Run and provide any requested input within OPT CPP itself. Use its step controls (including **Last**) to inspect the trace and output. ClassLab's native Run-first stdin is independent.
-3. If the generated URL exceeds ClassLab's 8,192-character threshold, use **打开空白 OPT CPP** and **复制当前代码** to transfer the source manually.
+1. Click the original teammate-designed **Send to OPT CPP** button next to **Copy code**. It opens DIVE4DEC's OPT CPP visualizer in a new tab with the current editor contents and an empty input array. Its existing automatic display-mode behavior is unchanged.
+2. Run and provide any requested input within OPT CPP itself. Use its step controls (including **Last**) to inspect the trace and output. ClassLab's Run stdin is independent.
+3. If the generated URL exceeds ClassLab's 8,192-character threshold, use **Open blank OPT CPP** and **Copy Current Code** to transfer the source manually.
 4. If the external page or its runtime cannot load, keep editing, download a .cpp copy, or submit to ClassLab. Submission and classroom feedback remain available without the external tool. Judge results require an independently verified server installation.
 
 **Privacy.** The address fragment is not included in the initial HTTP request, but the external page can read the code and any input supplied there, and the link may appear in local browser history or be shared. Do not pass passwords, tokens, personal data or private course materials. The external site's handling and policies apply. ClassLab does not receive the external output or award a score from it.
@@ -53,7 +53,7 @@ The integration check also ran the actual upstream assets from revision 654cd74 
 
 ## Repeatable classroom demonstration
 
-Use the [authored score-analysis Notebook](../examples/CS2310_Score_Analysis.ipynb), publish Cell 22, join three separate browser sessions, correct the boundary and submit. Actual Run and grades require an accepted isolated Judge or a reviewed source in the trusted native experiment. Without it, demonstrate saved submissions and source changes only. See [the rehearsal guide](COURSEWORK_DEMO.md).
+Use the [authored score-analysis Notebook](../examples/CS2310_Score_Analysis.ipynb), publish Cell 22, join three separate browser sessions, correct the boundary and submit. Actual Run and grades require an accepted isolated Judge or an approved source in the reviewed-native experiment. Without it, demonstrate saved submissions and source changes only. See [the rehearsal guide](COURSEWORK_DEMO.md).
 
 ## Architecture and evidence
 

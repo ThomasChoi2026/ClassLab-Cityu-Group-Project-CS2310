@@ -1,107 +1,107 @@
 
 <!doctype html>
-<html lang="zh-Hans">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClassLab · 学生课堂</title>
+  <title>ClassLab · Student Learning Portal</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body data-view="student">
-  <header class="top"><div><strong>ClassLab</strong><span>学生课堂</span></div></header>
-  <p class="demo-banner" role="status">Trusted Native GCC · 真实编译；无独立沙盒。仅执行本地操作人员审查过的源码，不可开放给不受信任的学生。</p>
+  <header class="top"><div><strong>ClassLab</strong><span>Student Learning Portal</span></div></header>
+  <p class="demo-banner" role="status">Trusted Native GCC · Real compilation, no separate sandbox. Only locally reviewed source is eligible. Never expose this experiment to untrusted students.</p>
   <main class="student">
     <section id="setup" class="intro">
-      <div><h1>加入编程课堂</h1><p>输入昵称，让教师认出你的提交。</p></div>
+      <div><h1>Join the Classroom</h1><p>Enter a display name so that your instructor can identify your submissions.</p></div>
       <div class="panel">
         <form id="join">
-          <label>你的昵称<input name="name" required maxlength="40" autocomplete="nickname"></label>
-          <button>加入课堂</button>
+          <label>Display Name<input name="name" required maxlength="40" autocomplete="nickname"></label>
+          <button>Join Classroom</button>
         </form>
       </div>
     </section>
     <details id="student-classrooms" class="panel" hidden>
-      <summary>已加入的课堂</summary>
+      <summary>Enrolled Classes</summary>
       <ul id="student-classroom-list" class="case-results"></ul>
     </details>
     <section id="workspace" hidden>
       <div class="heading"><div><h1 id="room-name"></h1><p id="student-name"></p></div></div>
       <p id="connection" role="status" class="feedback error"></p>
       <details class="panel timetable">
-        <summary>每周课表</summary>
-        <p id="schedule-empty">暂无课程时段。</p>
+        <summary>Weekly Schedule</summary>
+        <p id="schedule-empty">No scheduled class sessions are currently available.</p>
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <section class="panel">
-        <label id="student-task-navigation" hidden>本课堂已发布任务
-          <select id="student-task-picker"><option value="">最新发布</option></select>
+        <label id="student-task-navigation" hidden>Available Assignments
+          <select id="student-task-picker"><option value="">Latest task</option></select>
         </label>
-        <p id="archive-notice" class="inline-status" hidden>正在查看往期任务。返回最新发布可运行和提交。</p>
-        <p id="waiting">等待教师发布任务，页面将自动更新。</p>
+        <p id="archive-notice" class="inline-status" hidden>You are viewing a previous assignment. Return to the latest assignment to run programs and submit solutions.</p>
+        <p id="waiting">Waiting for the instructor to publish an assignment. This page will update automatically.</p>
         <div id="assignment" hidden>
           <h2 id="task-title"></h2>
           <p id="task-description" class="description"></p>
           <details id="public-tests" hidden>
-            <summary>公开测试用例</summary>
+            <summary>Public Test Cases</summary>
             <div id="student-public-tests"></div>
           </details>
           <form id="submit">
             <div class="editor-field">
               <div class="section-heading">
-                <label for="student-code">你的 C++ 代码</label>
+                <label for="student-code">Your C++ Source Code</label>
                 <div class="lesson-actions">
-                  <button id="copy-code" type="button" class="secondary">复制代码</button>
-                  <button id="open-optcpp" type="button" class="secondary" title="在新标签页打开外部 OPT CPP 可视化工具">抄送至OPT_CPP</button>
-                  <button id="reset-code" type="button" class="secondary">恢复起始代码</button>
-                  <button id="download-code" type="button" class="secondary">下载 .cpp</button>
+                  <button id="copy-code" type="button" class="secondary">Copy Code</button>
+                  <button id="open-optcpp" type="button" class="secondary" title="Open the external OPT CPP visualizer in a new tab">Send to OPT CPP</button>
+                  <button id="reset-code" type="button" class="secondary">Restore Starter Code</button>
+                  <button id="download-code" type="button" class="secondary">Download .cpp File</button>
                 </div>
               </div>
               <textarea id="student-code" class="editor" name="code" required rows="14" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
               <p id="editor-feedback" class="inline-status" role="status"></p>
             </div>
             <div id="stdin-panel" hidden>
-              <label for="run-stdin"><span id="stdin-label">标准输入（stdin）</span>
+              <label for="run-stdin"><span id="stdin-label">Standard input (stdin)</span>
                 <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false"></textarea>
               </label>
-              <p id="stdin-hint" class="inline-status">批处理模式请在运行前填写完整输入；交互模式可以逐次发送输入。</p>
+              <p id="stdin-hint" class="inline-status">Enter complete input before batch Run, or send input in stages during an interactive session.</p>
               <div id="live-actions" class="lesson-actions" hidden>
-                <button id="send-stdin" type="button" class="secondary">发送输入</button>
-                <button id="send-eof" type="button" class="secondary">结束输入 (EOF)</button>
-                <button id="stop-run" type="button" class="secondary">停止运行</button>
+                <button id="send-stdin" type="button" class="secondary">Send input</button>
+                <button id="send-eof" type="button" class="secondary">End input (EOF)</button>
+                <button id="stop-run" type="button" class="secondary">Stop</button>
               </div>
               <p id="run-action-feedback" class="inline-status" role="status"></p>
             </div>
             <fieldset id="run-controls" class="run-controls" disabled aria-describedby="run-state">
-              <legend>ClassLab 自由运行</legend>
-              <button id="run-code" type="button" class="secondary">运行代码</button>
+              <legend>ClassLab Program Execution</legend>
+              <button id="run-code" type="button" class="secondary">Run code</button>
             </fieldset>
-            <p id="run-state" role="status">隔离执行器不可用，暂时无法运行代码。</p>
-            <section id="run-result" aria-label="自由运行结果" hidden></section>
+            <p id="run-state" role="status">The execution environment is currently unavailable. Program execution cannot be performed at this time.</p>
+            <section id="run-result" aria-label="Program Execution Results" hidden></section>
             <div id="optcpp-fallback" hidden>
-              <p>代码过长，无法直接传递。请打开空白 OPT CPP 并自行复制代码。</p>
+              <p>The source code exceeds the transfer limit. Please open a blank OPT_CPP workspace and copy the code manually.</p>
               <div class="lesson-actions">
-                <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">打开空白 OPT CPP</a>
-                <button id="copy-opt-code" type="button" class="secondary">复制当前代码</button>
+                <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">Open blank OPT CPP</a>
+                <button id="copy-opt-code" type="button" class="secondary">Copy Current Code</button>
               </div>
             </div>
             <p id="optcpp-status" class="inline-status" role="status"></p>
-            <button id="submit-code" type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">提交代码</button>
-            <small id="submit-shortcut">在编辑器中按 Ctrl + Enter 或 ⌘ + Enter 也可提交。</small>
+            <button id="submit-code" type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">Submit code</button>
+            <small id="submit-shortcut">Press Ctrl + Enter (Windows/Linux) or ⌘ + Enter (macOS) to submit directly from the editor.</small>
             <p id="submit-feedback" role="status" class="feedback"></p>
           </form>
           <section id="latest-result" hidden>
-            <h3>最新正式提交</h3>
+            <h3>Latest Assessment Result</h3>
             <div id="student-result"></div>
           </section>
           <details id="submission-history" hidden>
-            <summary>本题提交历史（最近 50 次）</summary>
+            <summary>Submission and Assessment History (Most Recent 50 Attempts)</summary>
             <ol id="history-list"></ol>
           </details>
         </div>
       </section>
     </section>
-    <p id="praise-toast" class="praise-toast" role="status">🏅 做得好！</p>
+    <p id="praise-toast" class="praise-toast" role="status">🏅 Excellent Work!</p>
     <p id="feedback" role="status" class="feedback"></p>
   </main>
 </body>

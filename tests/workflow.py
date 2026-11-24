@@ -158,7 +158,7 @@ class ClassroomWorkflow(unittest.TestCase):
             with server(data) as base:
                 status, page = request(base, "/")
                 self.assertEqual(status, 200)
-                self.assertIn("任务说明（可选）", page)
+                self.assertIn("Task Description (Optional)", page)
                 self.assertNotIn('name="description" required', page)
                 _, room = request(base, "/api/rooms", {"name": "Optional description"})
                 root = "/api/rooms/" + room["id"]
@@ -186,7 +186,7 @@ class ClassroomWorkflow(unittest.TestCase):
     def test_classroom_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:
             data = Path(directory) / "classrooms.json"
-            task = {"title": "修正返回值", "description": "让 main 返回 0。",
+            task = {"title": "Fix the return value", "description": "Make main return 0.",
                     "starterCode": "int main() { return 1; }"}
 
             with server(data) as base:
@@ -199,7 +199,7 @@ class ClassroomWorkflow(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertIn("QR Code Generator for JavaScript", asset)
                 self.assertEqual(request(base, "/api/rooms", {"name": " "})[0], 400)
-                status, room = request(base, "/api/rooms", {"name": "C++ 实验课"})
+                status, room = request(base, "/api/rooms", {"name": "C++ lab"})
                 self.assertEqual(status, 201)
                 root = "/api/rooms/" + room["id"]
                 teacher = {"X-Teacher-Key": room["teacherKey"]}
@@ -379,7 +379,7 @@ class ClassroomWorkflow(unittest.TestCase):
                 self.assertNotIn("fixture source", json.dumps(result))
                 self.assertEqual(result["latestResult"]["cases"], [
                     {"status": "passed", "name": "Public", "input": "p", "expectedOutput": "3", "actualOutput": "3"},
-                    {"name": "隐藏测试 1", "status": "wrong_answer"}])
+                    {"name": "Hidden test 1", "status": "wrong_answer"}])
                 detail = root + "/latest/2?taskId=" + task_id
                 self.assertEqual(request(base, detail, **{"X-Student-Key": "lin"})[0], 403)
                 self.assertEqual(request(base, detail, **teacher)[1]["result"], compile_error["judgement"])

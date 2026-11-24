@@ -1,24 +1,24 @@
-# Phase 4 执行与部署验收
+# Phase 4 execution and deployment acceptance
 
 > This guide covers the ClassLab server-side Judge. The optional [OPT CPP handoff](COURSE_DELIVERY.md#opt-cpp-practice) is a browser link. It does not provide formal judging or change the server's isolation requirements.
 
-## 路线与边界
+## Architecture and scope
 
-ClassLab 保留原 C++20 Web 服务和教室数据。独立 Python 3 Judge 通过本机 Unix socket 接收源码和标准输入，使用 Docker + gVisor 在独立进程中执行 GCC 14.3.0（-std=c++20）。镜像按摘要固定，执行时禁止拉取。编译用一个容器，每项测试使用新容器、新工作区。教师预期输出留在 C++ 服务中，比较沿用 Phase 3 的换行规则。隐藏用例的运行输出不落库，学生只收到隐藏用例的编号及状态。
+ClassLab retains its C++20 web service and classroom data. A separate Python 3 judge receives source and standard input over a local Unix socket. It uses Docker and gVisor to run GCC 14.3.0 with `-std=c++20` in a separate process. The image is pinned by digest and is never pulled during execution. Compilation gets a dedicated container. Each test gets a fresh container and workspace. Expected outputs stay in the C++ service, which applies the Phase 3 newline comparison rules. Hidden-case output is discarded. Students receive only a generic case number and status.
 
-考察了三条路线。独立服务器执行器需要可验证的 cgroup v2、容器文件系统和运行时，当前 Codex Cloud 缺少有效控制器。独立 Judge 路线保持权限边界，可接自托管组件。Judge0 等方案还需要额外服务及其自己的隔离前提，本项目选用只依赖 Python 标准库的本机 Worker。浏览器 WASM 可用于自由练习，但需要固定并分发可在浏览器内使用的 C++20 工具链和标准库，还要验证 cin/cout、内存和浏览器兼容性。浏览器结果不能作为可信课堂成绩，Phase 4 未实现该路线。后续 OPT CPP 的浏览器功能由外部工具提供。
+The team considered three approaches. Server-side execution needs a verified runtime, filesystem isolation, and effective cgroup v2 controls, which the evaluated Codex Cloud host lacked. A separate judge keeps privilege boundaries and can use self-hosted components. Services such as Judge0 have additional service and isolation requirements, so the team chose a local Python standard-library worker. Browser WebAssembly practice would require a distributable, pinned C++20 toolchain and standard library, plus checks for input/output, memory, and browser compatibility. Browser results cannot serve as trusted classroom grades. Phase 4 did not implement this route. The later OPT CPP browser feature uses an external tool.
 
-## 运行配置
+## Runtime configuration
 
-需要独立、经批准的 Linux x86-64 环境，Docker 本机守护进程及有效 cgroup v2 CPU/内存/PID 控制器。默认使用 gVisor runsc。若目标 gVisor 无法通过探针，可以在专用且不含敏感数据的 VM 上评估 runc，使用相同验收门槛。runc 共享该 VM 的内核，不能当成 gVisor 的附加内核隔离。使用专门的 Docker 主机或 daemon，不放入其他工作负载或数据。安装可信 Docker 和 gVisor，使用 Docker 的 runsc 注册，运行时不得忽略 cgroups。Judge 用户需要访问 daemon，本身属于高权限主体，应与课堂 Web 用户分开。学生容器不挂载宿主路径、Docker Socket、凭据或课堂数据。不能假定 Codespaces 开通这些权限。
+Use an approved, dedicated Linux x86-64 host with a local Docker daemon and effective cgroup v2 CPU, memory, and PID controllers. The default runtime is gVisor runsc. If the target gVisor setup fails its probes, evaluate runc only on a dedicated VM without sensitive data, under the same acceptance criteria. runc shares that VM's kernel. Keep the Docker host or daemon free of other workloads and data. Install trusted Docker and gVisor, register runsc with Docker, and verify that the runtime enforces cgroups. The judge user needs privileged daemon access and must be separate from the classroom web user. Student containers must have no host-path, Docker socket, credential, or classroom-data mounts. Verify the available privileges on any Codespaces host.
 
-1. 浏览并信任镜像来源后，在目标主机预拉特定镜像：
+1. Review the image source and pull the pinned image on the target host:
 
    ~~~sh
    docker pull --platform linux/amd64 docker.io/library/gcc@sha256:5e927c284bf55a7dc796262e311a0703344f62f41f5621eb56843111b1d37e15
    ~~~
 
-2. 先以实际 Judge 用户运行探针和验收。任一失败都保持执行关闭。
+2. Run the probes and acceptance checks as the actual judge user. Keep execution disabled if any check fails.
 
    ~~~sh
    python3 judge/worker.py
@@ -26,26 +26,24 @@ ClassLab 保留原 C++20 Web 服务和教室数据。独立 Python 3 Judge 通�
    python3 tests/judge_real_flow.py build/classlab
    ~~~
 
-3. 核对启动探针、验收脚本与实际配置。探针验证可见的宿主 cgroup 配额、根挂载、UID、capabilities、NoNewPrivs、网络、临时盘和文件大小上限。验收还需确认 CPU 节流、内存超限与进程上限、禁止访问测试标记文件和服务、编译和运行超时、强制终止后清理。检查宿主 Docker 无代理注入凭据，无业务路径挂载，确认跨用例工作区隔离。发生任一基础设施或清理故障须重启并重新验证。
+3. Check the startup probe, acceptance script, and effective configuration. The probe checks visible host cgroup quotas, root mounts, UID, capabilities, NoNewPrivs, networking, temporary disk limits, and file size limits. Acceptance also covers CPU throttling, memory and process limits, denied access to test markers and services, compile and run timeouts, and cleanup after forced termination. Check Docker for proxy-injected credentials and application mounts, and verify workspace isolation between cases. Restart and revalidate after infrastructure or cleanup failures.
 
-4. 在同一主机使用 judge/classlab-judge.service 作为 systemd 配置示例，项目部署路径为 /opt/classlab，独立服务用户和组为 classlab-judge。先准备这些账户及组，再由管理员安装服务。Web 用户只加入 classlab-judge 组以获得 socket 权限。Judge 使用私有目录 /run/classlab-judge，服务停止后 ExecStopPost 清理由该专用 Worker 标记的容器。验收完成后才以 --operator-verified 启动。选用 runc 时，探针、验收和服务启动均须传入 --runtime runc。
+4. On the same host, use `judge/classlab-judge.service` as a systemd example. It assumes installation under `/opt/classlab` and a separate `classlab-judge` user and group. An administrator creates the accounts and installs the service. Give the web user socket access through the `classlab-judge` group. The judge uses a private `/run/classlab-judge` directory. On shutdown, `ExecStopPost` removes containers labeled by this dedicated worker. Use `--operator-verified` only after acceptance. For runc, pass `--runtime runc` to the probe, acceptance checks, and service.
 
-5. 启动 ClassLab，设置 CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock。保持 Web 预览端口私有，不转发 Judge。网页会按 Judge 实时可用性启用 Run。Judge 独立服务不可用时，Run 返回 503，Submit 保存源码并显示未评测。
+5. Start ClassLab with `CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock`. Keep the web preview private and do not forward the judge socket. The page enables Run according to current judge availability. When the judge is unavailable, Run returns 503. Submit saves the source and displays an ungraded result.
 
-## Run-first stdin 探测协议
+## Standard input and interactive execution
 
-- 学生端默认隐藏标准输入。在已验收的独立 Judge 可用时，首次点击 Run 向同一受身份验证的 `/run` 路由发送 `probe: true`、空 `input`。后端使用现有的 Unix Socket、相同的 Docker 容器配额和超时。
-- Judge 先正常编译 C++20。探测执行在全新的隔离容器内，将一个字节的换行放入可信包装器创建的输入文件。包装器通过另存的 fd 查看程序终止后的文件偏移，因此检测的是**真实的标准输入读取**，不是对 C++ 代码搜索 `cin` 等文本。
-- 如果探测时实际读取了输入，Judge 返回 `stdin_required` 和读取前的公开输出。学生输入后再次点击 Run，程序将在另一隔离执行中从头运行，并使用本次提供的完整 stdin。此前探测执行的状态和结果不会被当作正式评测。正式提交的 Grade 路径不变。
-- 这是 **probe → rerun** 模式，并非可在同一个进程中逐行等待输入的交互式终端。输入需要一次性提供。依赖终端 TTY、特殊文件描述符或故意修改探测文件的程序不保证被正确识别。探测同样受 3 秒执行时间、输出和内存限制；它不授予新权限。
-- 任意未完成隔离验收的 Codespaces / Docker 环境必须继续禁用原生 Run。检测程序读取 stdin 的能力与执行器是否通过安全验收是两回事。
+The official application never enables unisolated execution. An accepted batch worker accepts complete stdin supplied before Run. The browser no longer probes and reruns. The legacy private probe protocol remains only for compatibility and regression tests.
 
-## 运行与故障语义
+Interactive execution requires additional actual-host validation of persistent Docker attach stdin, EOF, cleanup and limits. Follow [INTERACTIVE_RUN.md](INTERACTIVE_RUN.md); use the additional operator-verified flag only after those tests pass. Submit remains batch evaluation.
 
-容器配置申请单核、256 MiB 无交换、32 进程、8 MiB 的 /tmp、16 MiB 的 /work、单文件 1 MiB，并使用 Docker 默认 seccomp 策略及无外网、禁用 IPC 共享。编译和运行的流处理各有 15 秒和 3 秒墙钟期限，Docker 管理命令和整体任务另设期限。运行标准输出、标准错误分别最多保留 16 KiB，编译产物经过固定大小的传输和 ELF 校验。超时或超量时尽力强制移除容器，清理异常会关闭 Judge，systemd 的停止钩子补充清理。执行器一次执行一个 Run 或正式评测。Phase 5 的正式提交进入持久化队列，Run 在忙碌或有排队项时提示稍后重试。评测启动失败记为系统错误，学生编译和运行的时限从受信任的容器启动确认后开始计时。正式结果按提交编号更新，等待中的提交在重启后恢复，中断的评测记为评测服务错误。评测服务错误不会算成学生答错。
+## Execution and failures
 
-## 测试证据
+The container requests one CPU, 256 MiB of memory without swap, 32 processes, an 8 MiB `/tmp`, a 16 MiB `/work`, and a 1 MiB per-file limit. It uses Docker's default seccomp policy, disables IPC sharing, and has no external network. Compilation and execution have 15-second and three-second wall-clock limits respectively. Docker management commands and the whole task have separate deadlines. The runner retains up to 16 KiB each of stdout and stderr and checks the size and ELF format of compiled artifacts. After a timeout or resource overrun it attempts forced container removal. Cleanup failures disable the judge, with an additional systemd stop hook for cleanup. The batch worker serializes ordinary runs and submissions. An additionally accepted interactive worker has two bounded free-run slots; each retains the same isolated process for input sends. Phase 5 queues formal submissions persistently. Practice runs ask students to retry when the worker is busy or submissions are queued. Startup failures count as service errors. Student compile and run deadlines begin after trusted confirmation of container startup. Formal results update by submission ID. Queued attempts resume after restart, while interrupted grading becomes a service error and does not count as a wrong answer.
 
-- CTest 包含已有课堂与输出比较测试，以及明确使用 Mock Judge 的 Unix 协议集成，涵盖状态校验、并发、故障恢复、权限和结果存储。
-- tests/judge_smoke.py 默认只运行代码中固定的可信 GCC 示例。tests/judge_real_flow.py 使用临时 Unix socket，只允许固定源码与固定输入，用于验证真实执行经 C++ 后端形成课堂统计。这两个测试入口都不会开启正常的学生执行服务。
-- Codex Cloud 的 Docker cgroup driver 为 none，配置的 runsc 带有 --ignore-cgroups，生产启动探针拒绝启用。当前环境的有效 CPU、内存、进程限制，资源滥用及强制终止恢复尚待在验收主机验证。可信探针已确认非特权 UID、零 capabilities、只读根目录、仅回环网络、8 MiB /tmp、16 MiB /work、文件大小 ulimit、未挂载仓库或 Docker Socket，以及通过 prctl 确认 no-new-privileges。不要在当前环境运行 --acceptance 的危险样例或开放执行。
+## Test evidence
+
+- CTest includes classroom and output-comparison tests plus Unix protocol integration with an explicit mock judge. It covers status validation, concurrency, recovery, authorization, and result storage.
+- `tests/judge_smoke.py` runs only the fixed, trusted GCC examples by default. `tests/judge_real_flow.py` accepts only fixed programs and inputs on a temporary Unix socket and checks that actual results reach the C++ classroom statistics. Neither entry point starts the regular student execution service.
+- In the evaluated Codex Cloud environment, Docker reported no cgroup driver and runsc was configured with `--ignore-cgroups`, so the production startup probe refused to enable execution. Effective CPU, memory, and process limits, resource abuse, and recovery after forced termination still needed verification on the acceptance host. Trusted probes confirmed an unprivileged UID, zero capabilities, a read-only root, loopback-only networking, 8 MiB `/tmp`, 16 MiB `/work`, the file-size ulimit, no repository or Docker socket mounts, and no-new-privileges via `prctl`. Keep execution disabled and do not run the `--acceptance` stress cases in that environment.

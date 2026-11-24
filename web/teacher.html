@@ -1,10 +1,10 @@
 
 <!doctype html>
-<html lang="zh-Hans">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClassLab · 教师工作台</title>
+  <title>ClassLab · Teacher Dashboard</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/vendor/qrcode.js" defer></script>
   <script src="/diff.js" defer></script>
@@ -12,217 +12,217 @@
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
-  <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">使用指引</button></div></header>
-  <p class="demo-banner" role="status">Trusted Native GCC · 真实编译；无独立沙盒。仅执行本地操作人员审查过的源码，不可开放给不受信任的学生。</p>
+  <header class="top"><div><strong>ClassLab</strong><span>Teacher Dashboard</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">User Guide</button></div></header>
+  <p class="demo-banner" role="status">Trusted Native GCC · Real compilation, no separate sandbox. Only locally reviewed source is eligible. Never expose this experiment to untrusted students.</p>
   <main>
     <section id="setup" class="intro">
-      <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
+      <div><h1>Create a Programming Class</h1><p>Publish C++ exercises and share the join link with students.</p></div>
       <div class="panel">
         <form id="create">
-          <label>课堂名称<input name="name" required maxlength="40" placeholder="例如 C++ 程序设计"></label>
-          <button>创建课堂</button>
-          <button id="open-preparation" type="button" class="secondary">课前备课</button>
+          <label>Class Name<input name="name" required maxlength="40" placeholder="e.g. C++ Programming"></label>
+          <button>Create classroom</button>
+          <button id="open-preparation" type="button" class="secondary">Lesson Preparation</button>
         </form>
       </div>
     </section>
-    <label id="teacher-room-navigation" hidden>切换已管理的课堂
-      <select id="teacher-room-picker"><option value="">选择课堂</option></select>
+    <label id="teacher-room-navigation" hidden>Switch Managed Classrooms
+      <select id="teacher-room-picker"><option value="">Select a Classroom</option></select>
     </label>
     <section id="dashboard" hidden>
       <div class="heading section-heading classroom-heading">
         <h1 id="room-name"></h1>
-        <button id="exit-preparation" type="button" class="secondary" hidden>返回创建课堂</button>
-        <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">课堂投影</button>
-        <button id="new-classroom" type="button" class="secondary">创建新课堂</button>
+        <button id="exit-preparation" type="button" class="secondary" hidden>Return to Create Classroom</button>
+        <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">Classroom Projection</button>
+        <button id="new-classroom" type="button" class="secondary">Create New Classroom</button>
       </div>
-      <section id="classroom-view" class="panel classroom-view" aria-label="课堂投影" hidden>
+      <section id="classroom-view" class="panel classroom-view" aria-label="Classroom Projection" hidden>
         <div class="projection-invite">
-          <h2>扫码加入课堂</h2>
+          <h2>Scan to Join the Classroom</h2>
           <div id="projection-qr"></div>
-          <a id="projection-link">打开学生加入页</a>
+          <a id="projection-link">Open Student Join Page</a>
         </div>
         <div class="projection-progress">
-          <h2 id="projection-task">尚未发布任务</h2>
+          <h2 id="projection-task">No task published yet</h2>
           <dl class="metrics">
-            <div><dt>已加入</dt><dd id="projection-joined">0</dd></div>
-            <div><dt>已提交</dt><dd id="projection-submitted">0</dd></div>
-            <div><dt>全部通过</dt><dd id="projection-accepted">0</dd></div>
+            <div><dt>Joined</dt><dd id="projection-joined">0</dd></div>
+            <div><dt>Submitted</dt><dd id="projection-submitted">0</dd></div>
+            <div><dt>All Passed</dt><dd id="projection-accepted">0</dd></div>
           </dl>
-          <label for="projection-meter">提交进度</label>
+          <label for="projection-meter">Submission Progress</label>
           <progress id="projection-meter" value="0" max="100"></progress>
-          <p id="projection-rate">等待学生加入</p>
+          <p id="projection-rate">Waiting for Students to Join</p>
           <p id="projection-connection"></p>
         </div>
       </section>
       <div id="management-view">
       <section class="panel share" aria-labelledby="share-title">
-        <button id="show-qr" class="qr-trigger" type="button" aria-label="放大加入二维码" aria-haspopup="dialog" hidden></button>
+        <button id="show-qr" class="qr-trigger" type="button" aria-label="Enlarge Join QR Code" aria-haspopup="dialog" hidden></button>
         <div>
-          <h2 id="share-title">邀请学生加入</h2>
-          <p id="share-hint">扫描二维码或打开链接即可进入学生页面。</p>
-          <label for="join-link">课堂加入链接</label>
-          <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">复制链接</button></div>
+          <h2 id="share-title">Invite Students to Join</h2>
+          <p id="share-hint">Scan the QR code or open the link to access the student page.</p>
+          <label for="join-link">Classroom Join Link</label>
+          <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">Copy Link</button></div>
           <p id="copy-feedback" class="inline-status" role="status"></p>
         </div>
       </section>
       <details id="class-schedule" class="panel timetable">
-        <summary>每周课表</summary>
+        <summary>Weekly Schedule</summary>
         <form id="add-slot">
-          <label>课程名称<input name="name" required maxlength="40" placeholder="例如 CS2310 Lecture"></label>
-          <label>星期<select name="day">
-            <option value="1">星期一</option><option value="2">星期二</option>
-            <option value="3">星期三</option><option value="4">星期四</option>
-            <option value="5">星期五</option><option value="6">星期六</option>
-            <option value="7">星期日</option>
+          <label>Course Name<input name="name" required maxlength="40" placeholder="e.g. CS2310 Lecture"></label>
+          <label>Day of Week<select name="day">
+            <option value="1">Monday</option><option value="2">Tuesday</option>
+            <option value="3">Wednesday</option><option value="4">Thursday</option>
+            <option value="5">Friday</option><option value="6">Saturday</option>
+            <option value="7">Sunday</option>
           </select></label>
-          <label>开始时间<input type="time" name="start" required></label>
-          <label>结束时间<input type="time" name="end" required></label>
-          <button>添加时段</button>
+          <label>Start Time<input type="time" name="start" required></label>
+          <label>End Time<input type="time" name="end" required></label>
+          <button>Add Time Slot</button>
         </form>
         <p id="schedule-feedback" class="feedback" role="status"></p>
-        <p id="schedule-empty">暂无课程时段。</p>
+        <p id="schedule-empty">No class sessions scheduled.</p>
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <div class="layout">
         <section class="panel" id="teacher-composer">
-          <h2>创建 C++ 练习</h2>
-          <div class="compose-switch" role="group" aria-label="练习创建方式">
-            <button type="button" id="compose-quick" class="secondary" aria-pressed="false">快速课堂</button>
-            <button type="button" id="compose-prep" aria-pressed="true">课前备课</button>
+          <h2>Create a C++ Exercise</h2>
+          <div class="compose-switch" role="group" aria-label="Exercise Creation Method">
+            <button type="button" id="compose-quick" class="secondary" aria-pressed="false">Quick Classroom</button>
+            <button type="button" id="compose-prep" aria-pressed="true">Lesson Preparation</button>
           </div>
-          <p id="compose-hint" role="status">浏览 Notebook，将所需单元填入起始代码，再核对并发布。</p>
+          <p id="compose-hint" role="status">Browse the Notebook, insert the required cells into the starter code, then review and publish.</p>
           <form id="publish">
-            <section id="notebook-import" class="notebook-import" aria-label="Notebook 导入">
-              <strong>导入 Notebook</strong>
-              <p id="normal-notebook-download"><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">下载教学 Notebook 示例（74 Cells / 5 题）</a></p>
-              <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
+            <section id="notebook-import" class="notebook-import" aria-label="Notebook Import">
+              <strong>Import Notebook</strong>
+              <p id="normal-notebook-download"><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download sample teaching notebook (74 cells / 5 exercises)</a></p>
+              <label>Notebook File<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
               <p id="notebook-overview" role="status" hidden></p>
               <div id="notebook-cells" hidden>
                 <div class="notebook-search-row">
-                  <label>搜索单元<input type="search" id="notebook-search" placeholder="编号或源码关键词" autocomplete="off"></label>
-                  <label>筛选类型<select id="notebook-filter">
-                    <option value="all">全部单元</option>
-                    <option value="exercise">课堂互动练习</option>
-                    <option value="cpp">C++ 代码</option>
-                    <option value="other">其他代码</option>
+                  <label>Search Cells<input type="search" id="notebook-search" placeholder="Cell number or source code keyword" autocomplete="off"></label>
+                  <label>Filter Type<select id="notebook-filter">
+                    <option value="all">All Cells</option>
+                    <option value="exercise">Interactive Classroom Exercise</option>
+                    <option value="cpp">C++ Code</option>
+                    <option value="other">Other Code</option>
                     <option value="markdown">Markdown</option>
                   </select></label>
                 </div>
                 <div class="notebook-browser">
-                  <div id="notebook-list" class="notebook-list" role="group" aria-label="Notebook 单元列表"></div>
+                  <div id="notebook-list" class="notebook-list" role="group" aria-label="Notebook Cell List"></div>
                   <div class="notebook-detail">
                     <strong id="notebook-current-label"></strong>
                     <pre id="notebook-preview"></pre>
                   </div>
                 </div>
                 <div class="lesson-actions">
-                  <button type="button" class="secondary" id="use-notebook-cell">用此 Cell 作为起始代码</button>
-                  <button type="button" class="secondary" id="append-notebook-text" hidden>追加到题目说明</button>
+                  <button type="button" class="secondary" id="use-notebook-cell">Use This Cell as Starter Code</button>
+                  <button type="button" class="secondary" id="append-notebook-text" hidden>Append to Task Description</button>
                 </div>
                 <details id="notebook-combination" hidden>
-                  <summary>多 Cell 组合（高级）</summary>
-                  <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
+                  <summary>Combine cells (advanced)</summary>
+                  <button type="button" class="secondary" id="toggle-prep-cell">Add to selection</button>
                   <p id="selected-prep-cells"></p>
-                  <button type="button" class="secondary" id="assemble-notebook" disabled>将组合填入起始代码</button>
+                  <button type="button" class="secondary" id="assemble-notebook" disabled>Use selected cells as starter code</button>
                 </details>
               </div>
               <p id="notebook-status" class="inline-status" role="status"></p>
             </section>
-            <label>标题<input name="title" required maxlength="53"></label>
-            <label>任务说明（可选）<textarea name="description" maxlength="3000" rows="4"></textarea></label>
-            <label>C++ 起始代码（学生将收到的代码）<textarea aria-describedby="starter-code-status" class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+            <label>Title<input name="title" required maxlength="53"></label>
+            <label>Task Description (Optional)<textarea name="description" maxlength="3000" rows="4"></textarea></label>
+            <label>C++ Starter Code (Code Students Will Receive)<textarea aria-describedby="starter-code-status" class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <p id="starter-code-status" class="inline-status" role="status"></p>
-            <label id="empty-starter-choice" class="empty-starter-choice"><input id="allow-empty-starter" type="checkbox">让学生从空白开始</label>
+            <label id="empty-starter-choice" class="empty-starter-choice"><input id="allow-empty-starter" type="checkbox">Let Students Start from a Blank Template</label>
             <details id="teacher-optional-settings" class="teacher-optional-settings">
-              <summary>测试用例与易错点（<span id="preparation-counts">0 个用例 · 0 个易错点</span>）</summary>
+              <summary>Test cases and pitfalls (<span id="preparation-counts">Test cases: 0 · Pitfalls: 0</span>)</summary>
             <fieldset class="case-editor">
-              <legend>自动评测用例</legend>
-              <p>每题最多 12 项。未添加用例时只收集提交。发布后，用例随任务保存。</p>
+              <legend>Automated Evaluation Test Cases</legend>
+              <p>Up to 12 items per problem. If no test cases are added, only submissions will be collected. After publication, test cases are saved with the assignment.</p>
               <div id="case-editor-rows"></div>
-              <button id="add-case" type="button" class="secondary">添加测试用例</button>
+              <button id="add-case" type="button" class="secondary">Add Test Case</button>
 
             </fieldset>
             <fieldset class="case-editor">
-              <legend>预期易错点（仅教师可见）</legend>
-              <p>可附上需查找的源码片段或关联用例编号。匹配是复核线索。</p>
+              <legend>Expected Pitfalls (Teacher Only)</legend>
+              <p>You may attach source-code snippets to search for or related test case IDs. Matches are review hints only.</p>
               <div id="pitfall-rows"></div>
-              <button id="add-pitfall" type="button" class="secondary">添加易错点</button>
+              <button id="add-pitfall" type="button" class="secondary">Add Pitfall</button>
             </fieldset>
             </details>
           <details id="prep-library">
-            <summary>备课练习库（可选）</summary>
+            <summary>Lesson Preparation Exercise Library (Optional)</summary>
           <fieldset class="case-editor">
-            <legend>已保存草稿</legend>
-            <p>草稿保存在当前浏览器。载入草稿会替换当前编辑器。</p>
-            <label>已保存练习<select id="draft-library"><option value="">选择练习</option></select></label>
+            <legend>Saved Drafts</legend>
+            <p>Drafts are stored in the current browser. Loading a draft will replace the current editor contents.</p>
+            <label>Saved Exercises<select id="draft-library"><option value="">Select Exercise</option></select></label>
             <div class="lesson-actions">
-              <button id="save-draft" type="button" class="secondary">保存新练习</button>
-              <button id="load-draft" type="button" class="secondary" disabled>载入</button>
-              <button id="update-draft" type="button" class="secondary" hidden>更新已载入练习</button>
-              <button id="delete-draft" type="button" class="secondary" disabled>删除所选练习</button>
+              <button id="save-draft" type="button" class="secondary">Save New Exercise</button>
+              <button id="load-draft" type="button" class="secondary" disabled>Load</button>
+              <button id="update-draft" type="button" class="secondary" hidden>Update Loaded Exercise</button>
+              <button id="delete-draft" type="button" class="secondary" disabled>Delete Selected Exercise</button>
             </div>
             <p id="draft-feedback" class="inline-status" role="status"></p>
           </fieldset>
           </details>
-            <button id="publish-task">发布为当前任务</button>
+            <button id="publish-task">Publish as current task</button>
             <p id="publish-feedback" role="status" class="feedback"></p>
           </form>
         </section>
         <section class="panel" id="classroom-progress">
           <div class="section-heading progress-heading">
-            <h2>课堂进度</h2>
+            <h2>Classroom Progress</h2>
             <div class="progress-actions">
-              <span id="refresh-state" role="status">正在加载</span>
-              <button id="export-current-csv" type="button" class="secondary">导出当前任务 CSV</button>
+              <span id="refresh-state" role="status">Loading</span>
+              <button id="export-current-csv" type="button" class="secondary">Export Current Assignment CSV</button>
             </div>
           </div>
           <p id="export-feedback" class="inline-status" role="status"></p>
-          <label id="teacher-task-navigation" hidden>查看已发布任务
-            <select id="teacher-task-picker"><option value="">最新发布</option></select>
+          <label id="teacher-task-navigation" hidden>View published tasks
+            <select id="teacher-task-picker"><option value="">Latest task</option></select>
           </label>
-          <p id="current-task">正在获取当前任务…</p>
+          <p id="current-task">Retrieving Current Assignment…</p>
           <dl class="metrics">
-            <div><dt>已加入</dt><dd id="joined">0</dd></div>
-            <div><dt>已提交</dt><dd id="submitted">0</dd></div>
-            <div><dt>提交次数</dt><dd id="attempts">0</dd></div>
+            <div><dt>Joined</dt><dd id="joined">0</dd></div>
+            <div><dt>Submitted</dt><dd id="submitted">0</dd></div>
+            <div><dt>Attempts</dt><dd id="attempts">0</dd></div>
           </dl>
           <div class="table-wrap">
-            <table><thead><tr><th scope="col">学生</th><th scope="col">状态</th><th scope="col">次数</th><th scope="col">详情</th><th scope="col">操作</th></tr></thead><tbody id="students"></tbody></table>
+            <table><thead><tr><th scope="col">Student</th><th scope="col">Status</th><th scope="col">Attempts</th><th scope="col">Details</th><th scope="col">Actions</th></tr></thead><tbody id="students"></tbody></table>
           </div>
           <dl class="metrics judge-metrics">
-            <div><dt>未提交</dt><dd id="unsubmitted">0</dd></div>
-            <div><dt>全部通过</dt><dd id="accepted">0</dd></div>
-            <div><dt>未通过</dt><dd id="failed">0</dd></div>
-            <div><dt>未评测</dt><dd id="unjudged">0</dd></div>
-            <div><dt>等待评测</dt><dd id="queued">0</dd></div>
-            <div><dt>评测中</dt><dd id="pending">0</dd></div>
+            <div><dt>Not Submitted</dt><dd id="unsubmitted">0</dd></div>
+            <div><dt>All Passed</dt><dd id="accepted">0</dd></div>
+            <div><dt>Failed</dt><dd id="failed">0</dd></div>
+            <div><dt>Not Evaluated</dt><dd id="unjudged">0</dd></div>
+            <div><dt>Queued</dt><dd id="queued">0</dd></div>
+            <div><dt>Evaluating</dt><dd id="pending">0</dd></div>
           </dl>
           <p id="judge-state"></p>
           <p id="class-pass-rate"></p>
-          <p id="empty-students" hidden>还没有学生加入。可以将上方二维码投影给学生。</p>
+          <p id="empty-students" hidden>No students have joined yet. Project the QR code above so they can join.</p>
           <section id="case-analysis" hidden>
-            <h3>共同失败的测试</h3>
-            <p>按每位学生最新提交统计，未完成的用例不计入通过率。共同失败可能有不同原因。</p>
+            <h3>Common test failures</h3>
+            <p>Counts use each student's latest submission. Pass rates include completed cases only. Students can fail the same test for different reasons.</p>
             <ul id="case-stats" class="case-results"></ul>
             <details>
-              <summary>查看已发布的用例配置</summary>
+              <summary>View published test settings</summary>
               <div id="teacher-case-config"></div>
             </details>
           </section>
           <section id="pitfall-analysis" hidden>
-            <h3>备课预期与提交反馈</h3>
-            <p>按每位学生的最新提交统计。片段或用例结果仅供核对。</p>
+            <h3>Expected pitfalls and submission feedback</h3>
+            <p>Based on each student's latest submission. Review the source snippets and test results to check for each pitfall.</p>
             <ul id="pitfall-results" class="case-results"></ul>
           </section>
           <section id="error-analysis">
-            <h3>常见编译诊断</h3>
-            <p id="no-errors">暂无可归类的编译诊断。</p>
+            <h3>Common compiler diagnostics</h3>
+            <p id="no-errors">No compiler diagnostics to group yet.</p>
             <ul id="error-groups" class="case-results"></ul>
           </section>
           <section>
-            <h3>全班共同修改</h3>
-            <p>按本题每人最新提交统计。列出至少两人在同一位置做出的相同短修改（最多六组），并显示这些提交的评测结果。</p>
-            <p id="no-patterns">尚未发现重复的短修改。</p>
+            <h3>Common code changes</h3>
+            <p>Shows up to six short edits made by at least two students at the same location, with the grading results for their latest submissions.</p>
+            <p id="no-patterns">No repeated short edits found yet.</p>
             <ul id="edit-patterns" class="case-results"></ul>
           </section>
         </section>
@@ -232,81 +232,81 @@
     <p id="feedback" role="status" class="feedback"></p>
     <dialog id="teacher-guide" aria-labelledby="teacher-guide-title">
       <div class="section-heading">
-        <h2 id="teacher-guide-title">ClassLab 使用指引</h2>
-        <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
+        <h2 id="teacher-guide-title">ClassLab user guide</h2>
+        <form method="dialog"><button class="secondary" autofocus>Close</button></form>
       </div>
       <section>
-        <h3>1. 从 Notebook 发布互动练习</h3>
+        <h3>1. Publish an interactive exercise from a notebook</h3>
         <ol>
-          <li><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">打开 CS2310_Score_Analysis.ipynb</a>，在 GitHub 点击 Download raw file 下载示例教材（74 Cells / 5 题）。</li>
-          <li>创建课堂后默认进入「课前备课」，也可先在创建课堂页面点击「课前备课」准备；发布前须创建课堂。</li>
-          <li>在「导入 Notebook」上传文件，系统识别五道互动练习。使用「搜索单元」和「筛选类型」寻找 Cell。</li>
-          <li>选择 Cell 可查看源码预览。普通 C++ Cell 需要点击「用此 Cell 作为起始代码」；标记的互动练习会尝试自动载入，或点击「载入互动练习」，如有未保存的修改会提示确认。</li>
-          <li>核对标题、任务说明、起始代码，并展开「测试用例与易错点」检查预填内容；可按教学需要修改。只有点击「发布为当前任务」才会把任务发送给学生。预览和载入均不等于发布。</li>
+          <li><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Open CS2310_Score_Analysis.ipynb</a> and select Download raw file on GitHub to get the sample notebook (74 cells / 5 exercises).</li>
+          <li>Creating a classroom opens Lesson preparation. You can also select Lesson preparation on the setup page and create the classroom when you are ready to publish.</li>
+          <li>Upload the file under Import notebook. ClassLab detects five interactive exercises. Use Search cells and Filter by type to find a cell.</li>
+          <li>Select a cell to preview its source. For an ordinary C++ cell, select Use this cell as starter code. Marked exercises load automatically or can be loaded with Load interactive exercise. You will be asked to confirm before replacing unsaved edits.</li>
+          <li>Review the title, description, and starter code. Expand Test cases and pitfalls to check or edit the prefilled entries. Select Publish as current task to send the exercise to students.</li>
         </ol>
       </section>
       <section>
-        <h3>2. 邀请学生并查看课堂反馈</h3>
-        <p>在「邀请学生加入」分享二维码或加入链接。学生在浏览器编辑代码、运行（取决于模式及执行器状态）及提交。教师在「课堂进度」查看提交人数、评测结果、共同失败的测试、常见编译诊断、全班共同修改及备课预期与提交反馈。这些统计是教学复核线索，并非 AI 对学生思考过程的判断。</p>
+        <h3>2. Invite students and review classroom feedback</h3>
+        <p>Share the QR code or link under Invite students. Students can edit and submit in their browsers and run code when the mode and runner allow it. Classroom progress shows submission counts, grading results, common test failures, compiler diagnostics, shared edits, and expected pitfalls. Use these observations to discuss students' work. ClassLab does not infer their reasoning with AI.</p>
       </section>
       <section>
-        <h3>3. 连续发布及回顾历史任务</h3>
-        <p>无需重新上传 Notebook：选择下一道互动练习，确认新题的标题、代码、用例和易错点已正确载入，再点击「发布为当前任务」。学生端在跟随最新任务时自动收到新题。</p>
-        <p>旧任务及提交不会被删除。使用「查看已发布任务」切换历史任务，查看该题的提交、评测和课堂分析；此操作不会改变学生当前任务。选择「最新发布」返回当前进度。关闭或重新加载页面后需要重新导入 Notebook。</p>
+        <h3>3. Publish the next exercise and review earlier tasks</h3>
+        <p>Select the next interactive exercise in the same notebook. Check its title, code, cases, and pitfalls, then select Publish as current task. Students following the latest task receive it automatically.</p>
+        <p>Earlier tasks and submissions remain available. Use View published tasks to review submissions, grading, and analysis for an earlier task. Students keep their current task. Choose Latest task to return to live progress. Import the notebook again after closing or reloading the page.</p>
       </section>
       <section>
-        <h3>4. 准备自己的 Notebook</h3>
-        <p>在合法 C++ Code Cell 的源码开头（如使用 %%cpp，放在该指令之后）添加标记：</p>
+        <h3>4. Prepare your own notebook</h3>
+        <p>Place this marker at the beginning of a valid C++ code cell, after the %%cpp directive if present:</p>
         <pre>// @classlab exercise: Fix the loop boundary</pre>
-        <p>普通代码可预览并手动载入；带标记的互动练习可自动识别。测试用例、说明和易错点可通过可选 Metadata 预填，或在编辑器中添加。详见 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook 标记与 Metadata 说明</a>。</p>
+        <p>You can preview and manually load ordinary code. ClassLab detects marked interactive exercises automatically. Add cases, descriptions, and pitfalls through optional metadata or in the editor. See <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook markers and metadata</a>.</p>
       </section>
       <section>
-        <h3>5. 真实编译与评测</h3>
-        <p>此实验分支的 Judge 通过本地真实 GCC 编译审查过的源码。Run 支持同一个进程多次输入、EOF 和停止；Submit 仍使用完整测试输入。未经审查的源码只收件、不评测。未连接 Judge 时仍可收集代码和查看课堂记录，但不会产生编译或评测结果。</p>
+        <h3>5. Live execution and grading</h3>
+        <p>This experimental judge compiles exact locally reviewed source with GCC. Run supports repeated input, EOF and Stop in one process; Submit still uses complete test input. Unapproved code is saved but not graded. Without a judge, compilation and grading are unavailable.</p>
       </section>
     </dialog>
     <dialog id="submission-dialog" aria-labelledby="submission-title">
       <div class="section-heading">
-        <h2 id="submission-title">最新提交</h2>
-        <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
+        <h2 id="submission-title">Latest submission</h2>
+        <form method="dialog"><button class="secondary" autofocus>Close</button></form>
       </div>
       <div id="teacher-result"></div>
       <section id="submission-pitfalls" hidden>
-        <h3>对照预期易错点</h3>
+        <h3>Review expected pitfalls</h3>
         <ul id="submission-pitfall-list" class="case-results"></ul>
       </section>
-      <h3>相对起始代码的修改</h3>
+      <h3>Changes from starter code</h3>
       <p id="diff-summary"></p>
-      <pre id="submission-diff" aria-label="原行号、新行号、修改内容"></pre>
-      <details id="full-source"><summary>查看完整起始代码和学生代码</summary>
-        <h4>起始代码</h4><pre id="starter-code"></pre>
-        <h4>学生代码</h4><pre id="submission-code"></pre>
+      <pre id="submission-diff" aria-label="Original line, new line, and changes"></pre>
+      <details id="full-source"><summary>View complete starter code and student code</summary>
+        <h4>Starter code</h4><pre id="starter-code"></pre>
+        <h4>Student code</h4><pre id="submission-code"></pre>
       </details>
     </dialog>
     <template id="pitfall-template">
       <fieldset class="case-row">
-        <legend>预期易错点</legend>
-        <label>易错点名称<input data-field="name" maxlength="60" required></label>
-        <label>复核说明<textarea data-field="note" rows="2" maxlength="300"></textarea></label>
-        <label>源码线索（按文字查找）<input data-field="needle" maxlength="160"></label>
-        <label>关联用例编号<input data-field="testNumber" type="number" min="1" max="12"></label>
-        <button type="button" class="secondary remove-pitfall">删除易错点</button>
+        <legend>Expected pitfalls</legend>
+        <label>Pitfall name<input data-field="name" maxlength="60" required></label>
+        <label>Review notes<textarea data-field="note" rows="2" maxlength="300"></textarea></label>
+        <label>Source snippet (exact text)<input data-field="needle" maxlength="160"></label>
+        <label>Linked test case number<input data-field="testNumber" type="number" min="1" max="12"></label>
+        <button type="button" class="secondary remove-pitfall">Remove pitfall</button>
       </fieldset>
     </template>
     <template id="case-template">
       <fieldset class="case-row">
-        <legend>测试用例</legend>
-        <label>名称<input data-field="name" required maxlength="40"></label>
-        <label>可见性<select data-field="visibility"><option value="public">公开</option><option value="hidden">隐藏</option></select></label>
-        <label>标准输入<textarea data-field="input" rows="2" maxlength="2700"></textarea></label>
-        <label>预期输出<textarea data-field="expectedOutput" rows="2" maxlength="2700"></textarea></label>
-        <button type="button" class="secondary remove-case">删除用例</button>
+        <legend>Test case</legend>
+        <label>Name<input data-field="name" required maxlength="40"></label>
+        <label>Visibility<select data-field="visibility"><option value="public">Public</option><option value="hidden">Hidden</option></select></label>
+        <label>Standard input<textarea data-field="input" rows="2" maxlength="2700"></textarea></label>
+        <label>Expected output<textarea data-field="expectedOutput" rows="2" maxlength="2700"></textarea></label>
+        <button type="button" class="secondary remove-case">Remove test case</button>
       </fieldset>
     </template>
     <dialog id="qr-dialog" aria-labelledby="qr-title">
       <div class="section-heading">
-        <h2 id="qr-title">扫码加入课堂</h2>
-        <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
+        <h2 id="qr-title">Scan to join the classroom</h2>
+        <form method="dialog"><button class="secondary" autofocus>Close</button></form>
       </div>
       <div id="qr-large" class="qr-large"></div>
     </dialog>

@@ -27,7 +27,7 @@ def check(browser):
             teacher.locator("[name=title]").fill("Native run")
             teacher.locator("[name=starterCode]").fill("NO_STDIN")
             teacher.locator("#publish-task").click()
-            expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+            expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
             student = context.new_page()
             student.goto(join)
@@ -37,7 +37,7 @@ def check(browser):
             field = student.locator("#stdin-panel")
             typed = student.locator("[name=runInput]")
             expect(field).to_be_visible()
-            expect(student.locator("#stdin-label")).to_contain_text("批处理")
+            expect(student.locator("#stdin-label")).to_contain_text("batch")
             expect(student.locator("#run-code")).to_be_enabled()
             editor.fill("NO_STDIN")
             student.locator("#run-code").click()

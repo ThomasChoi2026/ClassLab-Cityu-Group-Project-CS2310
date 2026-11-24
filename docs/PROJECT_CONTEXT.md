@@ -1,107 +1,113 @@
-# ClassLab 项目背景与交接说明
+# ClassLab project background and handover
 
-更新时间：2026-11-22；用途：帮助新的 Codex Cloud 任务或组员理解此前在 ChatGPT 与旧 Codex 会话中已讨论的决策。此文档仅包含可公开讨论的项目级信息，**不包含用户私人课程资料正文**。
+Background last updated on 22 November 2026. This document records project-level decisions from earlier ChatGPT and Codex sessions for teammates and new Codex Cloud tasks. It excludes the contents of private course materials.
 
-## 当前交付范围
+## Delivery scope
 
-ClassLab 是课程作业。GitHub 保存可复现代码，Codex Cloud 用于开发与测试，临时私有预览用于师生流程验收与演示录像。演示结束即可停止云端环境。优先使用免费额度。公开部署、商业级账户及长期运营不属于当前范围。下方功能规划与历史记录保留供追溯。当前教学与学生操作见 [development and review guide](COURSE_DELIVERY.md)。ClassLab 服务端需在独立 Judge 完成隔离验收后才执行学生代码。外部 OPT CPP 仅用于练习。
+ClassLab is a coursework project. GitHub holds the reproducible source, Codex Cloud is used for development and testing, and a temporary private preview supports acceptance and demo recording. The environment can be stopped after recording. Prefer free resources. Public deployment, commercial accounts, and long-term operation are outside the coursework scope. The plans and historical notes below are retained for context. For current teacher and student instructions, see the [development and review guide](COURSE_DELIVERY.md). Server-side execution of student code requires a separate judge that has passed isolation checks. External OPT CPP is for practice.
 
-## 1. 项目定位
+## 1. Project purpose
 
-**ClassLab — 实时互动编程课堂平台**，用于 City University of Hong Kong 的 CS2310 Computer Programming — Agentic Coding Project。
+**ClassLab** is a live, interactive programming classroom for the City University of Hong Kong CS2310 Computer Programming Agentic Coding Project.
 
-核心场景：教师在授课时（例如正在用 Jupyter Notebook 投影 C++ 代码），希望将一段代码或带 Bug 的练习直接发给学生。学生不必对着投影抄代码，只需扫描二维码或点链接，即可在手机、平板或电脑上接收任务，修改、提交并查看结果。教师端实时显示多少学生已加入、正在尝试、提交成功及通过测试，并决定是否需要继续讲解。
+A teacher presenting C++ in a Jupyter Notebook can share the current example or a debugging exercise. Students scan a QR code or open a link on a phone, tablet, or computer, receive the task without copying from the projector, edit it, submit, and see the result. The teacher follows joins, attempts, submissions, and passes to decide where the class needs more explanation.
 
-它是**课堂互动工作流程**，不是普通 Quiz App、训练某个狭窄知识点的小游戏，也不是重新制作能执行 Cell 的 Jupyter。Jupyter 和 VS Code 已可执行 Notebook Cell，创新主张不能停留在“能运行代码”。
+The design focuses on the classroom workflow. Jupyter and VS Code already execute notebook cells. A general quiz app, a single-concept game, or another notebook execution environment would not address the teaching problem.
 
-期望的一分钟演示：教师发出带 Bug 的 C++ 程序 → 两个学生端通过链接即时收到 → 学生分别修改并提交 → 系统报告不同结果 → 教师端通过人数/状态变化看到课堂反馈。
+The intended one-minute demonstration starts with a teacher publishing a buggy C++ program. Two students receive it immediately, edit it, and submit different answers. The teacher uses the resulting statuses and counts to discuss the class's progress.
 
-## 2. 已做出的决定
+## 2. Decisions already made
 
-- 正式项目名称：ClassLab。
-- GitHub 目标：`https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310`。
-- 此前检查时，该仓库已创建，权限为 Private，默认分支为 `main`，起初只有简短的 README；开始执行新任务时必须重新检查最新状态，不能假设仍然只有 README。
-- 用户明确希望**直接在 GitHub 关联的 Codex Cloud 环境工作**，不在 Mac 本地保存或开发此项目。
-- 课程资料位于另一个名为 CS C++ 的本地工作区，其中有私人课件、Notebook、练习、备份等。此前 Codex 错把它当成项目目录并扫描很多文件。不得复制、提交或上传任何这些资料。
-- 用户此前在本机建立过 `~/Projects/ClassLab` 空目录，但未成功克隆；这不再是项目开发目标或依赖。**不要尝试访问本地路径以“继续旧任务”。**
-- C++20 为后端初步标准；学生代码评测标准应可单独配置，第一版默认 C++20。
-- 网页端计划使用 HTML、CSS、JavaScript；第一阶段可不使用 Node.js 构建工具。
-- 产品本身不需要集成大语言模型；开发时可以使用 Codex。
-- 项目沟通与说明文档使用中文。
+- The project is named ClassLab.
+- Target repository: [ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310).
+- When first inspected, the private repository used `main` as its default branch and contained a short README. Check the current files and branch state at the start of new work.
+- The user chose the GitHub-connected Codex Cloud environment for this project. Development and storage on the Mac are outside the project workflow.
+- A separate local workspace called CS C++ contains private slides, notebooks, exercises, and backups. An earlier Codex session mistook it for the project directory and scanned unrelated files. Do not copy, commit, or upload that material.
+- An empty `~/Projects/ClassLab` directory was once created locally after an unsuccessful clone. It is not a project dependency. Do not access it to resume the work.
+- C++20 was selected as the initial backend standard. The student grading standard should be independently configurable, initially defaulting to C++20.
+- The planned frontend uses HTML, CSS, and JavaScript. The first phase can run without a Node.js build toolchain.
+- Product features do not need a large language model. Developers may use Codex.
+- Early project discussions and documentation used Chinese. This submission uses English.
 
-## 3. MVP 的必要功能（尚需与实际仓库核对）
+## 3. Original MVP requirements
 
-### 教师侧
-1. 创建一个课堂会话，获得课堂链接/二维码。
-2. 发布一项 C++ 任务，包括起始代码和一组可机器检查的测试条件。
-3. 查看加入人数、已提交人数、通过测试人数，以及最新提交结果。
+Check the current repository for the implementation status of each requirement.
 
-### 学生侧
-1. 无需先注册账户，通过链接或二维码加入指定课堂；可使用简单的匿名昵称或临时会话标识。
-2. 接收与查看起始代码，在线编辑并提交。
-3. 查看编译结果和测试通过状态；避免泄露教师设置的隐藏测试数据。
+### Teacher
 
-### 系统侧
-1. 保存任务、学生提交和评测状态；MVP 可先使用简单持久化或内存存储，并明确限制。
-2. 对学生提交的 C++ 程序进行隔离编译、执行和检查，具备超时和资源限制。
-3. 将统计结果反馈到教师页面；MVP 可先使用定时 HTTP 轮询，WebSocket 非必须。
-4. 对非法输入、重复提交、会话不存在和执行失败给予明确错误提示。
+1. Create a classroom session and obtain its link and QR code.
+2. Publish a C++ task with starter code and machine-checkable tests.
+3. View the number of students who joined, submitted, and passed, together with the latest submission results.
 
-安全说明：在隔离未完成前，可先用只读模拟数据或预先准备的受控输入验证 UI/流程；不能把直接运行任意学生代码的危险实现部署到公网。
+### Student
 
-## 4. 非 MVP，暂时不要做
+1. Join a specific classroom by link or QR code without registering. A nickname or temporary session identifier is sufficient.
+2. Receive, view, edit, and submit starter code in the browser.
+3. See compilation and test results while keeping the teacher's hidden test data private.
 
-- 从 Jupyter Notebook 正在讲解的 Cell 一键推送的正式 JupyterLab 插件。
-- 与 Canvas/DIVE/E-Quiz 或其他学校系统深度集成。
-- 学生账号自动通知或手机系统推送。
-- AI 自动生成题目、AI 判题、AI 智能辅导。
-- 多语言编程判题、全套课程管理平台、复杂教师分析报表。
+### System
 
-可以预留扩展接口，但不要求提前实现，更不要把它们写成完成的功能。
+1. Store tasks, submissions, and grading status. A simple persistence method or in-memory storage is acceptable for the MVP if its limits are documented.
+2. Compile, run, and check submitted C++ in isolation with time and resource limits.
+3. Send statistics to the teacher page. Periodic HTTP polling is sufficient for the MVP.
+4. Give clear feedback for invalid input, duplicate submissions, missing classrooms, and execution failures.
 
-## 5. 技术建议（非冻结设计）
+Before isolation is verified, use read-only simulated data or controlled examples to validate the interface and workflow. Do not expose direct execution of arbitrary student programs on the public internet.
 
-- 架构：一个 C++20 服务处理课堂、任务、提交、统计；一个隔离的评测执行器；静态前端分教师页与学生页。
-- 构建：CMake；优先选择可靠、容易安装的现成库，不重复造 HTTP 和 JSON 解析轮子。
-- 通信：HTTP + JSON；先用轮询更新教师统计。
-- 运行：在云端开发与测试；是否让手机访问演示地址需要验证，Cloud 开发工作区不是永久发布站点。
-- 评测：输入数据与预期输出或教师编写的测试；须做资源限制和安全隔离。不要误把“程序可编译”当成“问题已修好”。
-- Git 流程：每个任务检查仓库现状；不直接改 `main`，在新分支实现，经审核后创建 PR/合并（具体是否允许推送/创建 PR，以当前用户授权和 Codex Cloud 能力为准）。
+## 4. Outside the initial MVP
 
-## 6. 来自之前两段对话的教训
+- A JupyterLab extension that publishes the current teaching cell in one click.
+- Deep integration with Canvas, DIVE, E-Quiz, or other university systems.
+- Automatic student-account notifications or mobile push notifications.
+- AI-generated exercises, AI grading, and AI tutoring.
+- Multilanguage judging, full course management, and advanced teacher analytics.
 
-**ChatGPT 选题讨论：**
-- 用户明确否决“学生猜黑箱函数”“针对一个小知识点的练习平台”等小工具，要求改善真实教学体验、课堂参与和日常操作便利。
-- 用户强调 Jupyter、VS Code 已能运行 Cell；不能把现成功能当作创新。
-- ClassLab 的真实价值要落在“教师快速发放正在讲的内容 → 学生快速获取/参与 → 全班实时反馈”这一完整工作流程。
-- 市场已有在线判题和课堂互动产品，因此不能声称全球首创；差异化待实测，尤其是教师从现有材料发布任务的便利性。
+Interfaces can allow for future extensions. Mark these ideas as future work unless the repository demonstrates an implementation.
 
-**旧 Codex 会话：**
-- 最初任务误在本地 CS C++ 私人课程工作区执行，检查到了大量无关文件；没有证据显示课程资料已上传。
-- 本地终端访问私有 GitHub 仓库时遇到认证问题。GitHub 网页/ChatGPT 插件授权与终端 Git 凭据不同，因此本地克隆一直失败。
-- 用户因此决定采用 Cloud 模式，直接对 GitHub 仓库进行云端开发，不需要在 Mac 本地写代码。
-- 如果运行环境仍是 macOS、工作目录是 CS C++，就不应在该环境继续项目修改；必须在真正选定的 Codex Cloud 任务环境中工作。
-- 不需要把几十条旧对话全文上传，只需保存这些已经确认的决策与事实，并在新的任务中核查实际项目状态。
+## 5. Initial technical recommendations
 
-## 7. 推荐开发步骤
+- **Architecture.** A C++20 service handles classrooms, tasks, submissions, and statistics. Use a separate isolated runner and static teacher and student pages.
+- **Build.** Use CMake and established, readily installable HTTP and JSON libraries.
+- **Communication.** Use HTTP and JSON. Start with polling for teacher statistics.
+- **Hosting.** Develop and test in the cloud. Verify the demo address on a phone if needed. Development workspaces are temporary.
+- **Grading.** Compare output against expected results or teacher-defined tests, with resource limits and isolation. Successful compilation alone does not demonstrate a correct solution.
+- **Git.** Inspect the repository for each task. Work on a separate branch. Push, open a pull request, or merge according to the user's current authorization and the capabilities of the connected environment.
 
-1. **仓库核验与安全初始化**：确认 Codex Cloud 关联的仓库，检查原 README、文件和 Git 状态；建立最小项目结构、中文 README、合理 `.gitignore`、CMake 基础和最小可编译测试。
-2. **课堂会话与任务发布**：教师创建课堂，发布一段起始 C++ 代码，学生通过链接立即看到；先做端到端通信。
-3. **学生编辑与提交**：网页代码编辑，提交保存，教师看到提交活动。
-4. **隔离评测与反馈**：可编译、可安全运行、支持自动测试，返回通过/失败原因；评测执行器与主服务隔离。
-5. **二维码、统计和验收**：教师页面进度统计，二维码可扫码，手机端操作检查；整合测试。
-6. **提交与发布**：整理 README、运行说明、测试、实际功能截图/演示，一分钟演示；通过分支/PR 让用户审核。
+## 6. Lessons from the earlier discussions
 
-课程截至 2026-11-24 23:59 香港时间，时间有限。功能稳定与完整演示高于扩展功能。
+### Project selection
 
-## 8. 对新 Codex Cloud 任务的第一条指令建议
+- The user rejected ideas such as guessing a black-box function or practicing one narrow concept. The project should improve everyday teaching, participation, and convenience.
+- Jupyter and VS Code already run cells. The classroom value comes from quickly sharing material already being taught, enabling students to take part, and showing feedback to the whole class.
+- Online judges and classroom interaction products already exist. Avoid claims of being the first. Test how readily teachers can publish from their existing materials.
 
-请先阅读根目录 `AGENTS.md` 及 `docs/PROJECT_CONTEXT.md`，然后检查**实际连接的 GitHub 仓库**和已存在文件。只在仓库内初始化第一阶段基础结构，包括 README、CMake、最小 C++20 编译程序、`.gitignore` 和必要说明；不要实现自动评测、Jupyter 插件或多余功能。真实编译并运行测试。报告修改、运行结果、未解决问题和分支/PR 状态。不要复制私人资料，不要访问 Mac 本地 CS C++ 目录，不得擅自合并到 `main`。如果连接的不是指定仓库，就停止并报告。
+### Earlier Codex session
 
-## 9. 待确认的问题
+- The initial task ran in the private CS C++ workspace and inspected unrelated files. There was no evidence that any course materials were uploaded.
+- Local Git authentication failed for the private repository. GitHub browser or ChatGPT connector authorization and terminal Git credentials are separate.
+- The user chose cloud development directly against GitHub and no longer needs a local Mac checkout.
+- If the environment is macOS and the working directory is the private CS C++ workspace, stop editing there and use the selected Codex Cloud project environment.
+- The confirmed decisions and facts are sufficient for handover. There is no need to upload full transcripts. Verify the current repository state when resuming work.
 
-- Codex 云端环境是否已成功连接目标 GitHub 仓库；是否为可复用的已发布环境。
-- 仓库当前是否仍只有 README，或者 Codex 已经产生其他更改。
-- 选用哪个小型 C++ HTTP/JSON 库，部署时怎么提供可供手机扫描的 URL。
-- 学生代码评测隔离方案在 Codex Cloud/后续部署环境能否实际运行。
-- 各组员分工以及演示要求的最终细节。
+## 7. Recommended development sequence
+
+1. **Repository setup.** Confirm the connected repository, inspect its README, files, and Git status, then establish the smallest project structure with a README, appropriate `.gitignore`, CMake configuration, and a compilable test.
+2. **Sessions and publishing.** Let teachers create a classroom and publish starter C++ that students can immediately see by link. Verify the end-to-end connection.
+3. **Editing and submission.** Add browser editing, saved submissions, and teacher-visible submission activity.
+4. **Isolated grading and feedback.** Compile and execute safely, run tests automatically, and report pass/fail reasons. Keep the runner separate from the web service.
+5. **QR codes, statistics, and acceptance.** Test teacher progress, QR scanning, mobile use, and integration.
+6. **Submission and release.** Prepare the README, run and test instructions, screenshots of functioning features, and a one-minute demonstration. Use a branch or pull request for review.
+
+The coursework deadline was set for 24 November 2026 at 23:59 Hong Kong time. A stable, complete demonstration takes priority over extensions.
+
+## 8. Suggested prompt for the original setup task
+
+Read `AGENTS.md` and `docs/PROJECT_CONTEXT.md`, then inspect the connected GitHub repository and its existing files. Initialize only the first-phase foundation: a README, CMake, a minimal C++20 program, `.gitignore`, and essential instructions. Leave automatic grading, Jupyter extensions, and additional features to later phases. Compile and test the result. Report changes, test outcomes, open issues, and branch or pull request status. Do not copy private materials, visit the Mac's private CS C++ directory, or merge into `main` without authorization. Stop and report if the connected repository is not the specified project.
+
+## 9. Questions recorded at the initial handover
+
+- Is the selected cloud environment connected to the intended repository, and is it reusable?
+- Which files have been added since the first README?
+- Which small C++ HTTP and JSON libraries should be used, and how will students reach the demo URL from phones?
+- Can the proposed grading isolation run and pass acceptance in Codex Cloud or on the deployment host?
+- How will teammates divide the work, and what are the final demonstration requirements?

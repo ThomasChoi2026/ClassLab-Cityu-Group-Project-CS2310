@@ -24,7 +24,7 @@ def check(browser, base, evidence):
     single = "int main() { return 0; }\n"
     dependency = "#include <iostream>\nint answer() { return 42; }\n"
     entry = "int main() { std::cout << answer(); }\n"
-    markdown = "# 課堂練習\n先閱讀以下程式。"
+    markdown = "# Classroom exercise\nRead the following program."
     third = "int main() { return 3; }"
     cells = [
         {"cell_type": "code", "source": ["%%cpp\n", single]},
@@ -65,10 +65,10 @@ def check(browser, base, evidence):
     teacher.on("request", lambda req: count.append(req.url) if req.method == "POST" and req.url.endswith("/tasks") else None)
     title.fill("First exercise")
     select(1)
-    expect(teacher.locator("#notebook-status")).to_contain_text("这里只是预览")
+    expect(teacher.locator("#notebook-status")).to_contain_text("Preview only")
     expect(starter).to_have_value("")
     publish.click()
-    expect(notice).to_contain_text("让学生从空白开始")
+    expect(notice).to_contain_text("Let students start with a blank editor")
     expect(student.locator("#waiting")).to_be_visible()
     assert count == []
 
@@ -76,13 +76,13 @@ def check(browser, base, evidence):
     expect(combination).not_to_have_attribute("open", "")
     combination.locator("summary").click()
     toggle.click()
-    expect(selection).to_contain_text("尚未填入")
-    expect(combination.locator("summary")).to_contain_text("1 个待填入")
+    expect(selection).to_contain_text("pending")
+    expect(combination.locator("summary")).to_contain_text("1 pending")
     publish.click()
-    expect(notice).to_contain_text("所选组合尚未填入")
+    expect(notice).to_contain_text("The selected cells are pending")
     assert count == []
     use.click()
-    expect(teacher.locator("#notebook-status")).to_contain_text("已移除 %%cpp")
+    expect(teacher.locator("#notebook-status")).to_contain_text("Removed %%cpp")
     expect(starter).to_have_value(single)
     select(2)
     teacher.locator("#append-notebook-text").click()
@@ -97,7 +97,7 @@ def check(browser, base, evidence):
         teacher.locator("#teacher-composer").screenshot(path=evidence / "after-teacher.png")
     publish.click()
     expect_student("First exercise", single)
-    expect(student.locator("#task-description")).to_contain_text("先閱讀以下程式。")
+    expect(student.locator("#task-description")).to_contain_text("Read the following program.")
     expect(student.locator("#student-public-tests")).to_contain_text("First case only")
     if evidence:
         student.screenshot(path=evidence / "after-student.png", full_page=True)
@@ -115,9 +115,9 @@ def check(browser, base, evidence):
     toggle.click()
     select(3)
     toggle.click()
-    expect(selection).to_have_text("组合 Cell 3 → 4 尚未填入起始代码。")
+    expect(selection).to_have_text("Selected cells: 3 → 4 pending. Apply this selection to the starter code.")
     teacher.locator("#assemble-notebook").click()
-    expect(selection).to_contain_text("已填入起始代码")
+    expect(selection).to_contain_text("added to starter code")
     combined = dependency.rstrip() + "\n\n" + entry.rstrip()
     expect(starter).to_have_value(combined)
     edited = combined.replace("return 42", "return 7")
@@ -126,12 +126,12 @@ def check(browser, base, evidence):
     search.fill("answer")
     expect(teacher.locator("#notebook-current-label")).to_contain_text("Cell 3")
     teacher.route("**/api/rooms/*/tasks", lambda route: route.fulfill(
-        status=503, json={"error": "测试用发布失败"}), times=1)
+        status=503, json={"error": "Simulated publishing failure"}), times=1)
     publish.click()
-    expect(notice).to_contain_text("测试用发布失败")
+    expect(notice).to_contain_text("Simulated publishing failure")
     expect(title).to_have_value("Second exercise")
     expect(starter).to_have_value(edited)
-    expect(selection).to_contain_text("已填入起始代码")
+    expect(selection).to_contain_text("added to starter code")
     expect(overview).to_contain_text("lesson.ipynb")
     expect(student.locator("#task-title")).to_have_text("First exercise")
     publish.click()
@@ -140,14 +140,14 @@ def check(browser, base, evidence):
     expect(student.locator("#public-tests")).to_be_hidden()
     expect(search).to_have_value("answer")
     expect(teacher.locator("#notebook-current-label")).to_contain_text("Cell 3")
-    expect(selection).to_have_text("尚未选择组合单元。")
+    expect(selection).to_have_text("No cells selected.")
     expect(combination).not_to_have_attribute("open", "")
-    expect(teacher.locator("#preparation-counts")).to_have_text("0 个用例 · 0 个易错点")
+    expect(teacher.locator("#preparation-counts")).to_have_text("Test cases: 0 · Pitfalls: 0")
     expect(overview).to_contain_text("lesson.ipynb")
     assert "lesson.ipynb" in file.input_value()
 
     search.fill("")
-    for number, reason in ((5, "%%hermes"), (6, "无参数的 %%cpp"), (7, "Python")):
+    for number, reason in ((5, "%%hermes"), (6, "%%cpp without arguments"), (7, "Python")):
         select(number)
         expect(teacher.locator("#notebook-status")).to_contain_text(reason)
         use.click()
@@ -164,7 +164,7 @@ def check(browser, base, evidence):
     title.fill("Open exercise")
     description.fill("Write your own program.")
     publish.click()
-    expect(notice).to_contain_text("让学生从空白开始")
+    expect(notice).to_contain_text("Let students start with a blank editor")
     teacher.locator("#allow-empty-starter").check()
     publish.click()
     expect_student("Open exercise", "")
