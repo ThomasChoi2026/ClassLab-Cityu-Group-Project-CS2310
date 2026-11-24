@@ -40,9 +40,7 @@ inline std::string limited_text(const Json& data, const char* key, std::size_t l
 
 class Client {
 public:
-    explicit Client(std::string socket, bool demo = false) : socket_(std::move(socket)), demo_(demo) {}
-
-    bool demo() const { return demo_; }
+    explicit Client(std::string socket) : socket_(std::move(socket)) {}
 
     bool configured() const { return !socket_.empty(); }
 
@@ -62,10 +60,6 @@ public:
         const auto reply = request(code, Json::array({probe ? std::string{} : input}),
                                    probe ? "probe" : "run");
         const auto status = reply.value("status", "");
-        if (demo_ && status == "demo_no_fixture") {
-            return {{"status", "demo_no_fixture"},
-                    {"error", "没有匹配的演示数据；请使用本题支持的预置代码和公开输入。这里没有编译或运行任意 C++。"}};
-        }
         if (probe && status == "stdin_required") {
             try {
                 return {{"status", "stdin_required"},
@@ -94,7 +88,6 @@ public:
         Json inputs = Json::array();
         for (const auto& test : tests) inputs.push_back(test.at("input"));
         const auto reply = request(code, inputs, "grade");
-        if (demo_ && reply.value("status", "") == "demo_no_fixture") return {{"status", "demo_no_fixture"}};
         if (reply.value("status", "") != "success") return failure(reply);
         try {
             const auto& cases = reply.at("cases");
@@ -163,7 +156,7 @@ private:
                 client.Post("/evaluate", Json{{"version", 1}, {"code", code}, {"inputs", inputs}, {"mode", mode}}.dump(), "application/json");
             if (!result || result->status != 200 || result->body.size() > 600000) return judge_error();
             const auto data = Json::parse(result->body, nullptr, false);
-            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) != demo_ ||
+            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) ||
                 !data.contains("status") || !data.at("status").is_string()) return judge_error();
             return data;
         } catch (const std::exception&) {
@@ -172,7 +165,6 @@ private:
     }
 
     std::string socket_;
-    bool demo_;
     std::mutex slot_;
 };
 

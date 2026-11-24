@@ -523,7 +523,6 @@ private:
         });
         if (request.is_null()) return true;
         auto result = judge_.grade(request.at("code").get<std::string>(), request.at("cases"));
-        if (judge_.demo()) result["demoFixture"] = true;
         slot.unlock();
         while (!stop.stop_requested()) {
             try {
@@ -588,20 +587,8 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     });
     server.Get("/api/health", [&](const Request&, Response& response) {
         Json health = {{"status", "ready"}};
-        if (judge.demo()) health["demo"] = true;
         reply(response, health);
     });
-    if (judge.demo()) {
-        server.Get("/demo-notebook.ipynb", [](const Request&, Response& response) {
-            response.set_header("Content-Disposition", "attachment; filename=classlab-demo.ipynb");
-            response.set_file_content(CLASSLAB_WEB_DIR "/../examples/classlab-demo.ipynb", "application/json");
-        });
-        server.Get("/demo-lecture.ipynb", [](const Request&, Response& response) {
-            response.set_header("Content-Disposition", "attachment; filename=CS2310_ClassLab_Demo_Lecture.ipynb");
-            response.set_file_content(CLASSLAB_WEB_DIR "/../examples/CS2310_ClassLab_Demo_Lecture.ipynb", "application/json");
-        });
-    }
-
     server.Post("/api/rooms", [&](const Request& request, Response& response) {
         const auto name = field(body_of(request), "name", 120);
         reply(response, store.write([&](Json& rooms) -> Json {
@@ -657,8 +644,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             result["tasks"] = task_navigation(room);
             return result;
         });
-        result["demo"] = judge.demo();
-        result["executionAvailable"] = !judge.demo() && judge.available();
+        result["executionAvailable"] = judge.available();
         reply(response, result);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/latest/([1-9][0-9]{0,15}))",
@@ -749,8 +735,6 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     {"task", judging::student_task(task)}, {"latestResult", latest_result},
                     {"submissionHistory", history}};
         });
-        result["demo"] = judge.demo();
-        // Demo mode exposes only an explicit prerecorded, allowlisted playback.
         result["executionAvailable"] = judge.available();
         reply(response, result);
     });
@@ -786,7 +770,6 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
         });
         if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
         auto result = judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe);
-        if (judge.demo()) result["demoFixture"] = true;
         reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
@@ -870,11 +853,8 @@ int main() {
     try {
         ::umask(0077);
         const auto host = setting("CLASSLAB_HOST", "127.0.0.1");
-        const bool demo = setting("CLASSLAB_DEMO", "") == "1";
+        if (setting("CLASSLAB_DEMO", "") == "1") throw std::runtime_error("Replay mode is not available in this branch.");
         const auto socket = setting("CLASSLAB_JUDGE_SOCKET", "");
-        if (demo && (socket.empty() || host != "127.0.0.1" || std::getenv("CLASSLAB_DATA") == nullptr)) {
-            throw std::runtime_error("Demo mode requires loopback, an explicit data path, and a fixture socket.");
-        }
         Store store(setting("CLASSLAB_DATA", "data/classrooms.json"));
         const auto port_text = setting("CLASSLAB_PORT", "8080");
         std::size_t parsed = 0;
@@ -884,7 +864,7 @@ int main() {
         }
         httplib::Server server;
         recover_pending(store);
-        judging::Client judge(socket, demo);
+        judging::Client judge(socket);
         GradeQueue queue(store, judge);
         routes(server, store, judge, queue);
         server.set_write_timeout(120);

@@ -1,6 +1,6 @@
-# Running ClassLab — normal mode, demo mode and a school server
+# Running ClassLab — isolated Judge and a school server
 
-ClassLab uses one repository and one C++20 web binary. The demo is a separate startup mechanism that uses an isolated temporary data directory and a prerecorded fixture socket. It is not a separate website or source branch.
+This branch uses the real classroom server with an optional security-accepted Judge. No replay launcher is included.
 
 ## 1. Build once
 
@@ -19,18 +19,10 @@ Initial dependency download needs network access. Repository access is required 
 ## 2. Normal ClassLab (without a Judge)
 
 ```sh
-CLASSLAB_DEMO=0 CLASSLAB_JUDGE_SOCKET= CLASSLAB_PORT=8080 ./build/classlab
+CLASSLAB_JUDGE_SOCKET= CLASSLAB_PORT=8080 ./build/classlab
 ```
 
-Open http://127.0.0.1:8080 on the same machine, or privately forward port 8080 in Codespaces. This is the real application, not a simulation. Import Notebook files, create a classroom, receive actual student submissions, and analyze source changes. Without a Judge, Run is disabled and submissions are recorded without grading. Data persist in data/classrooms.json relative to the current directory by default. Protect and back up the file. Do not run the normal and demo server on the same port.
-
-## 3. Coursework demonstration
-
-```sh
-bash demo/start_coursework.sh 8082
-```
-
-Open http://127.0.0.1:8082 (or the corresponding private Codespaces preview). The teacher page has one clearly labeled download link to the [74-cell teaching Notebook](../examples/CS2310_Score_Analysis.ipynb). Its five marked exercises have offline-validated prerecorded results. The Demo banner and results make this limitation explicit. This mode neither requires nor launches a real Judge. Ctrl+C stops the demo and removes its temporary classroom data. See [the demo rehearsal](COURSEWORK_DEMO.md).
+Open http://127.0.0.1:8080 on the same machine, or privately forward port 8080 in Codespaces. This is the real application, not a simulation. Import Notebook files, create a classroom, receive actual student submissions, and analyze source changes. Without a Judge, Run is disabled and submissions are recorded without grading. Data persist in data/classrooms.json relative to the current directory by default. Protect and back up the file. 
 
 ## 4. Normal ClassLab with real C++20 execution (administrator setup)
 
@@ -52,7 +44,7 @@ For example, once the Judge is running and a private writable data directory /va
 
 ```sh
 cd /opt/classlab
-CLASSLAB_DEMO=0 \
+\
 CLASSLAB_HOST=127.0.0.1 \
 CLASSLAB_PORT=8080 \
 CLASSLAB_DATA=/var/lib/classlab/classrooms.json \
@@ -62,14 +54,13 @@ CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock \
 
 Use a school-managed, authenticated HTTPS reverse proxy or approved internal access route to reach the web service. Students open the resulting classroom URL or scan the QR code. Do not publish the Unix socket or Docker daemon, and do not expose the application as an unrestricted public service: the current course MVP does not implement production-grade account management and rate limiting.
 
-Verify that the normal teacher page has no Demo banner, create a small test classroom, and confirm the student's Run button enables, a no-input program produces output, an input program requests stdin and reruns with input, and formal submissions produce real verdicts. The deployment has not been certified merely because the repository CI is green. The native Judge needs actual-host acceptance, including isolation, resource limits, cleanup and failure recovery.
+Create a small test classroom, and confirm the student's Run button enables, a no-input program produces output, an input program requests stdin and reruns with input, and formal submissions produce real verdicts. The deployment has not been certified merely because the repository CI is green. The native Judge needs actual-host acceptance, including isolation, resource limits, cleanup and failure recovery.
 
 ## Quick comparison
 
 | Mode | Command | Classroom storage | Evaluation |
 | --- | --- | --- | --- |
-| Normal, no Judge | CLASSLAB_DEMO=0 CLASSLAB_JUDGE_SOCKET= ./build/classlab | Persistent | Receives submissions; no execution |
-| Demo | bash demo/start_coursework.sh 8082 | Temporary | Explicitly labeled fixed replay |
-| Normal, accepted Judge | CLASSLAB_DEMO=0 CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock ./build/classlab | Persistent | Actual C++20 compilation/execution |
+| Normal, no Judge | CLASSLAB_JUDGE_SOCKET= ./build/classlab | Persistent | Receives submissions; no execution |
+| Normal, accepted Judge | CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock ./build/classlab | Persistent | Actual C++20 compilation/execution |
 
-The same browser UI, Notebook import and teaching workflow are used in normal and demo modes. No mode-switch button exposes or weakens the Judge from the browser.
+The sample Notebook and teaching workflow remain unchanged. No mode-switch button exposes or weakens the Judge from the browser.

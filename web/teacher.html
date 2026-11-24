@@ -13,7 +13,6 @@
 </head>
 <body data-view="teacher">
   <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">使用指引</button></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo 模式 · 课堂操作实时记录，运行与评测为预置回放。 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">下载教学 Notebook（74 Cells / 5 题）</a></div>
   <main>
     <section id="setup" class="intro">
       <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
@@ -261,8 +260,8 @@
         <p>普通代码可预览并手动载入；带标记的互动练习可自动识别。测试用例、说明和易错点可通过可选 Metadata 预填，或在编辑器中添加。详见 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook 标记与 Metadata 说明</a>。</p>
       </section>
       <section>
-        <h3>5. 正式模式与 Demo 模式</h3>
-        <p>正式模式的真实 C++ Run 和自动评测需要通过安全验收的 Judge。Demo 模式仅回放匹配的预置结果，不实时编译任意 C++。课堂加入、提交记录及课堂分析均为真实操作。</p>
+        <h3>5. 真实编译与评测</h3>
+        <p>真实 C++ Run 和自动评测需要通过安全验收的 Judge。未连接 Judge 时仍可收集代码和查看课堂记录，但不会产生编译或评测结果。</p>
       </section>
     </dialog>
     <dialog id="submission-dialog" aria-labelledby="submission-title">

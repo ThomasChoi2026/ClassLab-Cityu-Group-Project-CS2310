@@ -127,7 +127,6 @@ const statusText = {
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
   pending: "评测中",
-  demo_no_fixture: "未评测 · 无匹配的演示夹具",
   queued: "等待评测",
   judge_queue_full: "未评测 · 队列已满",
   accepted: "全部通过",
@@ -155,7 +154,6 @@ function exportedStatus(status, count) {
     judge_unavailable: "Not evaluated (Judge unavailable)",
     judge_queue_full: "Not evaluated (evaluation queue full)",
     judge_error: "Evaluation service error",
-    demo_no_fixture: "Not evaluated (no matching Demo fixture)",
     accepted: "All tests passed",
     wrong_answer: "Tests not all passed (wrong answer)",
     compilation_error: "Compilation error",
@@ -184,7 +182,7 @@ function buildClassroomCsv(state, exportedAt = new Date()) {
       exportedStatus(student.latestStatus, student.count),
       hasScore ? student.passed : "",
       hasScore ? student.total : "",
-      state.demo ? "Demo" : "Normal",
+      "Normal",
       exportedAtUtc,
     ].map(csvCell).join(",");
   });
@@ -198,9 +196,9 @@ function safeFilePart(value) {
     .slice(0, 70) || "ClassLab";
 }
 
-function runResultCopyText(result, demoMode) {
+function runResultCopyText(result) {
   const sections = [];
-  if (demoMode || result.demoFixture) {
+  if (result.demoFixture) {
     sections.push("DEMO REPLAY — 预置演示回放；没有编译或执行当前 C++ 代码。");
   }
   if (result.status) {
@@ -595,12 +593,6 @@ function initializeNotebookImport(form, loadExercise) {
       status.textContent = "已保留 Notebook，可继续浏览并准备下一题。";
     },
   };
-}
-
-function showDemoBanner(state) {
-  byId("demo-banner").hidden = !state.demo;
-  const notebookDownload = byId("normal-notebook-download");
-  if (notebookDownload) notebookDownload.hidden = Boolean(state.demo);
 }
 
 function renderDiff(original, code) {
@@ -1190,7 +1182,6 @@ function initializeTeacher() {
     byId("classroom-progress").hidden = false;
     byId("class-schedule").hidden = false;
     toggle.disabled = false;
-    showDemoBanner(state);
     renderSchedule(state.schedule);
     const archived = Boolean(selectedTask.value);
     renderTasks(state.tasks);
@@ -1211,7 +1202,7 @@ function initializeTeacher() {
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
-    byId("judge-state").textContent = state.demo || state.executionAvailable ? "" :
+    byId("judge-state").textContent = state.executionAvailable ? "" :
       (state.queued ? "评测器暂不可用，等待中的提交已保存，连接恢复后继续。" : "隔离执行器不可用，未评测的提交不会计为未通过。");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
@@ -1477,7 +1468,6 @@ function initializeStudent() {
   let pendingSubmission;
   let running = false;
   let stdinPending = null;
-  let demoMode = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -1505,7 +1495,7 @@ function initializeStudent() {
     fallback.setAttribute("aria-label", "待手动复制的运行结果");
 
     button.addEventListener("click", async () => {
-      fallback.value = runResultCopyText(result, demoMode);
+      fallback.value = runResultCopyText(result);
       fallback.hidden = false;
       const copied = await copyText(fallback, "run-copy-feedback", "运行结果已复制。");
       if (copied) fallback.hidden = true;
@@ -1517,11 +1507,8 @@ function initializeStudent() {
   }
 
   function showTask(state) {
-    demoMode = Boolean(state.demo);
-    byId("stdin-label").textContent = demoMode ? "预置演示输入（stdin）" : "程序正在读取标准输入（stdin）";
-    byId("stdin-hint").textContent = demoMode ? "请填写本题公开的预置输入；再次点击仅回放固定结果，不执行 C++。" :
-      "填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。";
-    showDemoBanner(state);
+    byId("stdin-label").textContent = "程序正在读取标准输入（stdin）";
+    byId("stdin-hint").textContent = "填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。";
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
@@ -1555,9 +1542,8 @@ function initializeStudent() {
     }
     byId("run-controls").disabled = archived || !state.executionAvailable || running;
     const runStatus = byId("run-state");
-    const runMessage = archived ? "" : running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
-      stdinPending ? (demoMode ? "输入预置测试数据后，可再次点击回放。" : "程序已请求标准输入。填写后再次点击运行，将从头执行程序。") :
-      state.demo ? "仅匹配预置代码和输入；请使用本题公开用例。" :
+    const runMessage = archived ? "" : running ? "正在编译和运行…" :
+      stdinPending ? "程序已请求标准输入。填写后再次点击运行，将从头执行程序。" :
       state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
       "隔离执行器不可用，暂时无法运行代码。";
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
@@ -1630,7 +1616,7 @@ function initializeStudent() {
     stdinPending = null;
     byId("stdin-panel").hidden = true;
     if (clearInput || wasWaitingForInput) input.value = "";
-    byId("run-code").textContent = demoMode ? "演示 Run（回放）" : "运行代码";
+    byId("run-code").textContent = "运行代码";
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
@@ -1719,7 +1705,7 @@ function initializeStudent() {
     const runInput = provideInput ? input.value : "";
     running = true;
     byId("run-controls").disabled = true;
-    byId("run-state").textContent = demoMode ? "正在读取预置演示结果…" : "正在编译和运行…";
+    byId("run-state").textContent = "正在编译和运行…";
     panel.hidden = true;
     panel.replaceChildren();
     try {
@@ -1729,10 +1715,8 @@ function initializeStudent() {
       if (result.status === "stdin_required") {
         stdinPending = { taskId, code: editor.value };
         byId("stdin-panel").hidden = false;
-        byId("run-code").textContent = demoMode ? "输入并查看预置结果" : "提供输入并重新运行";
-        panel.replaceChildren(element("p", demoMode ?
-          "预置演示：本例包含标准输入。请使用本题公开用例；本流程不会执行当前代码。" :
-          "程序实际读取了标准输入，请提供输入后重新运行。"));
+        byId("run-code").textContent = "提供输入并重新运行";
+        panel.replaceChildren(element("p", "程序实际读取了标准输入，请提供输入后重新运行。"));
         if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
         if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
         panel.hidden = false;
@@ -1801,6 +1785,5 @@ function initializeStudent() {
   if (key) void refresh();
 }
 
-api("/health").then(showDemoBanner).catch(() => {});
 if (document.body.dataset.view === "teacher") initializeTeacher();
 else initializeStudent();

@@ -2,7 +2,7 @@
 
 ## Download the sample
 
-Open the [sample Notebook on GitHub](../examples/CS2310_Score_Analysis.ipynb) and choose **Download raw file**. You can download it before starting ClassLab. The same file imports in Normal Mode and Demo Mode. A new exercise you author can be published in either mode. Actual execution and grading require an accepted Judge in Normal Mode. Demo plays only its supplied fixtures.
+Open the [sample Notebook on GitHub](../examples/CS2310_Score_Analysis.ipynb) and choose **Download raw file**. You can download it before starting ClassLab. The sample and new exercises can be imported. Actual execution and grading require an accepted Judge.
 
 ## Mark your own exercise
 
@@ -82,7 +82,7 @@ Unknown classlab fields, invalid types, null in place of optional field values, 
 
 ### Read the teacher feedback
 
-After publication, ClassLab uses each student's latest formal submission for the current task. It counts exact text matches for `needle` and independently counts failures of the linked test among students with a result for that test. A text match is a review clue. It can occur in code that passes, and a different spelling may express the same mistake. The linked test needs a Judge result or a labelled Demo replay. A teacher can see both counts, even when they differ.
+After publication, ClassLab uses each student's latest formal submission for the current task. It counts exact text matches for `needle` and independently counts failures of the linked test among students with a result for that test. A text match is a review clue. It can occur in code that passes, and a different spelling may express the same mistake. The linked test needs a Judge result. A teacher can see both counts, even when they differ.
 
 ## Teacher-only information
 
@@ -94,6 +94,5 @@ Only the selected task title, public description, starter source, test configura
 
 - [CS2310 Score Analysis Notebook](../examples/CS2310_Score_Analysis.ipynb) — 74 cells; five marked exercises at original cells 22, 35, 48, 63, 72.
 - Instructor-only sample references for the synthetic lesson: [score_analysis_references.json](../examples/score_analysis_references.json). Download the lecture from the repository to the teacher device and upload it from there; the server does not serve this file or its reference JSON through a classroom endpoint.
-- Demo uses exact trimmed starter/reference source and exact predefined inputs; free Run accepts only the new exercises' **public** fixture inputs. Formal replay requires the complete ordered fixture input list. Other source or inputs explicitly return no matching data; correct alternative solutions may be unsupported. The legacy tiny synthetic addition demo remains available for compatibility.
 - CTest compiles and runs all 27 code cells and 5 separate reference programs in C++20, checks the specified ordinary outputs, public/hidden tests, defective starters and replay data. It only executes trusted repository-authored examples. It does not attest deployment of arbitrary student code.
-- Start `bash demo/start_coursework.sh 8082` and use [the coursework demo guide](COURSEWORK_DEMO.md). Ordinary production still requires a verified isolated Judge.
+- Use [the classroom rehearsal guide](COURSEWORK_DEMO.md). Real execution requires a verified isolated Judge.

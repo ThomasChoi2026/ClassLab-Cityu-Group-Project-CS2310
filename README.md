@@ -14,18 +14,9 @@ The project's distinctive contribution is this **Notebook → exercise → stude
 
 [**Get the sample Notebook (.ipynb)**](examples/CS2310_Score_Analysis.ipynb) on GitHub. Choose **Download raw file** to save it before opening ClassLab. The file contains 74 cells and five marked exercises.
 
-Import the same file through **课前备课 (Lesson Preparation)** in either mode. Demo Mode supplies labelled replay for the five sample exercises. Normal Mode uses the Notebook for real classroom activity and requires a validated Judge for native execution and grading. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
+Import the file through **课前备课 (Lesson Preparation)**. The sample remains a teaching resource, not a replay mechanism. This branch retains the isolated Judge; native execution requires a validated host. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
 
 ## Quick Start
-
-**Same repository, same application, two startup modes.** No separate website, branch or Docker installation is needed to try the classroom workflow.
-
-| Choose | Command after building | Browser / Codespaces port |
-| --- | --- | --- |
-| Normal Mode（正式版） | `CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab` | 8080 |
-| Demo Mode（作业演示） | `python3 demo/run.py --port 8082` | 8082 |
-
-To enable native C++ execution in Normal Mode, see the [school-server setup guide](docs/RUN_CLASSLAB.md).
 
 ### 1. Build once
 
@@ -34,23 +25,21 @@ Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C+
 For a fresh checkout:
 
 ~~~bash
-git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch release/sandbox-only https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 ~~~
 
-If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. Ensure the checkout contains the latest desired main revision before building; preserve any uncommitted work.
+If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. Ensure the checkout contains the desired branch revision before building; preserve any uncommitted work.
 
 ~~~bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ~~~
 
-### 2. Choose a mode
-
-#### A. Normal Mode — 正式课堂模式 (port 8080)
+### 2. Start the classroom (port 8080)
 
 ~~~bash
-CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab
+CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab
 ~~~
 
 Open **http://127.0.0.1:8080** on the same machine, or use the private Codespaces preview for port **8080**.
@@ -59,54 +48,15 @@ Create a classroom, import a Notebook or paste any C++ starter code, and collect
 
 **The command above deliberately launches without a Judge.** Code submission, class progress and source comparison still work. Native Run and automatic grading require a separately installed and security-accepted Judge (see [Judge deployment](docs/PHASE_4.md)). The external OPT CPP link remains available.
 
-#### B. Demo Mode — 作业演示模式 (port 8082)
-
-~~~bash
-python3 demo/run.py --port 8082
-~~~
-
-Open **http://127.0.0.1:8082** on the same machine, or use the private Codespaces preview for port **8082**.
-
-A yellow banner identifies Demo Mode. It supports the full classroom workflow and **clearly labelled prerecorded results** for the supplied teaching exercises. It does not compile or execute arbitrary student source code. Classroom data is temporary and is removed on normal shutdown.
-
-For a one-command build, test and Demo launch from a fresh checkout, use `bash demo/start_coursework.sh 8082` instead.
-
 ### 3. Open the correct page in Codespaces
 
-1. On GitHub, open the repository's **main** branch and choose **Code → Codespaces**.
-2. Build and launch the desired mode in the Codespace terminal using the commands above.
-3. Open the **Ports** panel. Forward **8080** for Normal Mode or **8082** for Demo Mode, keep the port **Private**, and click **Open in Browser**.
-4. The forwarded HTTPS URL opens the teacher page. Students use its generated join link or QR code. Other devices need a GitHub account authorized to access that private preview.
-
-The two modes can run simultaneously in separate terminals on these ports. Stop either with **Ctrl+C** in its terminal. Do not expose the Judge socket or the Demo service publicly. If a forwarded page cannot open, run `curl -fsS http://127.0.0.1:8080/api/health` (or use port 8082) in another terminal. A normal server returns a ready status; Demo also returns `"demo":true`. Check the startup terminal and port forwarding if the request fails.
-
-### Normal Mode vs. Demo Mode
-
-| Capability | Normal Mode (8080) | Demo Mode (8082) |
-| --- | --- | --- |
-| Classroom creation, QR join, Notebook import | Yes | Yes |
-| Code editing, submissions, classroom analytics | Real classroom records | Real classroom records |
-| Native Run and automatic grading | Requires a validated Judge | Prerecorded fixture results only |
-| Arbitrary C++20 execution | Only with a validated Judge | No |
-| External OPT CPP handoff | Yes | Yes |
-| Server-side classroom data | Persistent | Temporary |
-| Yellow Demo banner | No | Yes |
+1. Select this branch in GitHub and build the project in its Codespace.
+2. Keep port 8080 **Private** and open it in the browser. Other devices need access to that private preview.
+3. Stop the server with Ctrl+C. Never forward the Judge socket.
 
 ## One-minute classroom demo
 
-**Use Demo Mode for a reliable coursework presentation without configuring a native Judge.**
-
-Use the [sample Notebook download above](#download-the-sample-notebook-before-starting). The same file is linked from the Demo teacher banner and from **课前备课** in Normal Mode.
-
-1. Create a classroom and switch to **课前备课 (Lesson Preparation)**.
-2. Upload the downloaded Notebook directly. ClassLab identifies **5 exercises among 74 cells**. Select **Fix the grade boundary — Cell 22**.
-3. Review the automatically populated title, description and starter code; expand **测试用例与易错点** if needed to inspect five test cases (three public, two hidden) and the teacher-only pitfall. Click **发布为当前任务 (Publish)**.
-4. Open the student join link in separate browser sessions. Click **演示 Run（回放）**, enter the public input `60`, then click again. The starter produces the prerecorded output `FAIL`. Replace only `score > 60` with `score >= 60`; the same input now produces the prerecorded output `PASS`.
-5. Have one student submit the starter and two submit the exact corrected code. The teacher dashboard shows **3 submitted, 2 accepted, 1 failed**. Open the shared code change, explain the boundary error, and choose the next exercise without re-uploading the Notebook.
-
-In a single-minute presentation, prepare the browser sessions and example submissions in advance. The interaction and stored submission records are real; the Demo verdicts are not live C++ execution.
-
-[Detailed rehearsal guide and 60-second English script](docs/COURSEWORK_DEMO.md) · [Verified browser screenshots](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934/artifacts/14903579794) (GitHub access and artifact retention apply)
+Use the sample Notebook (74 cells, five exercises). Publish Cell 22, join three student sessions, correct `score > 60` to `score >= 60`, and submit. With an accepted Judge the public input `60` produces `FAIL` then `PASS`, and the classroom shows actual verdicts. Without a Judge, show source differences and submission counts; do not claim grading. See [rehearsal guide](docs/COURSEWORK_DEMO.md).
 
 ## Teacher workflow
 
@@ -153,7 +103,7 @@ The Notebook is parsed locally in the teacher browser (Notebook v4, up to 2 MiB)
 | 63 | Fix the average function | Numeric types and integer division |
 | 72 | Complete the score analyser | Function decomposition and transfer |
 
-All five support exact-source Demo playback. The full lecture also contains 22 ordinary teaching programs; the five reference implementations are separate from the Notebook.
+The full lecture also contains 22 ordinary teaching programs; the five reference implementations are separate from the Notebook.
 
 [Marker and Metadata specification](docs/NOTEBOOK_CLASSROOM.md) · [Full lecture](examples/CS2310_Score_Analysis.ipynb) · [Separate instructor references](examples/score_analysis_references.json)
 
@@ -161,7 +111,7 @@ All five support exact-source Demo playback. The full lecture also contains 22 o
 
 Join through the teacher's QR code or link and enter a nickname. **本课堂已发布任务** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **已加入的课堂** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.
 
-- **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
+- **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal.
 - **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
 - **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
 - **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source. Provide input, run and inspect results in OPT CPP itself. ClassLab does not import its runtime output as a grade.
@@ -182,9 +132,8 @@ Notebook parser / exercise editor       C++ editor / Run / Submit
              Classroom records / queue / analytics
                             |
                      Private Unix socket
-                     /                  \
-        Normal: isolated Judge       Demo: fixed fixtures
-        (validated host required)   (no arbitrary execution)
+                    Isolated Judge
+                (validated host required)
 ~~~
 
 | Path | Responsibility |
@@ -192,7 +141,6 @@ Notebook parser / exercise editor       C++ editor / Run / Submit
 | `web/` | Teacher and student interfaces, Notebook parsing, QR generation and code comparison |
 | `src/` | C++20 HTTP server, classroom permissions, persistence, submission queue and Judge client |
 | `judge/` | Independent C++20 execution worker with deployment isolation checks |
-| `demo/` | Explicitly labelled fixed-result classroom rehearsal with temporary storage |
 | `examples/` | Original teaching Notebook, separate sample references and legacy examples |
 | `tests/` | CTest, protocol checks, trusted C++ fixtures and Playwright browser regression |
 | `docs/` | Deployment, classroom usage and development review |
@@ -207,9 +155,9 @@ From the repository root after building:
 ctest --test-dir build --output-on-failure
 ~~~
 
-The Notebook classroom acceptance workflow at commit `0eb71c2` passed **11/11 CTest tests** with Node.js installed, plus five Chromium browser checks. This includes the 135-cell marker parser, draft protection, private test visibility, original OPT CPP handoff, student history, teacher workflow and full marked-Notebook classroom rehearsal. The lecture test actually compiled and ran 27 code cells and five reference implementations, and verified the 23 exercise cases against both source variants and Demo fixtures.
+Earlier baseline tests passed; the branch-specific checks must be run again after the removal of replay. The teaching lecture test still compiles real C++ examples and validates the authored expected results.
 
-[Notebook integration acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934) · [Subsequent UI regression acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45364191659) · [Notebook integration PR #16](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/16) · [All workflows](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions)
+[Historical Notebook integration acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934) · [Subsequent UI regression acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45364191659) · [Notebook integration PR #16](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/16) · [All workflows](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions)
 
 For local browser acceptance, install Playwright, Chromium, Pillow and zxing-cpp and follow the [rehearsal guide](docs/COURSEWORK_DEMO.md).
 
@@ -225,10 +173,10 @@ The [Notebook classroom workflow](.github/workflows/notebook-classroom.yml) also
 
 ## Native Judge deployment and current limitations
 
-Normal Mode defaults to submission collection without a Judge. For real C++20 execution, follow the [Judge deployment and security acceptance guide](docs/PHASE_4.md) on a suitable dedicated Linux host. Only after acceptance, configure the Web server to connect to the running Judge:
+This branch defaults to submission collection without a Judge. For real C++20 execution, follow the [Judge deployment and security acceptance guide](docs/PHASE_4.md) on a suitable dedicated Linux host. Only after acceptance, configure the Web server to connect to the running Judge:
 
 ~~~bash
-CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 \
+CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 \
   CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock ./build/classlab
 ~~~
 
@@ -240,9 +188,8 @@ The example assumes the approved worker is already running at that socket path. 
 | CLASSLAB_PORT | 8080 | Web listen port |
 | CLASSLAB_DATA | data/classrooms.json | Normal classroom store; one server per file |
 | CLASSLAB_JUDGE_SOCKET | empty | Path to an accepted local execution service |
-| CLASSLAB_DEMO | unset | Managed by the Demo launcher; do not manually enable replay in Normal Mode |
 
-ClassLab is a coursework prototype for small, trusted classrooms, not a public production SaaS platform. Nicknames are not verified accounts; browser access keys must be retained. The server has no account recovery, multi-process storage or public deployment protection. Demo replay recognizes only registered source variants and inputs: a different correct solution may have no corresponding fixture. Public deployment and long-term operations are outside the coursework scope.
+ClassLab is a coursework prototype for small, trusted classrooms, not a public production SaaS platform. Nicknames are not verified accounts; browser access keys must be retained. The server has no account recovery, multi-process storage or public deployment protection. Public deployment and long-term operations are outside the coursework scope.
 
 ## Team Contributions
 
@@ -263,7 +210,7 @@ See the [classroom MVP commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-
 
 The latest verified source is maintained on main. New work uses feature branches, automated tests and pull requests. Merge commits preserve original team authors and history.
 
-- [Running ClassLab: Normal, Demo and school-server setup](docs/RUN_CLASSLAB.md)
+- [Running ClassLab: isolated Judge and school-server setup](docs/RUN_CLASSLAB.md)
 - [Course delivery and architecture review](docs/COURSE_DELIVERY.md)
 - [Notebook integration specification](docs/NOTEBOOK_CLASSROOM.md)
 - [Coursework demonstration guide](docs/COURSEWORK_DEMO.md)

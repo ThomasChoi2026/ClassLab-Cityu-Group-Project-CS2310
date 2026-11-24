@@ -7,7 +7,6 @@ on:
       - 'tests/browser_teacher_ux.py'
       - 'tests/browser_classroom_export.py'
       - 'tests/browser_run_output.py'
-      - 'tests/browser_demo.py'
       - '.github/workflows/teacher-ux.yml'
 
 permissions:
