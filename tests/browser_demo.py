@@ -81,6 +81,20 @@ def rehearse(browser, base, evidence_dir=None):
         expect(page.locator("#run-result")).to_contain_text("预置演示回放")
         expect(page.locator("#run-result")).to_contain_text("5" if change else "-1")
         expect(page.locator("#stdin-panel")).to_be_hidden()
+        page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
+        page.locator("#copy-run-result").click()
+        expect(page.locator("#run-copy-feedback")).to_have_text("运行结果已复制。")
+        copied = page.evaluate("navigator.clipboard.readText()")
+        assert "DEMO REPLAY" in copied and "预置演示回放" in copied
+        assert "标准输出：" in copied
+        assert ("5" in copied) if change else ("-1" in copied)
+        page.evaluate("""() => Object.defineProperty(navigator, "clipboard", {
+            configurable: true,
+            value: { writeText: () => Promise.reject(new Error("clipboard blocked")) }
+        })""")
+        page.locator("#copy-run-result").click()
+        expect(page.locator("#run-copy-fallback")).to_be_visible()
+        expect(page.locator("#run-copy-feedback")).to_contain_text("已选中文本")
         if evidence_dir is not None and index == 2:
             page.screenshot(path=str(evidence_dir / "student-run-replay.png"), full_page=True)
         code.press("Control+Enter")
