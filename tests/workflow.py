@@ -319,7 +319,12 @@ class ClassroomWorkflow(unittest.TestCase):
                 self.assertEqual(status, 201)
                 self.assertNotEqual(replacement["id"], task_id)
                 self.assertEqual(request(base, root + "/submissions", submit, **ada)[0], 409)
-                self.assertEqual(request(base, detail, **teacher)[0], 409)
+                status, archived_detail = request(base, detail, **teacher)
+                self.assertEqual((status, archived_detail["code"]), (200, code))
+                archived_progress = request(base, root + "/progress?taskId=" + task_id, **teacher)[1]
+                self.assertEqual(archived_progress["attempts"], 3)
+                self.assertEqual([entry["id"] for entry in archived_progress["tasks"]],
+                                 [replacement["id"], task_id])
                 self.assertEqual(request(base, root + "/progress", **teacher)[1]["editPatterns"], [])
                 self.assertIsNone(request(base, root + "/task", **ada)[1]["latestResult"])
             self.assertEqual(json.loads(data.read_text())[room["id"]]["tasks"][0], current)

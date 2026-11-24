@@ -119,7 +119,7 @@ In a single-minute presentation, prepare the browser sessions and example submis
 | Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
 | Continue | Publish the next exercise without re-uploading. The Notebook stays available in the current page, while the editor clears and the dashboard switches to the active task. Reloading or closing the page requires re-importing the Notebook. |
 
-Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records.
+Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records. After publishing multiple tasks, select **查看已发布任务** in Classroom Progress to inspect earlier submissions, code differences and test statistics. The selection only changes the teacher view. The classroom projection shows the latest task.
 
 ### Notebook classroom integration
 
@@ -159,7 +159,7 @@ All five support exact-source Demo playback. The full lecture also contains 22 o
 
 ## Student workflow
 
-Join through the teacher's QR code or link, enter a nickname, and work on the current exercise in the browser.
+Join through the teacher's QR code or link and enter a nickname. **本课堂已发布任务** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **已加入的课堂** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.
 
 - **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
 - **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.

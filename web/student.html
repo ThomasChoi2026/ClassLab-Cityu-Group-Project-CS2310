@@ -21,6 +21,10 @@
         </form>
       </div>
     </section>
+    <details id="student-classrooms" class="panel" hidden>
+      <summary>已加入的课堂</summary>
+      <ul id="student-classroom-list" class="case-results"></ul>
+    </details>
     <section id="workspace" hidden>
       <div class="heading"><div><h1 id="room-name"></h1><p id="student-name"></p></div></div>
       <p id="connection" role="status" class="feedback error"></p>
@@ -30,6 +34,10 @@
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <section class="panel">
+        <label id="student-task-navigation" hidden>本课堂已发布任务
+          <select id="student-task-picker"><option value="">最新发布</option></select>
+        </label>
+        <p id="archive-notice" class="inline-status" hidden>正在查看往期任务。返回最新发布可运行和提交。</p>
         <p id="waiting">等待教师发布任务，页面将自动更新。</p>
         <div id="assignment" hidden>
           <h2 id="task-title"></h2>
@@ -79,7 +87,7 @@
               </div>
             </div>
             <p id="optcpp-status" class="inline-status" role="status"></p>
-            <button type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">提交代码</button>
+            <button id="submit-code" type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">提交代码</button>
             <small>在编辑器中按 Ctrl + Enter 或 ⌘ + Enter 也可提交。</small>
             <p id="submit-feedback" role="status" class="feedback"></p>
           </form>

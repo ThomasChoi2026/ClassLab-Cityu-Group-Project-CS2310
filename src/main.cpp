@@ -174,6 +174,31 @@ Json active_task(const Json& room) {
     return tasks.empty() ? Json(nullptr) : tasks.back();
 }
 
+const Json* find_task(const Json& room, std::string_view id) {
+    const auto& tasks = room.at("tasks");
+    const auto found = std::find_if(tasks.rbegin(), tasks.rend(), [&](const Json& task) {
+        return task.at("id") == id;
+    });
+    return found == tasks.rend() ? nullptr : &*found;
+}
+
+Json view_task(const Json& room, const httplib::Request& request) {
+    const auto id = request.get_param_value("taskId");
+    if (id.empty()) return active_task(room);
+    const auto* task = find_task(room, id);
+    if (!task) throw ApiError{400, "找不到这项课堂任务。"};
+    return *task;
+}
+
+Json task_navigation(const Json& room) {
+    const auto& tasks = room.at("tasks");
+    Json summary = Json::array();
+    for (auto task = tasks.rbegin(); task != tasks.rend(); ++task) {
+        summary.push_back({{"id", task->at("id")}, {"title", task->at("title")}});
+    }
+    return summary;
+}
+
 struct ClassSlot {
     std::string id, name;
     int day; // ISO weekday: Monday = 1, Sunday = 7.
@@ -285,8 +310,7 @@ Json pitfall_evidence(const Json& item, std::string_view code, const Json& outco
         {"testStatus", outcome == outcomes.end() ? Json(nullptr) : outcome->at("status")}};
 }
 
-Json progress(const Json& room) {
-    const auto task = active_task(room);
+Json progress(const Json& room, const Json& task) {
     const auto task_id = task.is_null() ? Json(nullptr) : task.at("id");
     Json rows = Json::array();
     Json cases = Json::array();
@@ -629,7 +653,9 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
         auto result = store.read([&](const Json& rooms) {
             const auto& room = room_for(rooms, request);
             require_teacher(room, request);
-            return progress(room);
+            auto result = progress(room, view_task(room, request));
+            result["tasks"] = task_navigation(room);
+            return result;
         });
         result["demo"] = judge.demo();
         result["executionAvailable"] = !judge.demo() && judge.available();
@@ -640,22 +666,20 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             reply(response, store.read([&](const Json& rooms) -> Json {
                 const auto& room = room_for(rooms, request);
                 require_teacher(room, request);
-                const auto task = active_task(room);
-                if (task.is_null() || task.at("id") != request.get_param_value("taskId")) {
-                    throw ApiError{409, "当前任务已切换，请重新打开提交记录。"};
-                }
+                const auto* task = find_task(room, request.get_param_value("taskId"));
+                if (!task) throw ApiError{409, "找不到这项课堂任务，请重新打开提交记录。"};
                 const auto number = std::stoull(request.matches[2].str());
                 for (const auto& student : room.at("students")) {
                     if (student.at("number") != number) continue;
-                    if (const auto* latest = judging::latest_for(student, task.at("id"))) {
+                    if (const auto* latest = judging::latest_for(student, task->at("id"))) {
                         const auto result = judging::result_for(*latest);
                         const auto outcomes = result.value("cases", Json::array());
                         const auto& code = latest->at("code").get_ref<const std::string&>();
                         Json evidence = Json::array();
-                        for (const auto& item : task.value("pitfalls", Json::array())) {
+                        for (const auto& item : task->value("pitfalls", Json::array())) {
                             evidence.push_back(pitfall_evidence(item, code, outcomes));
                         }
-                        return {{"name", student.at("name")}, {"code", code}, {"starterCode", task.at("starterCode")},
+                        return {{"name", student.at("name")}, {"code", code}, {"starterCode", task->at("starterCode")},
                                 {"result", result}, {"pitfallEvidence", evidence}};
                     }
                     break;
@@ -711,7 +735,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             const auto& room = room_for(rooms, request);
             const auto key = require_student(room, request);
             const auto& student = room.at("students").at(key);
-            const auto task = active_task(room);
+            const auto task = view_task(room, request);
             Json latest_result;
             if (!task.is_null()) {
                 if (const auto* latest = judging::latest_for(student, task.at("id"))) {
@@ -721,7 +745,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             const auto history = task.is_null() ? Json::array() : judging::history_for(student, task.at("id"));
             return {{"roomName", room.at("name")}, {"studentName", student.at("name")},
                     {"schedule", room.value("schedule", Json::array())},
-                    {"praiseSeq", student.value("praiseSeq", 0)},
+                    {"praiseSeq", student.value("praiseSeq", 0)}, {"tasks", task_navigation(room)},
                     {"task", judging::student_task(task)}, {"latestResult", latest_result},
                     {"submissionHistory", history}};
         });

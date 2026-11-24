@@ -250,3 +250,5 @@ pre {
 .empty-starter-choice { display: flex; align-items: center; }
 .empty-starter-choice input { width: auto; margin: 0; }
 #starter-code-status { margin: 0; }
+
+#teacher-task-picker, #student-task-picker { min-width: 0; max-width: 100%; }

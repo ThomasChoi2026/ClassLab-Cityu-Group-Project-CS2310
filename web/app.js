@@ -645,6 +645,30 @@ function initializeLessonLibrary(serialize, load) {
   return () => { loaded = undefined; render(); };
 }
 
+function taskPicker(select, container) {
+  let lastOptions;
+  return (tasks = []) => {
+    const options = JSON.stringify(tasks);
+    if (options === lastOptions) return;
+    lastOptions = options;
+    const selected = select.value;
+    const latest = element("option", tasks.length ? "最新发布 · " + tasks[0].title : "最新发布");
+    latest.value = "";
+    const archive = tasks.slice(1).map(task => {
+      const option = element("option", task.title);
+      option.value = task.id;
+      return option;
+    });
+    select.replaceChildren(latest, ...archive);
+    select.value = archive.some(option => option.value === selected) ? selected : "";
+    container.hidden = archive.length === 0;
+  };
+}
+
+function taskQuery(taskId) {
+  return taskId ? "?taskId=" + encodeURIComponent(taskId) : "";
+}
+
 function initializeTeacher() {
   const storageKey = "classlab.teacher";
   let credentials = JSON.parse(localStorage.getItem(storageKey) || "null");
@@ -661,6 +685,8 @@ function initializeTeacher() {
   const caseRows = byId("case-editor-rows");
   const addCase = byId("add-case");
   const submissionDialog = byId("submission-dialog");
+  const selectedTask = byId("teacher-task-picker");
+  const renderTasks = taskPicker(selectedTask, byId("teacher-task-navigation"));
   let analysisSignature;
   let configurationTask;
   let publishedCases = [];
@@ -727,6 +753,8 @@ function initializeTeacher() {
     if (credentials && !confirm("将离开当前课堂，并清除本浏览器保存的教师访问密钥（不可恢复）。确定创建新课堂？")) return;
     localStorage.removeItem(storageKey);
     credentials = null;
+    selectedTask.value = "";
+    renderTasks();
     byId("setup").hidden = false;
     if (qrDialog.open) qrDialog.close();
     if (submissionDialog.open) submissionDialog.close();
@@ -818,7 +846,13 @@ function initializeTeacher() {
     toggle.textContent = enabled ? "返回管理" : "课堂投影";
   }
 
-  toggle.addEventListener("click", () => project(classroom.hidden));
+  toggle.addEventListener("click", () => {
+    if (classroom.hidden && selectedTask.value) {
+      selectedTask.value = "";
+      void refresh();
+    }
+    project(classroom.hidden);
+  });
 
   function appendCase(values = {}, focus = true) {
     if (caseRows.childElementCount >= 12) return;
@@ -976,17 +1010,22 @@ function initializeTeacher() {
   function showProgress(state) {
     showDemoBanner(state);
     renderSchedule(state.schedule);
-    byId("projection-task").textContent = state.task?.title || "尚未发布任务";
-    for (const metric of ["joined", "submitted", "accepted"]) {
-      byId("projection-" + metric).textContent = state[metric];
+    const archived = Boolean(selectedTask.value);
+    renderTasks(state.tasks);
+    if (!archived) {
+      byId("projection-task").textContent = state.task?.title || "尚未发布任务";
+      for (const metric of ["joined", "submitted", "accepted"]) {
+        byId("projection-" + metric).textContent = state[metric];
+      }
+      const rate = state.joined ? Math.round(100 * state.submitted / state.joined) : 0;
+      byId("projection-meter").value = rate;
+      byId("projection-rate").textContent = state.joined ?
+        state.submitted + " / " + state.joined + " 人已提交（" + rate + "%）" : "等待学生加入";
     }
-    const rate = state.joined ? Math.round(100 * state.submitted / state.joined) : 0;
-    byId("projection-meter").value = rate;
-    byId("projection-rate").textContent = state.joined ?
-      state.submitted + " / " + state.joined + " 人已提交（" + rate + "%）" : "等待学生加入";
     byId("projection-connection").textContent = "";
     byId("room-name").textContent = state.name;
-    byId("current-task").textContent = state.task ? "当前任务 · " + state.task.title : "尚未发布任务";
+    byId("current-task").textContent = state.task ?
+      (archived ? "往期任务 · " : "当前任务 · ") + state.task.title : "尚未发布任务";
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
@@ -998,7 +1037,7 @@ function initializeTeacher() {
       "暂无已完成的评测，暂不计算通过率。";
     refreshStatus("每 2 秒更新");
     byId("empty-students").hidden = state.students.length > 0;
-    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns, state.pitfallStats]);
+    const signature = JSON.stringify([archived, state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns, state.pitfallStats]);
     if (signature === analysisSignature) return;
     analysisSignature = signature;
     renderAnalysis(state);
@@ -1014,6 +1053,7 @@ function initializeTeacher() {
       const detail = row.insertCell();
       if (student.count) detail.append(detailButton(student.number, state.task.id));
       const actions = row.insertCell();
+      if (archived) return row;
       const praise = element("button", "嘉奖");
       praise.type = "button";
       praise.className = "secondary";
@@ -1037,11 +1077,17 @@ function initializeTeacher() {
   }
 
   const refresh = poll(async () => {
-    if (credentials) showProgress(await api(endpoint("/progress"), { headers: headers() }));
+    if (!credentials) return;
+    const room = credentials.id;
+    const taskId = selectedTask.value;
+    const state = await api(endpoint("/progress") + taskQuery(taskId), { headers: headers() });
+    if (credentials?.id === room && selectedTask.value === taskId) showProgress(state);
   }, (error) => {
     if (error.status === 403 || error.status === 404) {
       localStorage.removeItem(storageKey);
       credentials = null;
+      selectedTask.value = "";
+      renderTasks();
       byId("setup").hidden = false;
       if (qrDialog.open) qrDialog.close();
       if (submissionDialog.open) submissionDialog.close();
@@ -1052,6 +1098,11 @@ function initializeTeacher() {
       refreshStatus("连接中断，数值可能过时");
       byId("projection-connection").textContent = "连接中断，数值可能过时";
     }
+  });
+
+  selectedTask.addEventListener("change", () => {
+    if (submissionDialog.open) submissionDialog.close();
+    void refresh();
   });
 
   onSubmit("create", async (data) => {
@@ -1086,6 +1137,7 @@ function initializeTeacher() {
     composer.inert = true;
     try {
       await api(endpoint("/tasks"), { data, headers: headers() });
+      selectedTask.value = "";
       // Clear only the published task. Keep the Notebook and the other workspace.
       composeBuffers[composeMode] = null;
       restoreCompose();
@@ -1120,9 +1172,64 @@ function renderHistory(history) {
   byId("history-list").replaceChildren(...rows);
 }
 
+function studentClassroomHistory(currentRoom) {
+  const prefix = "classlab.student.";
+  const namesKey = prefix + "classrooms";
+
+  function names() {
+    try {
+      const value = JSON.parse(localStorage.getItem(namesKey) || "{}");
+      return value && typeof value === "object" ? value : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function render() {
+    const saved = names();
+    const rooms = Object.keys(localStorage)
+      .map(key => key.match(/^classlab\.student\.([a-f0-9]{32})$/)?.[1])
+      .filter(Boolean);
+    byId("student-classrooms").hidden = !rooms.some(id => id !== currentRoom);
+    const rows = rooms.map(id => {
+      const title = typeof saved[id] === "string" ? saved[id] : "课堂 " + id.slice(0, 8);
+      const row = element("li");
+      if (id === currentRoom) {
+        row.textContent = title + "（当前课堂）";
+      } else {
+        const link = element("a", title);
+        link.href = "/join/" + id;
+        row.append(link);
+      }
+      return row;
+    });
+    byId("student-classroom-list").replaceChildren(...rows);
+  }
+
+  addEventListener("storage", event => {
+    if (!event.key || event.key.startsWith(prefix)) render();
+  });
+  render();
+  return {
+    remember(name) {
+      const saved = names();
+      if (saved[currentRoom] !== name) {
+        try {
+          localStorage.setItem(namesKey, JSON.stringify({...saved, [currentRoom]: name}));
+        } catch {}
+      }
+      render();
+    },
+    render,
+  };
+}
+
 function initializeStudent() {
   const room = location.pathname.split("/").pop();
   const storageKey = "classlab.student." + room;
+  const classrooms = studentClassroomHistory(room);
+  const selectedTask = byId("student-task-picker");
+  const renderTasks = taskPicker(selectedTask, byId("student-task-navigation"));
   let key = localStorage.getItem(storageKey);
   let currentTask = null;
   let resultSignature;
@@ -1150,6 +1257,9 @@ function initializeStudent() {
     byId("connection").textContent = "";
     feedback("");
     byId("room-name").textContent = state.roomName;
+    if (byId("student-name").textContent !== state.studentName) {
+      classrooms.remember(state.roomName);
+    }
     byId("student-name").textContent = state.studentName;
     const praiseSeq = Number(state.praiseSeq || 0);
     if (praiseSeq > praiseSeqSeen) {
@@ -1164,9 +1274,15 @@ function initializeStudent() {
     }
     byId("waiting").hidden = Boolean(state.task);
     byId("assignment").hidden = !state.task;
-    byId("run-controls").disabled = !state.executionAvailable || running;
+    const archived = Boolean(selectedTask.value);
+    renderTasks(state.tasks);
+    byId("archive-notice").hidden = !archived;
+    editor.readOnly = archived;
+    byId("reset-code").disabled = archived;
+    byId("submit-code").hidden = archived;
+    byId("run-controls").disabled = archived || !state.executionAvailable || running;
     const runStatus = byId("run-state");
-    const runMessage = running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
+    const runMessage = archived ? "" : running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
       stdinPending ? (demoMode ? "输入预置测试数据后，可再次点击回放。" : "程序已请求标准输入。填写后再次点击运行，将从头执行程序。") :
       state.demo ? "仅回放匹配的预置代码与支持的输入；请使用本题公开用例。不编译或运行任意 C++。" :
       state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
@@ -1187,7 +1303,7 @@ function initializeStudent() {
     byId("optcpp-status").textContent = "";
     byId("optcpp-options").open = false;
     byId("optcpp-input").value = "";
-    byId("editor-feedback").textContent = currentTask ? "教师已发布新任务。" : "";
+    byId("editor-feedback").textContent = currentTask && !archived ? "已打开最新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
     const taskDescription = currentTask.description || "";
@@ -1201,12 +1317,18 @@ function initializeStudent() {
   }
 
   const refresh = poll(async () => {
-    if (key) showTask(await api(endpoint("/task"), { headers: headers() }));
+    if (!key) return;
+    const taskId = selectedTask.value;
+    const state = await api(endpoint("/task") + taskQuery(taskId), { headers: headers() });
+    if (selectedTask.value === taskId) showTask(state);
   }, (error) => {
     if (error.status === 403 || error.status === 404) {
       localStorage.removeItem(storageKey);
       key = null;
       currentTask = null;
+      selectedTask.value = "";
+      renderTasks();
+      classrooms.render();
       byId("setup").hidden = false;
       byId("workspace").hidden = true;
       feedback(error.message, true);
@@ -1216,12 +1338,15 @@ function initializeStudent() {
     }
   });
 
+  selectedTask.addEventListener("change", () => { void refresh(); });
+
   onSubmit("join", async (data) => {
     const result = await api(endpoint("/students"), { data });
     key = result.studentKey;
     praiseSeqSeen = 0;
     localStorage.removeItem(storageKey + ".praiseSeq");
     localStorage.setItem(storageKey, key);
+    classrooms.render();
     await refresh();
   });
 
@@ -1318,7 +1443,7 @@ function initializeStudent() {
   });
 
   byId("run-code").addEventListener("click", async () => {
-    if (running || !currentTask || !editor.reportValidity()) return;
+    if (running || selectedTask.value || !currentTask || !editor.reportValidity()) return;
     const taskId = currentTask.id;
     const panel = byId("run-result");
     const provideInput = stdinPending?.taskId === taskId && stdinPending.code === editor.value;
@@ -1363,6 +1488,7 @@ function initializeStudent() {
   });
 
   onSubmit("submit", async ({ code }) => {
+    if (selectedTask.value || !currentTask) return;
     const taskId = currentTask.id;
     try {
       if (pendingSubmission?.taskId !== taskId || pendingSubmission.code !== code) {
