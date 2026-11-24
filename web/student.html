@@ -72,18 +72,11 @@
             </fieldset>
             <p id="run-state" role="status">隔离执行器不可用，暂时无法运行代码。</p>
             <section id="run-result" aria-label="自由运行结果" hidden></section>
-            <details id="optcpp-options" class="optcpp-options">
-              <summary>OPT CPP 标准输入（可选）</summary>
-              <label for="optcpp-input">传递给外部 OPT CPP 的输入
-                <textarea id="optcpp-input" rows="2" maxlength="2700" spellcheck="false" placeholder="例如 5 3"></textarea>
-              </label>
-            </details>
             <div id="optcpp-fallback" hidden>
-              <p>代码或输入过长，无法直接传递。请打开空白 OPT CPP 并自行复制。</p>
+              <p>代码过长，无法直接传递。请打开空白 OPT CPP 并自行复制代码。</p>
               <div class="lesson-actions">
                 <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">打开空白 OPT CPP</a>
                 <button id="copy-opt-code" type="button" class="secondary">复制当前代码</button>
-                <button id="copy-opt-input" type="button" class="secondary">复制标准输入</button>
               </div>
             </div>
             <p id="optcpp-status" class="inline-status" role="status"></p>

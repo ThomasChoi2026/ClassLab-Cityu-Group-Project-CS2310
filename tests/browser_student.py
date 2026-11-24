@@ -41,37 +41,48 @@ def check(browser, base):
     editor = student.locator("#student-code")
     expect(editor).to_have_value(starter)
     stdin = student.locator("[name=runInput]")
-    external_input = student.locator("#optcpp-input")
     expect(student.locator("#stdin-panel")).to_be_hidden()
     expect(stdin).to_be_hidden()
-    expect(external_input).to_be_hidden()
+    expect(student.locator("#optcpp-options, #optcpp-input, #copy-opt-input")).to_have_count(0)
+    expect(student.locator("#submit textarea")).to_have_count(2)  # editor and native Run-first stdin
     expect(student.locator("#run-code")).to_be_disabled()
     expect(student.locator(".editor-field #open-optcpp")).to_have_text("抄送至OPT_CPP")
-    student.locator("#optcpp-options summary").click()
-    expect(external_input).to_be_editable()
-    expect(stdin).to_be_hidden()
     assert student.evaluate("document.documentElement.scrollWidth === innerWidth")
     assert student.evaluate("""() => {
         const row = document.querySelector(".editor-field .section-heading");
         return row.scrollWidth === row.clientWidth;
     }""")
     code = "// synthetic 中文 & # + %\nint main() { return 0; }\n"
-    supplied = " 5 3\n\n另一个 & # + %\n"
-    editor.fill(code)
-    external_input.fill(supplied)
+    samples = (
+        code,
+        "#include <iostream>\nint main() { int x; std::cin >> x; std::cout << x; }",
+        "#include <iostream>\nint main() { int a, b; std::cin >> a; std::cin >> b; std::cout << a+b; }",
+    )
     assert not external
-    with student.expect_popup() as opened:
-        student.locator("#open-optcpp").click()
-    popup = opened.value
-    popup.wait_for_load_state("domcontentloaded")
-    parts = urlsplit(popup.url)
-    assert popup.url.split("#", 1)[0] == EXTERNAL
-    state = parse_qs(parts.fragment)
-    assert state["code"] == [code]
-    assert json.loads(state["rawInputLstJSON"][0]) == [supplied]
-    assert state["mode"] == ["display"]
-    assert popup.evaluate("window.opener === null")
-    popup.close()
+    for sample in samples:
+        editor.fill(sample)
+        expect(stdin).to_be_hidden()
+        # Baseline main's exact URL construction when its optional field is empty.
+        # The new popup URL must be byte-identical, not merely use the same host.
+        baseline = student.evaluate("""code => {
+            const optionalInput = "";
+            return "https://dive4dec.github.io/OPT_CPP/visualize.html#" + new URLSearchParams({
+                code, curInstr: "0", mode: "display", py: "cpp",
+                rawInputLstJSON: JSON.stringify(optionalInput === "" ? [] : [optionalInput])
+            });
+        }""", sample)
+        with student.expect_popup() as opened:
+            student.locator("#open-optcpp").click()
+        popup = opened.value
+        popup.wait_for_load_state("domcontentloaded")
+        assert popup.url == baseline, (popup.url, baseline)
+        state = parse_qs(urlsplit(popup.url).fragment)
+        assert state["code"] == [sample]
+        assert json.loads(state["rawInputLstJSON"][0]) == []
+        assert state["mode"] == ["display"]
+        assert popup.evaluate("window.opener === null")
+        popup.close()
+    editor.fill(code)
 
     with student.expect_download() as downloaded:
         student.locator("#download-code").click()
@@ -81,12 +92,9 @@ def check(browser, base):
     editor.fill("// long " + "中" * 3000)
     student.locator("#open-optcpp").click()
     expect(student.locator("#optcpp-fallback")).to_be_visible()
-    assert len(external) == 1
+    assert len(external) == len(samples)
     if browser.browser_type.name == "chromium":
         context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
-        student.locator("#copy-opt-input").click()
-        expect(student.locator("#optcpp-status")).to_have_text("标准输入已复制。")
-        assert student.evaluate("navigator.clipboard.readText()") == supplied
         student.locator("#copy-opt-code").click()
         expect(student.locator("#optcpp-status")).to_have_text("当前代码已复制。")
         assert student.evaluate("navigator.clipboard.readText()") == "// long " + "中" * 3000
@@ -125,6 +133,6 @@ if __name__ == "__main__":
         browser = getattr(playwright, args.browser).launch(executable_path=args.executable)
         try:
             check(browser, args.url)
-            print("Student browser check passed: teammate OPT CPP one-click handoff, optional external stdin, fallback, mobile layout, reset and history.")
+            print("Student browser check passed: teammate OPT CPP one-click handoff, baseline-identical empty-input handoff, fallback, mobile layout, reset and history.")
         finally:
             browser.close()

@@ -164,9 +164,9 @@ Join through the teacher's QR code or link and enter a nickname. **本课堂已�
 - **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
 - **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
 - **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
-- **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source and optional external stdin. It remains a separate tool; ClassLab does not import its runtime output as a grade.
+- **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source. Provide input, run and inspect results in OPT CPP itself. ClassLab does not import its runtime output as a grade.
 
-For long source code, the external handoff offers a blank visualizer link and manual copy controls. The external site can read the transmitted source and input; avoid sending sensitive information.
+For long source code, the external handoff offers a blank visualizer link and manual copy controls. The external site can read the transmitted source and any input you provide there; avoid sending sensitive information.
 
 [Detailed student controls and external-tool privacy](docs/COURSE_DELIVERY.md#student-workflow)
 
