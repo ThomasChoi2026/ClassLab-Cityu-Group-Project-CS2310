@@ -69,13 +69,14 @@ def check(browser, base):
         "Total Test Cases", "Mode", "Exported At (UTC)",
     ]
     assert list(rows[0]) == expected_headers
+    formula_name = "'=HYPERLINK(\"https://example.invalid\")"
     by_name = {row["Student Name"]: row for row in rows}
     assert set(by_name) == {
-        '\'=HYPERLINK("https://example.invalid")',
+        formula_name,
         '张三, "第二位"',
         "多行\n学生",
     }, by_name
-    formula_row = by_name['\'=HYPERLINK("https://example.invalid")']
+    formula_row = by_name[formula_name]
     assert formula_row["Classroom Name"] == 'Class, "CSV"'
     assert formula_row["Task Title"] == 'Task, "CSV"'
     assert formula_row["Latest Submission Status"] == "Submitted (not evaluated)"
@@ -83,7 +84,7 @@ def check(browser, base):
     assert formula_row["Submission Count"] == "1"
     assert formula_row["Mode"] == "Normal"
     assert all(row["Latest Submission Status"] == "Not submitted" for name, row in by_name.items()
-               if name != '\'=HYPERLINK("https://example.invalid")')
+               if name != formula_name)
     assert all(row["Passed Test Cases"] == "" and row["Total Test Cases"] == "" for row in rows)
     assert all(row["Exported At (UTC)"].endswith("Z") for row in rows)
     expect(teacher.locator("#export-feedback")).to_contain_text("已导出 3 名学生")
