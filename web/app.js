@@ -219,7 +219,7 @@ function displayResult(container, result, teacherCases) {
   }
 }
 
-function initializeNotebookImport(form) {
+function initializeNotebookImport(form, loadExercise) {
   const picker = byId("notebook-file");
   const list = byId("notebook-list");
   const search = byId("notebook-search");
@@ -228,6 +228,7 @@ function initializeNotebookImport(form) {
   const status = byId("notebook-status");
   const preview = byId("notebook-preview");
   const fields = byId("notebook-cells");
+  const overview = byId("notebook-overview");
   const use = byId("use-notebook-cell");
   const toggleCell = byId("toggle-prep-cell");
   const assemble = byId("assemble-notebook");
@@ -242,7 +243,7 @@ function initializeNotebookImport(form) {
     if (cell.kind === "markdown") return "markdown";
     const source = cell.code.trimStart();
     const magic = source.match(/^%%([\w-]+)/)?.[1]?.toLowerCase();
-    if (magic) return magic === "cpp" || magic === "hermes" ? "cpp" : "other";
+    if (magic) return magic === "cpp" && /^%%cpp[ \t]*(?:\r?\n|$)/.test(source) ? "cpp" : "other";
     if (/^(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\()/m.test(source)) return "other";
     return /(?:#\s*include\s*[<"]|\bstd::|\b(?:int\s+main|class|struct|template|constexpr|using\s+namespace)\b)/.test(source)
       ? "cpp" : "other";
@@ -261,17 +262,20 @@ function initializeNotebookImport(form) {
     assemble.disabled = !numbers.length;
   }
 
-  function renderList() {
+  function matchingCells() {
     const term = search.value.trim().toLowerCase();
     const selectedType = filter.value;
-    const matches = cells.map((cell, position) => ({cell, position})).filter(({cell}) => {
-      const typeMatches = selectedType === "all" || kindOf(cell) === selectedType;
-      const searchMatches = !term || String(cell.index + 1).includes(term) || cell.code.toLowerCase().includes(term);
+    return cells.map((cell, position) => ({cell, position})).filter(({cell}) => {
+      const typeMatches = selectedType === "all" || (selectedType === "exercise" ? Boolean(cell.exercise) : kindOf(cell) === selectedType);
+      const searchMatches = !term || String(cell.index + 1).includes(term) || cell.code.toLowerCase().includes(term) || (cell.exercise?.title || "").toLowerCase().includes(term);
       return typeMatches && searchMatches;
     });
-    const entries = matches.map(({cell, position}) => {
-      const label = kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
-      const button = element("button", "Cell " + (cell.index + 1) + " · " + label + " · " + summaryOf(cell));
+  }
+
+  function renderList() {
+    const entries = matchingCells().map(({cell, position}) => {
+      const label = cell.exercise ? "课堂互动练习" : cell.protected ? "仅教师预览 / 不可载入" : kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
+      const button = element("button", "Cell " + (cell.index + 1) + " · " + label + " · " + (cell.exercise?.title || summaryOf(cell)));
       button.type = "button";
       button.className = "notebook-cell-entry" + (position === current ? " active" : "");
       button.setAttribute("aria-pressed", String(position === current));
@@ -279,6 +283,7 @@ function initializeNotebookImport(form) {
       button.addEventListener("click", () => {
         current = position;
         showCell();
+        if (cell.exercise) importExercise(cell);
       });
       return button;
     });
@@ -290,14 +295,16 @@ function initializeNotebookImport(form) {
     const cell = cells[current];
     if (!cell) return;
     currentLabel.textContent = "Cell " + (cell.index + 1) + " · " +
-      (kindOf(cell) === "cpp" ? "C++ 代码" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码");
+      (cell.exercise ? cell.exercise.title : cell.protected ? "教师专用 / 无效互动信息" : kindOf(cell) === "cpp" ? "C++ 代码" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码");
     preview.textContent = cell.code;
     const isCode = cell.kind === "code";
-    use.hidden = toggleCell.hidden = !isCode;
-    appendText.hidden = isCode;
+    use.hidden = !isCode || cell.protected;
+    use.textContent = cell.exercise ? "载入互动练习" : "填入起始代码";
+    toggleCell.hidden = !isCode || cell.protected || Boolean(cell.exercise);
+    appendText.hidden = isCode || cell.protected;
     toggleCell.textContent = selected.has(current) ? "从组合移除" : "加入代码组合";
     toggleCell.setAttribute("aria-pressed", String(selected.has(current)));
-    status.textContent = "预览不会改变编辑器；Notebook 魔法指令需单独检查。";
+    status.textContent = cell.warning || (cell.exercise ? "互动练习含 " + cell.exercise.testCases.length + " 个用例；载入后请检查再发布。" : "普通讲授单元：可预览或手动整理代码。");
     renderList();
   }
 
@@ -312,17 +319,22 @@ function initializeNotebookImport(form) {
     preview.textContent = "";
     currentLabel.textContent = "";
     fields.hidden = true;
+    overview.hidden = true;
+    overview.textContent = "";
     status.textContent = "";
     showSelection();
   }
 
   function preparedSource(cell) {
-    if (cell.kind !== "code") return {error: "只能将代码单元放入 C++ 起始代码。"};
+    if (!cell || cell.kind !== "code") return {error: "只能将代码单元放入 C++ 起始代码。"};
+    if (cell.protected) return {error: cell.warning};
+    if (cell.exercise) return {error: "互动练习请独立载入，避免混合代码和测试规格。"};
     let code = cell.code;
     const notes = [];
     const magic = code.match(/^\s*%%([\w-]+)[^\r\n]*(?:\r?\n|$)/);
     if (magic) {
       const name = magic[1].toLowerCase();
+      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " 的 %%cpp 含参数，请手动整理。"};
       if (name !== "cpp") return {error: "Cell " + (cell.index + 1) +
         " 使用 %%" + name + "，不是标准 C++；请在预览中核对并手动转换。"};
       code = code.slice(magic[0].length);
@@ -361,14 +373,14 @@ function initializeNotebookImport(form) {
     try {
       const notebook = JSON.parse(await file.text());
       if (readVersion !== version) return;
-      if (notebook?.nbformat !== 4 || !Array.isArray(notebook.cells)) throw new Error();
-      cells = notebook.cells.flatMap((cell, index) => {
-        if (!["code", "markdown"].includes(cell?.cell_type)) return [];
-        const source = cell.source;
-        const code = typeof source === "string" ? source :
-          Array.isArray(source) && source.every(line => typeof line === "string") ? source.join("") : null;
-        return code === null ? [] : [{index, code, kind: cell.cell_type}];
-      });
+      const parsed = ClassLabNotebook.parse(notebook);
+      cells = parsed.cells;
+      overview.textContent = file.name + " · 总 Cell：" + parsed.total + " · 课堂互动练习：" + parsed.count + (parsed.warnings ? " · 需检查：" + parsed.warnings : "");
+      overview.hidden = false;
+      if (parsed.count) {
+        filter.value = "exercise";
+        current = cells.findIndex(cell => cell.exercise);
+      }
       if (!cells.length) {
         status.textContent = "此 Notebook 没有可读取的代码或 Markdown 单元。";
         return;
@@ -381,18 +393,48 @@ function initializeNotebookImport(form) {
     }
   });
 
-  search.addEventListener("input", renderList);
+  function refreshFilter() {
+    const matches = matchingCells();
+    if (matches.some(entry => entry.position === current)) {
+      renderList();
+    } else if (matches.length) {
+      current = matches[0].position;
+      showCell(); // Preview only, never load or publish on filtering.
+    } else {
+      current = -1;
+      currentLabel.textContent = "没有匹配的单元";
+      preview.textContent = "";
+      use.hidden = toggleCell.hidden = appendText.hidden = true;
+      status.textContent = "没有匹配的单元，可修改搜索或筛选条件。";
+      renderList();
+    }
+  }
+
+  search.addEventListener("input", refreshFilter);
   // Enter in cell search must never submit or publish the teacher form.
   search.addEventListener("keydown", event => {
     if (event.key === "Enter") event.preventDefault();
   });
-  filter.addEventListener("change", renderList);
+  filter.addEventListener("change", refreshFilter);
+  function importExercise(cell) {
+    if (!cell?.exercise || cell.protected) return;
+    if (!loadExercise(cell.exercise)) {
+      status.textContent = "保留了当前编辑内容；可点击载入互动练习再次选择。";
+      return;
+    }
+    selected.clear();
+    showSelection();
+    renderList();
+    status.textContent = "已载入互动练习，尚未发布。请核对说明和用例。" + (cell.warning ? " " + cell.warning : "");
+  }
   use.addEventListener("click", () => {
+    if (cells[current]?.exercise) return importExercise(cells[current]);
     const result = preparedSource(cells[current]);
     if (result.error) return void (status.textContent = result.error);
     fillCode(result.code, result.notes);
   });
   toggleCell.addEventListener("click", () => {
+    if (!cells[current] || cells[current].protected || cells[current].exercise || cells[current].kind !== "code") return;
     if (!selected.delete(current)) selected.add(current);
     showSelection();
     showCell();
@@ -409,7 +451,7 @@ function initializeNotebookImport(form) {
     if (parts.length) fillCode(parts.join("\n\n"), notes);
   });
   appendText.addEventListener("click", () => {
-    if (!cells[current] || cells[current].kind !== "markdown") return;
+    if (!cells[current] || cells[current].kind !== "markdown" || cells[current].protected) return;
     const field = form.elements.description;
     const next = [field.value, cells[current].code.trim()].filter(Boolean).join("\n\n");
     if (next.length > field.maxLength || new TextEncoder().encode(next).length > 10000) {
@@ -580,7 +622,16 @@ function initializeTeacher() {
   const management = byId("management-view");
   const classroom = byId("classroom-view");
   const toggle = byId("toggle-classroom");
-  const clearNotebook = initializeNotebookImport(byId("publish"));
+  let lastExerciseDraft = null;
+  initializeNotebookImport(byId("publish"), lesson => {
+    const previous = draftValues();
+    const occupied = ["title", "description", "starterCode"].some(key => previous[key]?.trim()) || previous.testCases.length || previous.pitfalls.length;
+    if (occupied && JSON.stringify(previous) !== lastExerciseDraft && !confirm("载入互动练习将替换当前题目、代码、测试用例及易错点。请先保存需要的草稿。确定载入？")) return false;
+    restoreCompose(lesson);
+    detachDraft();
+    lastExerciseDraft = JSON.stringify(draftValues());
+    return true;
+  });
 
   const form = byId("publish");
   const pitfallRows = byId("pitfall-rows");
@@ -971,8 +1022,7 @@ function initializeTeacher() {
     composeBuffers[composeMode] = null;
     restoreCompose();
     if (composeMode === "prep") {
-      byId("notebook-file").value = "";
-      clearNotebook();
+      // Keep the imported lecture available for the next classroom exercise.
       detachDraft();
     }
     feedback("任务已发布。", false, "publish-feedback");
@@ -1018,6 +1068,9 @@ function initializeStudent() {
 
   function showTask(state) {
     demoMode = Boolean(state.demo);
+    byId("stdin-label").textContent = demoMode ? "预置演示输入（stdin）" : "程序正在读取标准输入（stdin）";
+    byId("stdin-hint").textContent = demoMode ? "请填写本题公开的预置输入；再次点击仅回放固定结果，不执行 C++。" :
+      "填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。";
     showDemoBanner(state);
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
@@ -1043,7 +1096,7 @@ function initializeStudent() {
     const runStatus = byId("run-state");
     const runMessage = running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
       stdinPending ? (demoMode ? "输入预置测试数据后，可再次点击回放。" : "程序已请求标准输入。填写后再次点击运行，将从头执行程序。") :
-      state.demo ? "仅回放预置代码和测试输入（2 3、0 0、-4 9）；不编译或运行任意 C++。" :
+      state.demo ? "仅回放匹配的预置代码与支持的输入；请使用本题公开用例。不编译或运行任意 C++。" :
       state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
       "隔离执行器不可用，暂时无法运行代码。";
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
@@ -1211,7 +1264,7 @@ function initializeStudent() {
         byId("stdin-panel").hidden = false;
         byId("run-code").textContent = demoMode ? "输入并查看预置结果" : "提供输入并重新运行";
         panel.replaceChildren(element("p", demoMode ?
-          "预置演示：本例包含标准输入。请输入 2 3、0 0 或 -4 9；本流程不会执行当前代码。" :
+          "预置演示：本例包含标准输入。请使用本题公开用例；本流程不会执行当前代码。" :
           "程序实际读取了标准输入，请提供输入后重新运行。"));
         if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
         if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));

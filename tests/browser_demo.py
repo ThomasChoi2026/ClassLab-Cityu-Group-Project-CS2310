@@ -28,7 +28,7 @@ def rehearse(browser, base, evidence_dir=None):
     assert urlparse(decoded.text).netloc == urlparse(base).netloc
 
     teacher.locator("#compose-prep").click()
-    teacher.locator(".notebook-import summary").click()
+    expect(teacher.locator("#notebook-file")).to_be_visible()
     notebook = Path(__file__).resolve().parents[1] / "examples/classlab-demo.ipynb"
     teacher.locator("#notebook-file").set_input_files(notebook)
     teacher.get_by_role("button", name=re.compile(r"^Cell 2 ·")).click()

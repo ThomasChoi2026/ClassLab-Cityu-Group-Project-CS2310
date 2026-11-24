@@ -1,0 +1,55 @@
+{
+  "Fix the grade boundary": {
+    "cell": 22,
+    "referenceSource": "// @classlab exercise: Fix the grade boundary\n#include <iostream>\n\nint main() {\n    int score;\n    std::cin >> score;\n    if (score >= 60) std::cout << \"PASS\\n\";\n    else std::cout << \"FAIL\\n\";\n}\n",
+    "starterOutputs": [
+      "FAIL\n",
+      "FAIL\n",
+      "PASS\n",
+      "FAIL\n",
+      "PASS\n"
+    ]
+  },
+  "Debug the accumulation loop": {
+    "cell": 35,
+    "referenceSource": "// @classlab exercise: Debug the accumulation loop\n#include <iostream>\n\nint main() {\n    int n;\n    std::cin >> n;\n    int total = 0;\n    for (int i = 0; i < n; ++i) {\n        int score;\n        std::cin >> score;\n        total += score;\n    }\n    std::cout << total << '\\n';\n}\n",
+    "starterOutputs": [
+      "0\n",
+      "30\n",
+      "140\n",
+      "0\n",
+      "45\n"
+    ]
+  },
+  "Find the maximum correctly": {
+    "cell": 48,
+    "referenceSource": "// @classlab exercise: Find the maximum correctly\n#include <iostream>\n\nint main() {\n    int n;\n    std::cin >> n;\n    int changes[10] = {};\n    for (int i = 0; i < n; ++i) std::cin >> changes[i];\n    int best = changes[0];\n    for (int i = 0; i < n; ++i) {\n        if (changes[i] > best) best = changes[i];\n    }\n    std::cout << best << '\\n';\n}\n",
+    "starterOutputs": [
+      "0\n",
+      "2\n",
+      "0\n",
+      "0\n"
+    ]
+  },
+  "Fix the average function": {
+    "cell": 63,
+    "referenceSource": "// @classlab exercise: Fix the average function\n#include <iostream>\n#include <iomanip>\n\ndouble average(int total, int count) {\n    return static_cast<double>(total) / count;\n}\n\nint main() {\n    int n;\n    std::cin >> n;\n    int total = 0;\n    for (int i = 0; i < n; ++i) {\n        int score;\n        std::cin >> score;\n        total += score;\n    }\n    std::cout << std::fixed << std::setprecision(2) << average(total, n) << '\\n';\n}\n",
+    "starterOutputs": [
+      "80.00\n",
+      "80.00\n",
+      "1.00\n",
+      "100.00\n"
+    ]
+  },
+  "Complete the score analyser": {
+    "cell": 72,
+    "referenceSource": "// @classlab exercise: Complete the score analyser\n#include <iostream>\n\nint total_score(const int scores[], int n) {\n    int total = 0;\n    for (int i = 0; i < n; ++i) total += scores[i];\n    return total;\n}\n\nint maximum(const int scores[], int n) {\n    int best = scores[0];\n    for (int i = 1; i < n; ++i) if (scores[i] > best) best = scores[i];\n    return best;\n}\n\nint count_passes(const int scores[], int n) {\n    int passes = 0;\n    for (int i = 0; i < n; ++i) if (scores[i] >= 60) ++passes;\n    return passes;\n}\n\nint main() {\n    int n;\n    std::cin >> n;\n    int scores[10] = {};\n    for (int i = 0; i < n; ++i) std::cin >> scores[i];\n    std::cout << total_score(scores, n) << ' ' << maximum(scores, n)\n              << ' ' << count_passes(scores, n) << '\\n';\n}\n",
+    "starterOutputs": [
+      "0 0 0\n",
+      "0 0 0\n",
+      "0 0 0\n",
+      "0 0 0\n",
+      "0 0 0\n"
+    ]
+  }
+}

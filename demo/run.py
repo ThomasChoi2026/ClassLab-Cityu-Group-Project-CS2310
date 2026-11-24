@@ -19,6 +19,44 @@ ADD = SUBTRACT.replace("a - b", "a + b")
 SYNTAX = NOTEBOOK["cells"][2]["source"]
 FIXTURE_OUTPUTS = {ADD.strip(): ["5\n", "0\n", "5\n"], SUBTRACT.strip(): ["-1\n", "0\n", "-13\n"]}
 
+def score_fixtures():
+    """Trusted, offline-validated fixture table. Never evaluate submitted source."""
+    notebook = json.loads((ROOT / "examples/CS2310_Score_Analysis.ipynb").read_text(encoding="utf-8"))
+    references = json.loads((ROOT / "examples/score_analysis_references.json").read_text(encoding="utf-8"))
+    result = {}
+    for reference in references.values():
+        cell = notebook["cells"][reference["cell"] - 1]
+        starter = "".join(cell["source"]).strip()
+        if starter.startswith("%%cpp\n"):
+            starter = starter[len("%%cpp\n"):].strip()
+        cases = cell["metadata"]["classlab"]["testCases"]
+        inputs = [case["input"] for case in cases]
+        public = {case["input"] for case in cases if case["visibility"] == "public"}
+        for code, outputs in [(starter, reference["starterOutputs"]),
+                              (reference["referenceSource"].strip(), [case["expectedOutput"] for case in cases])]:
+            if code in result or len(outputs) != len(inputs) or len(set(inputs)) != len(inputs):
+                raise ValueError("Invalid or duplicate score-analysis fixture")
+            result[code] = {"inputs": inputs, "outputs": outputs, "public": public}
+    return result
+
+
+SCORE_FIXTURES = score_fixtures()
+
+
+def fixture_case(output):
+    return {"status": "success", "stdoutHex": output.encode().hex(), "exitCode": 0, "stderr": ""}
+
+
+def score_playback(fixture, mode, inputs):
+    if mode == "probe" and inputs == [""]:
+        return {"status": "stdin_required", "stdoutHex": "", "stderr": ""}
+    if mode == "run" and len(inputs) == 1 and isinstance(inputs[0], str) and inputs[0] in fixture["public"]:
+        return {"status": "success", "cases": [fixture_case(fixture["outputs"][fixture["inputs"].index(inputs[0])])]}
+    if mode == "grade" and inputs == fixture["inputs"]:
+        return {"status": "success", "cases": [fixture_case(output) for output in fixture["outputs"]]}
+    return {"status": "demo_no_fixture"}
+
+
 
 class FixtureHandler(BaseHTTPRequestHandler):
     def setup(self):
@@ -54,6 +92,8 @@ class FixtureHandler(BaseHTTPRequestHandler):
             inputs = payload["inputs"]
             if payload["version"] != 1 or mode not in ("grade", "probe", "run") or not isinstance(inputs, list):
                 self.send_json(400, {"status": "judge_error"})
+            elif code in SCORE_FIXTURES:
+                self.send_json(200, score_playback(SCORE_FIXTURES[code], mode, inputs))
             elif code not in FIXTURE_OUTPUTS and code != SYNTAX.strip():
                 self.send_json(200, {"status": "demo_no_fixture"})
             elif mode == "probe":

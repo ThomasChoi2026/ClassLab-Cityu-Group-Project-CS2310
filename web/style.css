@@ -233,3 +233,9 @@ pre {
   .notebook-list { max-height: 13rem; }
   .notebook-search-row { grid-template-columns: 1fr; }
 }
+
+/* Notebook upload is visible directly in lesson preparation. */
+#notebook-import { margin-block: 1rem; }
+#notebook-import > strong { display: block; margin-bottom: .5rem; }
+#notebook-overview { overflow-wrap: anywhere; font-weight: 600; }
+#notebook-import[hidden], #notebook-overview[hidden] { display: none; }

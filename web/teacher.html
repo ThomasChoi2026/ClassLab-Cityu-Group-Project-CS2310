@@ -8,11 +8,12 @@
   <link rel="stylesheet" href="/style.css">
   <script src="/vendor/qrcode.js" defer></script>
   <script src="/diff.js" defer></script>
+  <script src="/notebook.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
   <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>预置演示结果 · 加入和提交实时记录 · 评测仅回放固定夹具 <a href="/demo-notebook.ipynb" download>下载简版 Notebook</a> · <a href="/demo-lecture.ipynb" download>下载 CS2310 教学版 Notebook</a></div>
+  <div id="demo-banner" class="demo-banner" role="status" hidden>预置演示结果 · 加入和提交实时记录 · 评测仅回放固定夹具 <a href="/demo-notebook.ipynb" download>下载简版 Notebook</a> · <a href="/demo-lecture.ipynb" download>下载旧版合成教学 Notebook</a> · 完整标记教学版：<a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">从仓库下载（教师）</a></div>
   <main>
     <section id="setup" class="intro">
       <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
@@ -104,15 +105,16 @@
           <form id="publish">
             <label>标题<input name="title" required maxlength="53"></label>
             <label>任务说明（可选）<textarea name="description" maxlength="3000" rows="4"></textarea></label>
-            <details id="notebook-import" class="notebook-import" hidden>
-              <summary>从 Notebook 导入代码</summary>
-              <p>选择的文件只在本浏览器读取。可将相关代码单元按 Notebook 顺序合并，再补上 main 或整理重复定义。选中的 Markdown 可追加到题目说明。</p>
+            <section id="notebook-import" class="notebook-import" hidden aria-label="Notebook 导入">
+              <strong>导入 Notebook</strong>
               <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
+              <p id="notebook-overview" role="status" hidden></p>
               <div id="notebook-cells" hidden>
                 <div class="notebook-search-row">
                   <label>搜索单元<input type="search" id="notebook-search" placeholder="编号或源码关键词" autocomplete="off"></label>
                   <label>筛选类型<select id="notebook-filter">
                     <option value="all">全部单元</option>
+                    <option value="exercise">课堂互动练习</option>
                     <option value="cpp">C++ 代码</option>
                     <option value="other">其他代码</option>
                     <option value="markdown">Markdown</option>
@@ -134,7 +136,7 @@
                 <button type="button" class="secondary" id="assemble-notebook" disabled>将组合填入起始代码</button>
               </div>
               <p id="notebook-status" class="inline-status" role="status"></p>
-            </details>
+            </section>
             <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <details id="teacher-optional-settings" class="teacher-optional-settings">
               <summary>测试用例与预期易错点（可选）</summary>

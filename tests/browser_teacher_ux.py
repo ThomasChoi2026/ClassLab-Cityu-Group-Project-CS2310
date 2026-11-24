@@ -37,7 +37,7 @@ def check(browser, base):
     page.locator("#open-preparation").click()
     expect(page.locator("#compose-prep")).to_have_attribute("aria-pressed", "true")
     expect(page.locator("#publish-task")).to_be_disabled()
-    page.locator("#notebook-import summary").click()
+    expect(page.locator("#notebook-file")).to_be_visible()
 
     notebook = synthetic_notebook()
     page.locator("#notebook-file").set_input_files({
@@ -49,7 +49,7 @@ def check(browser, base):
     expect(page.locator("#notebook-current-label")).to_contain_text("Cell 1")
 
     page.locator("#notebook-filter").select_option("cpp")
-    expect(page.locator("#notebook-list button")).to_have_count(len(notebook["cells"]) - 2)
+    expect(page.locator("#notebook-list button")).to_have_count(len(notebook["cells"]) - 3)
     page.locator("#notebook-search").fill("sample_124")
     expect(page.locator("#notebook-list button")).to_have_count(1)
     expect(page.locator("#notebook-list button")).to_contain_text("Cell 125")
