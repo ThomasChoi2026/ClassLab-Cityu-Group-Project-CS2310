@@ -112,7 +112,7 @@ In a single-minute presentation, prepare the browser sessions and example submis
 
 | Stage | What the teacher does |
 | --- | --- |
-| Prepare | Choose **快速课堂 (Quick Classroom)** to paste C++, or **课前备课 (Lesson Preparation)** to import a Notebook and manage locally saved exercises. |
+| Prepare | Start in **课前备课 (Lesson Preparation)** to import a Notebook and manage locally saved exercises, or switch to **快速课堂 (Quick Classroom)** to paste C++. The teacher header's **使用指引** explains the classroom workflow. |
 | Configure | Enter a title and provide starter code or choose **让学生从空白开始**. The description, up to 12 public or hidden test cases, and up to 8 expected pitfalls are optional. |
 | Publish | Review the editor and publish explicitly; importing or selecting a Notebook cell does not publish a task. |
 | Share | Invite students using the join link or QR code; switch to classroom projection for a simplified class display. |
@@ -164,7 +164,7 @@ Join through the teacher's QR code or link and enter a nickname. **本课堂已�
 - **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
 - **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
 - **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
-- **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source and optional external stdin. It remains a separate tool; ClassLab does not import its runtime output as a grade.
+- **抄送至OPT_CPP:** Open the external OPT CPP editor in a new tab with the current source, without automatically running it. Use OPT CPP itself to run, provide interactive input and visualize; ClassLab does not import its runtime output as a grade. For EOF-driven input loops, upstream OPT CPP may end on EOF without prompting; its own permalink input mechanism is documented in [OPT CPP's usage guide](https://github.com/dive4dec/OPT_CPP#33-permalinks-and-sharing).
 
 For long source code, the external handoff offers a blank visualizer link and manual copy controls. The external site can read the transmitted source and input; avoid sending sensitive information.
 

@@ -28,9 +28,9 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 ### OPT CPP practice
 
-1. For input-based external exercises, expand **OPT CPP 标准输入（可选）** below the editor. This separate field stays optional and does not activate native Judge input. It is limited to 2,700 characters and resets on task changes.
-2. Click the original teammate-designed **抄送至OPT_CPP** button next to **复制代码**. It opens DIVE4DEC's OPT CPP visualizer in a new tab with one click. The encoded fragment carries the current editor contents and the complete stdin text as a single entry in the JSON input array. Blank stdin uses an empty array. The visualizer can attempt to run immediately after opening.
-3. Use the visualizer's step controls to inspect the trace. **Last** shows the final step and output. If the generated URL exceeds ClassLab's 8,192-character threshold, ClassLab shows **打开空白 OPT CPP** and separate copy buttons for the code and stdin. Use those controls to open a clean page and transfer the material manually.
+1. Click the original teammate-designed **抄送至OPT_CPP** next to **复制代码**. It opens DIVE4DEC's OPT CPP editor in a new tab with the current source, without auto-running it.
+2. Use **Visualize Execution** and supply any prompted inputs within OPT CPP itself. Its trace and **Last** controls show execution and final output. ClassLab's own Run-first input remains independent.
+3. If the generated URL exceeds ClassLab's 8,192-character threshold, use **打开空白 OPT CPP** and **复制当前代码** to transfer the source manually. For EOF-driven loops, upstream OPT CPP documents that EOF may end the loop without a prompt; its own permalink input facility is described in [its usage guide](https://github.com/dive4dec/OPT_CPP#33-permalinks-and-sharing).
 4. If the external page or its runtime cannot load, keep editing, download a .cpp copy, or submit to ClassLab. Submission and classroom feedback remain available without the external tool. Judge results require an independently verified server installation.
 
 **Privacy.** The address fragment is not included in the initial HTTP request, but the external page can read the code and input, and the link may appear in local browser history or be shared. Do not pass passwords, tokens, personal data or private course materials. The external site's handling and policies apply. ClassLab does not receive the external output or award a score from it.

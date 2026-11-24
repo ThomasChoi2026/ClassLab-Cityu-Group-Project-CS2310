@@ -1550,7 +1550,7 @@ function initializeStudent() {
     byId("archive-notice").hidden = !archived;
     editor.readOnly = archived;
     for (const id of ["reset-code", "submit-code", "submit-shortcut", "run-controls", "run-state",
-      "open-optcpp", "optcpp-options"]) {
+      "open-optcpp"]) {
       byId(id).hidden = archived;
     }
     byId("run-controls").disabled = archived || !state.executionAvailable || running;
@@ -1575,8 +1575,6 @@ function initializeStudent() {
     clearStdinPrompt(true);
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
-    byId("optcpp-options").open = false;
-    byId("optcpp-input").value = "";
     byId("editor-feedback").textContent = currentTask && !archived ? "已打开最新任务。" : "";
     currentTask = state.task;
     byId("task-title").textContent = currentTask.title;
@@ -1636,20 +1634,18 @@ function initializeStudent() {
   }
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
-  // External OPT CPP input is independent from ClassLab's Run-first Judge prompt.
-  const optInput = byId("optcpp-input");
   byId("open-optcpp").addEventListener("click", () => {
     fallback.hidden = true;
     optStatus.textContent = "";
     if (!editor.reportValidity()) return;
 
-    // OPT CPP joins the raw input array with LF. One entry preserves the whole stdin.
+    // Open the external editor without auto-running or pre-seeding stdin.
     const state = new URLSearchParams({
       code: editor.value,
       curInstr: "0",
-      mode: "display",
+      mode: "edit",
       py: "cpp",
-      rawInputLstJSON: JSON.stringify(optInput.value === "" ? [] : [optInput.value])
+      rawInputLstJSON: "[]"
     });
     const url = "https://dive4dec.github.io/OPT_CPP/visualize.html#" + state;
     if (url.length > 8192) {
@@ -1661,7 +1657,6 @@ function initializeStudent() {
     window.open(url, "_blank", "noopener,noreferrer");
   });
   byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "当前代码已复制。"));
-  byId("copy-opt-input").addEventListener("click", () => copyText(optInput, "optcpp-status", "标准输入已复制。"));
 
   byId("reset-code").addEventListener("click", () => {
     if (!currentTask) {

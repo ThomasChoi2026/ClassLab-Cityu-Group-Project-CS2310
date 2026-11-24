@@ -97,7 +97,7 @@ def check(browser, base):
     expect(editor).not_to_be_editable()
     expect(student.locator("#run-code")).to_be_disabled()
     expect(student.locator("#submit-code")).to_be_hidden()
-    for control in ("submit-shortcut", "run-controls", "reset-code", "open-optcpp", "optcpp-options"):
+    for control in ("submit-shortcut", "run-controls", "reset-code", "open-optcpp"):
         expect(student.locator("#" + control)).to_be_hidden()
     for control in ("copy-code", "download-code"):
         expect(student.locator("#" + control)).to_be_visible()

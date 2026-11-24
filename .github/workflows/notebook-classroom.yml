@@ -50,6 +50,8 @@ jobs:
           .venv/bin/python tests/browser_teacher_ux.py http://127.0.0.1:18080
           .venv/bin/python tests/browser_notebook_publish.py http://127.0.0.1:18080 --evidence notebook-evidence
           .venv/bin/python tests/browser_classroom_records.py http://127.0.0.1:18080
+          .venv/bin/python tests/browser_classroom_export.py http://127.0.0.1:18080
+          .venv/bin/python tests/browser_run_output.py http://127.0.0.1:18080
           .venv/bin/python tests/browser_run_first.py ./build/classlab
       - name: Original QR demo and full marked Notebook end-to-end browser rehearsal
         run: |
@@ -68,3 +70,38 @@ jobs:
           name: classlab-notebook-classroom-evidence
           path: notebook-evidence/*.png
           if-no-files-found: error
+
+  external-optcpp-acceptance:
+    # Real third-party execution; keep its results distinct from the intercepted
+    # source-handoff tests and the ClassLab classroom regression job.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ClassLab
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+      - name: Install real Chromium
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install playwright
+          .venv/bin/python -m playwright install --with-deps chromium
+      - name: Run external OPT CPP with no, one and multiple inputs
+        timeout-minutes: 10
+        run: |
+          CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=18083 CLASSLAB_DATA="$RUNNER_TEMP/optcpp-live.json" ./build/classlab >"$RUNNER_TEMP/optcpp-live.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18083/api/health >/dev/null 2>&1; then break; fi
+            sleep 0.25
+          done
+          .venv/bin/python tests/browser_optcpp_live.py http://127.0.0.1:18083 --evidence optcpp-evidence
+      - name: Upload external execution evidence (including failure screenshots)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: classlab-optcpp-live-evidence
+          path: optcpp-evidence/*.png
+          if-no-files-found: warn
