@@ -231,6 +231,7 @@ function initializeNotebookImport(form, loadExercise) {
   const overview = byId("notebook-overview");
   const use = byId("use-notebook-cell");
   const toggleCell = byId("toggle-prep-cell");
+  const combination = byId("notebook-combination");
   const assemble = byId("assemble-notebook");
   const appendText = byId("append-notebook-text");
   const selection = byId("selected-prep-cells");
@@ -301,6 +302,7 @@ function initializeNotebookImport(form, loadExercise) {
     use.hidden = !isCode || cell.protected;
     use.textContent = cell.exercise ? "载入互动练习" : "填入起始代码";
     toggleCell.hidden = !isCode || cell.protected || Boolean(cell.exercise);
+    combination.hidden = cell.protected || Boolean(cell.exercise) || (!isCode && !selected.size);
     appendText.hidden = isCode || cell.protected;
     toggleCell.textContent = selected.has(current) ? "从组合移除" : "加入代码组合";
     toggleCell.setAttribute("aria-pressed", String(selected.has(current)));
@@ -313,6 +315,8 @@ function initializeNotebookImport(form, loadExercise) {
     cells = [];
     current = 0;
     selected.clear();
+    combination.open = false;
+    combination.hidden = true;
     search.value = "";
     filter.value = "all";
     list.replaceChildren();
@@ -405,6 +409,7 @@ function initializeNotebookImport(form, loadExercise) {
       currentLabel.textContent = "没有匹配的单元";
       preview.textContent = "";
       use.hidden = toggleCell.hidden = appendText.hidden = true;
+      combination.hidden = true;
       status.textContent = "没有匹配的单元，可修改搜索或筛选条件。";
       renderList();
     }
@@ -465,8 +470,7 @@ function initializeNotebookImport(form, loadExercise) {
 }
 
 function showDemoBanner(state) {
-  if (state.demo) byId("demo-banner").hidden = false;
-  if (state.demo && byId("demo-cases")) byId("demo-cases").hidden = false;
+  byId("demo-banner").hidden = !state.demo;
 }
 
 function renderDiff(original, code) {
@@ -637,6 +641,13 @@ function initializeTeacher() {
   const pitfallRows = byId("pitfall-rows");
   const addPitfall = byId("add-pitfall");
   const publishTask = byId("publish-task");
+  const updatePreparationCounts = () => {
+    byId("preparation-counts").textContent = caseRows.childElementCount + " 个用例 · " + pitfallRows.childElementCount + " 个易错点";
+  };
+  const countObserver = new MutationObserver(updatePreparationCounts);
+  countObserver.observe(caseRows, {childList: true});
+  countObserver.observe(pitfallRows, {childList: true});
+  updatePreparationCounts();
 
   function prepare(enabled) {
     byId("dashboard").toggleAttribute("data-preparing", enabled);
@@ -647,7 +658,7 @@ function initializeTeacher() {
     if (enabled) {
       selectComposeMode("prep");
       byId("room-name").textContent = "课前备课";
-      byId("save-draft").focus();
+      byId("notebook-file").focus();
     } else {
       byId("open-preparation").focus();
     }
@@ -732,7 +743,8 @@ function initializeTeacher() {
     byId("compose-prep").classList.toggle("secondary", !preparing);
     byId("prep-library").hidden = !preparing;
     byId("notebook-import").hidden = !preparing;
-    byId("teacher-optional-settings").open = preparing;
+    byId("teacher-optional-settings").open = false;
+    byId("prep-library").open = false;
     byId("compose-hint").textContent = preparing
       ? "导入并整理 Notebook 单元、保存练习；创建课堂后也可以直接发布。"
       : "临时粘贴 C++ 代码，填写标题即可发布；说明和测试用例均可选。";
@@ -769,16 +781,7 @@ function initializeTeacher() {
     if (focus) row.querySelector("input").focus();
   }
   addCase.addEventListener("click", () => appendCase());
-  byId("demo-cases").addEventListener("click", () => {
-    if (caseRows.childElementCount) {
-      feedback("请先清空已有用例，再填入演示用例。", true, "publish-feedback");
-      return;
-    }
-    for (const [name, input, expectedOutput, visibility] of [
-      ["Positive", "2 3", "5", "public"], ["Zero", "0 0", "0", "public"], ["Mixed signs", "-4 9", "5", "hidden"],
-    ]) appendCase({name, input, expectedOutput, visibility});
-    feedback("已填入三个演示用例。", false, "publish-feedback");
-  });
+
 
   async function praiseStudent(name, number) {
     try {
