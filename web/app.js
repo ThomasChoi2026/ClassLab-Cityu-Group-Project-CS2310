@@ -26,12 +26,12 @@ async function api(path, { data, headers = {}, timeoutMs = 8000, method = data =
     });
     result = await response.json().catch(() => null);
   } catch {
-    throw new RequestError("连接中断，请稍后重试。", 0);
+    throw new RequestError("Connection lost. Please try again.", 0);
   } finally {
     clearTimeout(timeout);
   }
-  if (!result) throw new RequestError("无法读取服务器响应，请检查预览连接。", 0);
-  if (!response.ok) throw new RequestError(result.error || "请求失败。", response.status);
+  if (!result) throw new RequestError("Could not read the server response. Check the preview connection.", 0);
+  if (!response.ok) throw new RequestError(result.error || "Request failed.", response.status);
   return result;
 }
 
@@ -84,7 +84,7 @@ async function copyText(field, status, success) {
   } catch {
     field.focus();
     field.select();
-    byId(status).textContent = "已选中文本，请使用浏览器的复制操作。";
+    byId(status).textContent = "Text selected. Use your browser's Copy command.";
     return false;
   }
 }
@@ -122,8 +122,8 @@ function joinQr(link) {
 }
 
 const statusText = {
-  received: "已提交",
-  success: "运行成功",
+  received: "Submitted",
+  success: "Run successful",
   compiling: "正在编译",
   running: "运行中",
   stopping: "正在停止",
@@ -132,18 +132,18 @@ const statusText = {
   busy: "运行资源正忙",
   not_found: "运行会话已结束",
   request_error: "请求错误",
-  judge_unavailable: "未评测 · 执行器不可用",
-  judge_error: "评测服务错误",
-  pending: "评测中",
-  queued: "等待评测",
-  judge_queue_full: "未评测 · 队列已满",
-  accepted: "全部通过",
-  passed: "通过",
-  wrong_answer: "输出不符",
-  compilation_error: "编译错误",
-  runtime_error: "运行错误",
-  time_limit: "运行超时",
-  resource_limit: "资源超限",
+  judge_unavailable: "Ungraded · Runner unavailable",
+  judge_error: "Grading service error",
+  pending: "Grading",
+  queued: "Queued for grading",
+  judge_queue_full: "Ungraded · Queue full",
+  accepted: "All tests passed",
+  passed: "Passed",
+  wrong_answer: "Wrong answer",
+  compilation_error: "Compilation error",
+  runtime_error: "Runtime error",
+  time_limit: "Time limit exceeded",
+  resource_limit: "Resource limit exceeded",
 };
 
 function csvCell(value) {
@@ -207,32 +207,32 @@ function safeFilePart(value) {
 function runResultCopyText(result) {
   const sections = [];
   if (result.demoFixture) {
-    sections.push("DEMO REPLAY — 预置演示回放；没有编译或执行当前 C++ 代码。");
+    sections.push("DEMO REPLAY — Prerecorded result. The current C++ code was neither compiled nor run.");
   }
   if (result.status) {
-    sections.push("运行状态：" + (statusText[result.status] || result.status));
+    sections.push("Run status: " + (statusText[result.status] || result.status));
   }
-  if (result.error) sections.push("运行错误：\n" + String(result.error));
-  if (result.diagnostic) sections.push("编译诊断：\n" + String(result.diagnostic));
+  if (result.error) sections.push("Runtime error:\n" + String(result.error));
+  if (result.diagnostic) sections.push("Compiler diagnostics:\n" + String(result.diagnostic));
   if (Object.hasOwn(result, "stdout")) {
-    sections.push("标准输出：\n" + String(result.stdout ?? ""));
+    sections.push("Standard output:\n" + String(result.stdout ?? ""));
   }
   if (Object.hasOwn(result, "stderr")) {
-    sections.push("标准错误：\n" + String(result.stderr ?? ""));
+    sections.push("Standard error:\n" + String(result.stderr ?? ""));
   }
   if (Object.hasOwn(result, "exitCode")) {
-    sections.push("退出状态：" + String(result.exitCode));
+    sections.push("Exit status: " + String(result.exitCode));
   }
-  return sections.length ? sections.join("\n\n") : "运行结果：没有可复制的输出。";
+  return sections.length ? sections.join("\n\n") : "Run result: No output to copy.";
 }
 
 const categoryText = {
-  missing_semicolon: "可能缺少分号",
-  syntax: "语法诊断",
-  undeclared_identifier: "未声明的标识符",
-  type_mismatch: "类型不匹配",
-  header_or_namespace: "头文件或命名空间诊断",
-  other: "其他编译诊断",
+  missing_semicolon: "Possible missing semicolon",
+  syntax: "Syntax error",
+  undeclared_identifier: "Undeclared identifier",
+  type_mismatch: "Type mismatch",
+  header_or_namespace: "Header or namespace issue",
+  other: "Other compiler diagnostics",
 };
 
 function element(tag, text) {
@@ -242,7 +242,7 @@ function element(tag, text) {
 }
 
 function scheduleView(onRemove) {
-  const days = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"];
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   let signature;
   return (slots) => {
     const next = JSON.stringify(slots);
@@ -254,10 +254,10 @@ function scheduleView(onRemove) {
       const row = element("li");
       row.append(element("strong", slot.name), element("span", label));
       if (onRemove) {
-        const remove = element("button", "移除");
+        const remove = element("button", "Remove");
         remove.type = "button";
         remove.className = "secondary";
-        remove.setAttribute("aria-label", "移除 " + slot.name + " " + label);
+        remove.setAttribute("aria-label", "Remove " + slot.name + " " + label);
         remove.addEventListener("click", async () => {
           remove.disabled = true;
           try {
@@ -279,9 +279,9 @@ function sampleBlock(test) {
   const block = element("div");
   const summary = test.status ? test.name + " · " + statusText[test.status] : test.name;
   block.append(element("strong", summary));
-  for (const [field, label] of [["input", "标准输入"], ["expectedOutput", "预期输出"], ["actualOutput", "实际输出"]]) {
+  for (const [field, label] of [["input", "Standard input"], ["expectedOutput", "Expected output"], ["actualOutput", "Actual output"]]) {
     if (Object.hasOwn(test, field)) {
-      block.append(element("p", label), element("pre", test[field] || "（空）"));
+      block.append(element("p", label), element("pre", test[field] || "(empty)"));
     }
   }
   return block;
@@ -290,16 +290,16 @@ function sampleBlock(test) {
 function displayResult(container, result, teacherCases) {
   container.replaceChildren();
   if (!result) return;
-  const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " 通过";
-  container.append(element("p", (statusText[result.status] || "结果未知") + score));
-  if (result.demoFixture) container.append(element("p", "预置演示回放：没有编译或执行当前 C++ 代码。"));
+  const score = result.total === undefined ? "" : " · " + result.passed + "/" + result.total + " passed";
+  container.append(element("p", (statusText[result.status] || "Unknown result") + score));
+  if (result.demoFixture) container.append(element("p", "Prerecorded result. The current C++ code was neither compiled nor run."));
   if (result.diagnostic) container.append(element("pre", result.diagnostic));
   if (teacherCases) {
     for (const test of result.cases || []) {
       const config = teacherCases.find(item => item.id === test.testId);
-      const name = config ? config.name + (config.visibility === "hidden" ? "（隐藏）" : "") : "用例 " + test.testId;
+      const name = config ? config.name + (config.visibility === "hidden" ? " (hidden)" : "") : "Test case " + test.testId;
       const details = element("details");
-      details.append(element("summary", name + " · " + (statusText[test.status] || "结果未知")),
+      details.append(element("summary", name + " · " + (statusText[test.status] || "Unknown result")),
         sampleBlock({...config, ...test, name}));
       container.append(details);
     }
@@ -343,18 +343,18 @@ function initializeNotebookImport(form, loadExercise) {
 
   function summaryOf(cell) {
     const lines = cell.code.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    return (lines.find(line => !/^(?:%%|#\s*include\b|using\s+namespace\b)/.test(line)) || lines[0] || "（空单元）").slice(0, 100);
+    return (lines.find(line => !/^(?:%%|#\s*include\b|using\s+namespace\b)/.test(line)) || lines[0] || "(empty cell)").slice(0, 100);
   }
 
   function showSelection() {
     const numbers = cells.filter((_, position) => selected.has(position)).map(cell => cell.index + 1);
     selection.textContent = numbers.length
-      ? "组合 Cell " + numbers.join(" → ") + (selectionApplied ? " 已填入起始代码。" : " 尚未填入起始代码。")
-      : "尚未选择组合单元。";
+      ? "Selected cells: " + numbers.join(" → ") + (selectionApplied ? " added to starter code." : " pending. Apply this selection to the starter code.")
+      : "No cells selected.";
     assemble.disabled = !numbers.length;
     combination.hidden = !numbers.length && (!cells[current] || toggleCell.hidden);
-    combinationSummary.textContent = "多 Cell 组合（高级）" + (numbers.length
-      ? " · " + numbers.length + (selectionApplied ? " 个已填入" : " 个待填入") : "");
+    combinationSummary.textContent = "Combine cells (advanced)" + (numbers.length
+      ? " · " + numbers.length + (selectionApplied ? " applied" : " pending") : "");
   }
 
   function matchingCells() {
@@ -369,7 +369,7 @@ function initializeNotebookImport(form, loadExercise) {
 
   function renderList() {
     const entries = matchingCells().map(({cell, position}) => {
-      const label = cell.exercise ? "课堂互动练习" : cell.protected ? "仅教师预览 / 不可载入" : kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
+      const label = cell.exercise ? "Interactive exercise" : cell.protected ? "Teacher preview only / loading disabled" : kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "Other code";
       const button = element("button");
       const meta = element("span", "Cell " + (cell.index + 1) +
         (cell.exercise && filter.value === "exercise" ? "" : " · " + label) + " ");
@@ -382,7 +382,7 @@ function initializeNotebookImport(form, loadExercise) {
       button.setAttribute("aria-pressed", String(position === current));
       if (selected.has(position)) {
         button.classList.add("chosen");
-        meta.textContent += " · 已选入组合";
+        meta.textContent += " · Selected";
       }
       button.addEventListener("click", () => {
         current = position;
@@ -392,26 +392,26 @@ function initializeNotebookImport(form, loadExercise) {
       return button;
     });
     list.replaceChildren(...entries);
-    if (!entries.length) list.append(element("p", "没有匹配的单元，可修改搜索或筛选条件。"));
+    if (!entries.length) list.append(element("p", "No matching cells. Change the search or filter."));
   }
 
   function showCell() {
     const cell = cells[current];
     if (!cell) return;
     currentLabel.textContent = "Cell " + (cell.index + 1) + " · " +
-      (cell.exercise ? cell.exercise.title : cell.protected ? "教师专用 / 无效互动信息" : kindOf(cell) === "cpp" ? "C++ 代码" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码");
+      (cell.exercise ? cell.exercise.title : cell.protected ? "Teacher only / invalid exercise metadata" : kindOf(cell) === "cpp" ? "C++ code" : kindOf(cell) === "markdown" ? "Markdown" : "Other code");
     preview.textContent = cell.code;
     const isCode = cell.kind === "code";
     use.hidden = !isCode || cell.protected;
-    use.textContent = cell.exercise ? "载入互动练习" : "用此 Cell 作为起始代码";
+    use.textContent = cell.exercise ? "Load interactive exercise" : "Use this cell as starter code";
     toggleCell.hidden = !isCode || cell.protected || Boolean(cell.exercise);
     appendText.hidden = isCode || cell.protected;
-    toggleCell.textContent = selected.has(current) ? "从组合移除" : "加入代码组合";
+    toggleCell.textContent = selected.has(current) ? "Remove from selection" : "Add to selection";
     toggleCell.setAttribute("aria-pressed", String(selected.has(current)));
     status.textContent = cell.warning || (cell.exercise
-      ? "互动练习含 " + cell.exercise.testCases.length + " 个用例；载入后请检查再发布。"
-      : isCode ? preparedSource(cell).error || "这里只是预览。请使用此 Cell 或将它加入组合。"
-        : "这里只是预览。可将此 Cell 追加到任务说明。");
+      ? "Test cases: " + cell.exercise.testCases.length + ". Review before publishing."
+      : isCode ? preparedSource(cell).error || "Preview only. Use this cell as starter code or add it to the selection."
+        : "Preview only. You can append this cell to the task description.");
     showSelection();
     renderList();
   }
@@ -437,41 +437,41 @@ function initializeNotebookImport(form, loadExercise) {
   }
 
   function preparedSource(cell) {
-    if (!cell || cell.kind !== "code") return {error: "只能将代码单元放入 C++ 起始代码。"};
+    if (!cell || cell.kind !== "code") return {error: "Only code cells can be used as C++ starter code."};
     if (cell.protected) return {error: cell.warning};
-    if (cell.exercise) return {error: "互动练习请独立载入，避免混合代码和测试规格。"};
+    if (cell.exercise) return {error: "Load interactive exercises individually to keep their code and test cases together."};
     let code = cell.code;
     const notes = [];
     const magic = code.match(/^\s*%%([\w-]+)[^\r\n]*(?:\r?\n|$)/);
     if (magic) {
       const name = magic[1].toLowerCase();
-      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " 仅支持无参数的 %%cpp；请手动整理。"};
+      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " only supports %%cpp without arguments. Edit the cell manually."};
       if (name !== "cpp") return {error: "Cell " + (cell.index + 1) +
-        " 使用 %%" + name + "，不是标准 C++；请在预览中核对并手动转换。"};
+        " uses %%" + name + ", which is not standard C++. Review and convert it manually."};
       code = code.slice(magic[0].length);
-      notes.push("Cell " + (cell.index + 1) + "：已移除 %%cpp 魔法指令，请检查生成的 C++。");
+      notes.push("Cell " + (cell.index + 1) + ": Removed %%cpp. Check the resulting C++ code.");
     }
     if (/^\s*(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\()/m.test(code)) {
-      return {error: "Cell " + (cell.index + 1) + " 疑似 Python 代码，不会作为 C++ 起始代码插入。"};
+      return {error: "Cell " + (cell.index + 1) + " appears to contain Python. It cannot be inserted as C++ starter code."};
     }
     if (/(?:^|\n)\s*[%!](?![%=])/.test(code)) {
-      return {error: "Cell " + (cell.index + 1) + " 包含未处理的 Notebook 指令，请手动转换。"};
+      return {error: "Cell " + (cell.index + 1) + " contains unsupported notebook directives. Convert them manually."};
     }
-    if (!code.trim()) return {error: "Cell " + (cell.index + 1) + " 没有可加入的 C++ 代码。"};
+    if (!code.trim()) return {error: "Cell " + (cell.index + 1) + " has no C++ code to add."};
     return {code, notes};
   }
 
   function fillCode(code, source, notes) {
     if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
-      status.textContent = "所选代码超过起始代码长度限制。";
+      status.textContent = "The selected code exceeds the starter code length limit.";
       return false;
     }
     const mainCount = (code.match(/\bmain\s*\(/g) || []).length;
-    if (mainCount === 0) notes.push("未发现 main()：代码可能只是定义或片段，请补齐入口和依赖。");
-    if (mainCount > 1) notes.push("检测到多个 main()：请保留一个入口并手动整理。");
+    if (mainCount === 0) notes.push("No main() found. If this is a fragment, add an entry point and any missing dependencies.");
+    if (mainCount > 1) notes.push("Multiple main() functions found. Edit the code to keep one entry point.");
     form.elements.starterCode.value = code;
     form.elements.starterCode.dispatchEvent(new Event("input"));
-    status.textContent = [source + " 已填入起始代码。", ...notes].join(" ");
+    status.textContent = [source + " added to starter code.", ...notes].join(" ");
     return true;
   }
 
@@ -481,7 +481,7 @@ function initializeNotebookImport(form, loadExercise) {
     if (!file) return;
     const readVersion = version;
     if (!file.name.toLowerCase().endsWith(".ipynb") || file.size > 2 * 1024 * 1024) {
-      status.textContent = "请选择不超过 2 MiB 的 .ipynb 文件。";
+      status.textContent = "Choose an .ipynb file no larger than 2 MiB.";
       return;
     }
     try {
@@ -489,21 +489,21 @@ function initializeNotebookImport(form, loadExercise) {
       if (readVersion !== version) return;
       const parsed = ClassLabNotebook.parse(notebook);
       cells = parsed.cells;
-      overview.textContent = file.name + " · 总 Cell：" + parsed.total + " · 课堂互动练习：" + parsed.count + (parsed.warnings ? " · 需检查：" + parsed.warnings : "");
+      overview.textContent = file.name + " · Total cells: " + parsed.total + " · Interactive exercises: " + parsed.count + (parsed.warnings ? " · Needs review: " + parsed.warnings : "");
       overview.hidden = false;
       if (parsed.count) {
         filter.value = "exercise";
         current = cells.findIndex(cell => cell.exercise);
       }
       if (!cells.length) {
-        status.textContent = "此 Notebook 没有可读取的代码或 Markdown 单元。";
+        status.textContent = "This notebook contains no readable code or Markdown cells.";
         return;
       }
       fields.hidden = false;
       showCell();
       showSelection();
     } catch {
-      if (readVersion === version) status.textContent = "无法读取此文件，请选择有效的 Notebook v4。";
+      if (readVersion === version) status.textContent = "Could not read the file. Choose a valid version 4 notebook.";
     }
   });
 
@@ -516,11 +516,11 @@ function initializeNotebookImport(form, loadExercise) {
       showCell(); // Preview only, never load or publish on filtering.
     } else {
       current = -1;
-      currentLabel.textContent = "没有匹配的单元";
+      currentLabel.textContent = "No matching cells";
       preview.textContent = "";
       use.hidden = toggleCell.hidden = appendText.hidden = true;
       showSelection();
-      status.textContent = "没有匹配的单元，可修改搜索或筛选条件。";
+      status.textContent = "No matching cells. Change the search or filter.";
       renderList();
     }
   }
@@ -534,11 +534,11 @@ function initializeNotebookImport(form, loadExercise) {
   function importExercise(cell) {
     if (!cell?.exercise || cell.protected) return;
     if (!loadExercise(cell.exercise)) {
-      status.textContent = "保留了当前编辑内容；可点击载入互动练习再次选择。";
+      status.textContent = "Your edits were kept. Select Load interactive exercise to try again.";
       return;
     }
     resetSelection();
-    status.textContent = "已载入互动练习，尚未发布。请核对说明和用例。" + (cell.warning ? " " + cell.warning : "");
+    status.textContent = "Exercise loaded. Review the instructions and cases before publishing." + (cell.warning ? " " + cell.warning : "");
   }
   use.addEventListener("click", () => {
     if (cells[current]?.exercise) return importExercise(cells[current]);
@@ -566,7 +566,7 @@ function initializeNotebookImport(form, loadExercise) {
       parts.push(result.code.trimEnd());
       notes.push(...result.notes);
     }
-    if (parts.length && fillCode(parts.join("\n\n"), "所选组合", notes)) {
+    if (parts.length && fillCode(parts.join("\n\n"), "Selected cells", notes)) {
       selectionApplied = true;
       showSelection();
     }
@@ -576,18 +576,18 @@ function initializeNotebookImport(form, loadExercise) {
     const field = form.elements.description;
     const next = [field.value, cells[current].code.trim()].filter(Boolean).join("\n\n");
     if (next.length > field.maxLength || new TextEncoder().encode(next).length > 10000) {
-      status.textContent = "追加后说明过长，请在预览中复制需要的部分。";
+      status.textContent = "The combined description is too long. Copy the part you need from the preview.";
       return;
     }
     field.value = next;
-    status.textContent = "Markdown 已追加为纯文字，可继续修改。";
+    status.textContent = "Markdown appended as editable plain text.";
   });
   function resetSelection() {
     selected.clear();
     selectionApplied = false;
     if (cells.length) renderList();
     showSelection();
-    toggleCell.textContent = "加入代码组合";
+    toggleCell.textContent = "Add to selection";
     toggleCell.setAttribute("aria-pressed", "false");
   }
 
@@ -598,7 +598,7 @@ function initializeNotebookImport(form, loadExercise) {
       if (!cells.length) return;
       resetSelection();
       combination.open = false;
-      status.textContent = "已保留 Notebook，可继续浏览并准备下一题。";
+      status.textContent = "Notebook retained. Browse the cells to prepare the next exercise.";
     },
   };
 }
@@ -614,9 +614,9 @@ function renderDiff(original, code) {
   const added = rows?.filter(row => row.kind === "+").length || 0;
   const removed = rows?.filter(row => row.kind === "-").length || 0;
   panel.hidden = !added && !removed;
-  byId("diff-summary").textContent = rows === null ? "改动范围较大，请对照下方两份完整源码。" :
-    panel.hidden ? "与起始代码逐行相同（统一换行格式）。" :
-    "新增 " + added + " 行，删除 " + removed + " 行。左列为原行号，右列为新行号。";
+  byId("diff-summary").textContent = rows === null ? "The changes are too large for an inline diff. Compare the two full listings below." :
+    panel.hidden ? "Identical to the starter code after normalizing line endings." :
+    "Lines added: " + added + "; lines removed: " + removed + ". The left column shows original line numbers and the right column shows new line numbers.";
   if (panel.hidden) return;
   // Show two context rows on either side. Group adjoining rows for large pastes.
   let chunk = "", lastKind, skipped = false;
@@ -656,7 +656,7 @@ function initializeLessonLibrary(serialize, load) {
       const values = JSON.parse(localStorage.getItem(key) || "[]");
       if (Array.isArray(values)) return values;
     } catch {}
-    feedback("无法读取备课草稿。", true, "draft-feedback");
+    feedback("Could not read the lesson drafts.", true, "draft-feedback");
     return [];
   }
 
@@ -666,7 +666,7 @@ function initializeLessonLibrary(serialize, load) {
       option.value = draft.id;
       return option;
     });
-    picker.replaceChildren(element("option", "选择练习"), ...options);
+    picker.replaceChildren(element("option", "Select an exercise"), ...options);
     picker.firstElementChild.value = "";
     picker.value = id;
     if (!picker.value) picker.value = "";
@@ -677,21 +677,21 @@ function initializeLessonLibrary(serialize, load) {
   function save(id) {
     const lesson = serialize();
     if (!lesson.title.trim()) {
-      feedback("请填写练习标题后保存。", true, "draft-feedback");
+      feedback("Enter an exercise title before saving.", true, "draft-feedback");
       return;
     }
     const values = drafts();
     const existing = id && values.find(draft => draft.id === id);
     if (id && !existing) {
-      feedback("这份草稿已删除，可另存为新练习。", true, "draft-feedback");
+      feedback("This draft was deleted. Save it as a new exercise.", true, "draft-feedback");
       return;
     }
     if (!existing && values.some(draft => draft.lesson.title.trim().toLowerCase() === lesson.title.trim().toLowerCase())) {
-      feedback("已有同名练习，请更改名称后保存。", true, "draft-feedback");
+      feedback("An exercise with this name already exists. Rename it before saving.", true, "draft-feedback");
       return;
     }
     if (!existing && values.length >= 25) {
-      feedback("练习库最多保留 25 份草稿。", true, "draft-feedback");
+      feedback("The exercise library holds up to 25 drafts.", true, "draft-feedback");
       return;
     }
     const record = existing || { id: String(Date.now()) + "-" + Math.random().toString(36).slice(2) };
@@ -701,9 +701,9 @@ function initializeLessonLibrary(serialize, load) {
       localStorage.setItem(key, JSON.stringify(values));
       loaded = record.id;
       render(loaded);
-      feedback("练习已保存到当前浏览器。", false, "draft-feedback");
+      feedback("Exercise saved in this browser.", false, "draft-feedback");
     } catch {
-      feedback("无法写入浏览器存储，编辑器内容仍可复制。", true, "draft-feedback");
+      feedback("Could not save to browser storage. You can still copy the editor contents.", true, "draft-feedback");
     }
   }
 
@@ -716,18 +716,18 @@ function initializeLessonLibrary(serialize, load) {
     load(record.lesson);
     loaded = record.id;
     render(loaded);
-    feedback("练习已载入，可修改或发布。", false, "draft-feedback");
+    feedback("Exercise loaded. You can edit or publish it.", false, "draft-feedback");
   });
   remove.addEventListener("click", () => {
-    if (!confirm("删除所选的本地备课草稿？")) return;
+    if (!confirm("Delete the selected draft from this browser?")) return;
     const id = picker.value;
     try {
       localStorage.setItem(key, JSON.stringify(drafts().filter(draft => draft.id !== id)));
       if (loaded === id) loaded = undefined;
       render();
-      feedback("草稿已删除。", false, "draft-feedback");
+      feedback("Draft deleted.", false, "draft-feedback");
     } catch {
-      feedback("无法删除草稿。", true, "draft-feedback");
+      feedback("Could not delete the draft.", true, "draft-feedback");
     }
   });
   render();
@@ -741,7 +741,7 @@ function taskPicker(select, container) {
     if (options === lastOptions) return;
     lastOptions = options;
     const selected = select.value;
-    const latest = element("option", tasks.length ? "最新发布 · " + tasks[0].title : "最新发布");
+    const latest = element("option", tasks.length ? "Latest task · " + tasks[0].title : "Latest task");
     latest.value = "";
     const archive = tasks.slice(1).map(task => {
       const option = element("option", task.title);
@@ -777,7 +777,7 @@ function initializeTeacher() {
 
   let roomRecords = readRoomRecords();
 
-  function rememberRoom(name = "课堂 " + credentials.id.slice(0, 8)) {
+  function rememberRoom(name = "Classroom " + credentials.id.slice(0, 8)) {
     if (roomRecords[credentials.id]?.name === name &&
         roomRecords[credentials.id]?.teacherKey === credentials.teacherKey) return;
     roomRecords = readRoomRecords();
@@ -787,7 +787,7 @@ function initializeTeacher() {
   }
 
   function renderRoomNavigation() {
-    const placeholder = element("option", "选择课堂");
+    const placeholder = element("option", "Select a classroom");
     placeholder.value = "";
     const rooms = Object.values(roomRecords).map(room => {
       const option = element("option", room.name);
@@ -804,7 +804,7 @@ function initializeTeacher() {
   const endpoint = (suffix) => "/rooms/" + credentials.id + suffix;
   const renderSchedule = scheduleView(async slot => {
     await api(endpoint("/schedule/" + slot.id), { method: "DELETE", headers: headers() });
-    feedback("已移除「" + slot.name + "」。", false, "schedule-feedback");
+    feedback("Removed “" + slot.name + "”.", false, "schedule-feedback");
     await refresh();
   });
   const link = byId("join-link");
@@ -825,7 +825,7 @@ function initializeTeacher() {
   const notebook = initializeNotebookImport(byId("publish"), lesson => {
     const previous = draftValues();
     const occupied = ["title", "description", "starterCode"].some(key => previous[key]?.trim()) || previous.testCases.length || previous.pitfalls.length;
-    if (occupied && JSON.stringify(previous) !== lastExerciseDraft && !confirm("载入互动练习将替换当前题目、代码、测试用例及易错点。请先保存需要的草稿。确定载入？")) return false;
+    if (occupied && JSON.stringify(previous) !== lastExerciseDraft && !confirm("Loading this exercise replaces the current title, code, test cases, and pitfalls. Save any draft you want to keep. Load the exercise?")) return false;
     restoreCompose(lesson);
     detachDraft();
     lastExerciseDraft = JSON.stringify(draftValues());
@@ -845,8 +845,8 @@ function initializeTeacher() {
     byId("empty-starter-choice").hidden = hasCode;
     if (hasCode) allowBlank.checked = false;
     byId("starter-code-status").textContent = hasCode
-      ? "此编辑框中的完整代码会发送给学生。"
-      : "起始代码为空。可填入 Notebook 代码、粘贴代码，或选择让学生从空白开始。";
+      ? "Students will receive all the code in this editor."
+      : "The starter code is empty. Add code from a notebook, paste code, or let students start with a blank editor.";
   }
 
   starter.addEventListener("input", syncStarter);
@@ -856,19 +856,19 @@ function initializeTeacher() {
     const firstInvalid = Array.from(form.elements).find(field => field.willValidate && !field.validity.valid);
     if (event.target !== firstInvalid) return;
     const row = firstInvalid.closest(".case-row");
-    const label = firstInvalid.closest("label")?.textContent.trim() || "此字段";
+    const label = firstInvalid.closest("label")?.textContent.trim() || "this field";
     const message = row
-      ? (row.parentElement === caseRows ? "测试用例" : "预期易错点") + " " +
+      ? (row.parentElement === caseRows ? "Test case" : "Expected pitfall") + " " +
         (Array.from(row.parentElement.children).indexOf(row) + 1) + " · " + label
       : label;
     const section = firstInvalid.closest("details");
     if (section) section.open = true;
-    feedback(message + "：" + firstInvalid.validationMessage, true, "publish-feedback");
+    feedback(message + ": " + firstInvalid.validationMessage, true, "publish-feedback");
     firstInvalid.focus();
   }, true);
 
   const updatePreparationCounts = () => {
-    byId("preparation-counts").textContent = caseRows.childElementCount + " 个用例 · " + pitfallRows.childElementCount + " 个易错点";
+    byId("preparation-counts").textContent = "Test cases: " + caseRows.childElementCount + " · Pitfalls: " + pitfallRows.childElementCount;
   };
   const countObserver = new MutationObserver(updatePreparationCounts);
   countObserver.observe(caseRows, {childList: true});
@@ -884,7 +884,7 @@ function initializeTeacher() {
     renderRoomNavigation();
     if (enabled) {
       selectComposeMode("prep");
-      byId("room-name").textContent = "课前备课";
+      byId("room-name").textContent = "Lesson preparation";
       byId("notebook-file").focus();
     } else {
       byId("open-preparation").focus();
@@ -968,8 +968,8 @@ function initializeTeacher() {
     byId("teacher-optional-settings").open = false;
     byId("prep-library").open = false;
     byId("compose-hint").textContent = preparing
-      ? "浏览 Notebook，将所需单元填入起始代码，再核对并发布。"
-      : "填写标题并粘贴 C++ 代码，或选择让学生从空白开始。";
+      ? "Browse the notebook, add the cells you need to the starter code, then review and publish."
+      : "Enter a title and paste C++ code, or let students start with a blank editor.";
   }
 
   byId("compose-quick").addEventListener("click", () => selectComposeMode("quick"));
@@ -982,7 +982,7 @@ function initializeTeacher() {
     management.hidden = enabled;
     classroom.hidden = !enabled;
     toggle.setAttribute("aria-pressed", String(enabled));
-    toggle.textContent = enabled ? "返回管理" : "课堂投影";
+    toggle.textContent = enabled ? "Back to dashboard" : "Classroom projection";
     renderRoomNavigation();
   }
 
@@ -1015,14 +1015,14 @@ function initializeTeacher() {
   async function praiseStudent(name, number) {
     try {
       await api(endpoint("/students/" + number + "/praise"), { method: "POST", headers: headers() });
-      feedback("已嘉奖 " + name + "，其学生页面会收到提醒。");
+      feedback("Praise sent to " + name + ". A notification will appear on the student's page.");
     } catch (error) {
       feedback(error.message, true);
     }
   }
 
   async function removeStudent(student) {
-    if (!confirm("将 " + student.name + " 移出课堂？其提交记录会一并删除且不可恢复。")) return;
+    if (!confirm("Remove " + student.name + " from the classroom? Their submission history will be permanently deleted.")) return;
     try {
       await api(endpoint("/students/" + student.number), { method: "DELETE", headers: headers() });
       await refresh();
@@ -1032,7 +1032,7 @@ function initializeTeacher() {
   }
 
   function detailButton(number, taskId) {
-    const button = element("button", "查看提交");
+    const button = element("button", "View submission");
     button.type = "button";
     button.className = "secondary";
     button.addEventListener("click", async () => {
@@ -1042,7 +1042,7 @@ function initializeTeacher() {
         const latest = await api(endpoint("/latest/" + number + "?taskId=" + encodeURIComponent(taskId)),
           { headers: headers() });
         if (credentials?.id !== roomId || management.hidden || configurationTask !== taskId) return;
-        byId("submission-title").textContent = latest.name + "的最新提交";
+        byId("submission-title").textContent = latest.name + "'s latest submission";
         renderDiff(latest.starterCode, latest.code);
         displayResult(byId("teacher-result"), latest.result, publishedCases);
         const evidence = latest.pitfallEvidence || [];
@@ -1051,9 +1051,9 @@ function initializeTeacher() {
           const row = element("li");
           row.append(element("strong", item.name));
           if (item.note) row.append(element("p", item.note));
-          if (item.needle) row.append(element("p", item.sourceMatch ? "发现源码线索。" : "未发现预设源码片段。"));
-          if (item.testNumber) row.append(element("p", "用例 " + item.testNumber + " · " +
-            (statusText[item.testStatus] || "无评测结果")));
+          if (item.needle) row.append(element("p", item.sourceMatch ? "Source snippet found." : "Source snippet not found."));
+          if (item.testNumber) row.append(element("p", "Test case " + item.testNumber + " · " +
+            (statusText[item.testStatus] || "No grading result")));
           return row;
         }));
         if (!submissionDialog.open) submissionDialog.showModal();
@@ -1074,9 +1074,9 @@ function initializeTeacher() {
       const row = element("li");
       row.append(element("strong", item.name));
       if (item.note) row.append(element("p", item.note));
-      if (item.needle) row.append(element("p", "源码片段命中 " + item.sourceMatches + " 人"), element("code", item.needle));
-      if (item.testNumber) row.append(element("p", "用例 " + item.testNumber + " · " +
-        item.testFailures + " 人失败 / " + item.testObserved + " 人有结果"));
+      if (item.needle) row.append(element("p", "Source snippet found in submissions: " + item.sourceMatches), element("code", item.needle));
+      if (item.testNumber) row.append(element("p", "Test case " + item.testNumber + " · " +
+        item.testFailures + " failed / " + item.testObserved + " with results"));
       return row;
     }));
     if (configurationTask !== state.task?.id) {
@@ -1084,25 +1084,25 @@ function initializeTeacher() {
       publishedCases = state.task?.testCases || [];
       if (submissionDialog.open) submissionDialog.close();
       byId("teacher-case-config").replaceChildren(...publishedCases.map((test) => sampleBlock({
-        ...test, name: test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）"),
+        ...test, name: test.name + (test.visibility === "hidden" ? " (hidden)" : " (public)"),
       })));
     }
     const stats = state.caseStats.map((test) => {
       const evaluated = test.passed + test.failed;
-      const rate = evaluated ? "通过率 " + Math.round(100 * test.passed / evaluated) + "%" : "暂无用例结果";
-      const title = test.name + (test.visibility === "hidden" ? "（隐藏）" : "（公开）");
-      const causes = Object.entries(test.failureKinds).map(([key, count]) => statusText[key] + " " + count + " 人");
-      return element("li", title + " · " + test.passed + " 通过 / " + test.failed + " 失败 · " + rate +
-        (causes.length ? "（" + causes.join("，") + "）" : ""));
+      const rate = evaluated ? "Pass rate: " + Math.round(100 * test.passed / evaluated) + "%" : "No test results yet";
+      const title = test.name + (test.visibility === "hidden" ? " (hidden)" : " (public)");
+      const causes = Object.entries(test.failureKinds).map(([key, count]) => statusText[key] + " " + count + (count === 1 ? " student" : " students"));
+      return element("li", title + " · " + test.passed + " passed / " + test.failed + " failed · " + rate +
+        (causes.length ? " (" + causes.join(", ") + ")" : ""));
     });
     byId("case-stats").replaceChildren(...stats);
     byId("no-errors").hidden = state.errorGroups.length > 0;
     const groups = state.errorGroups.map((group) => {
       const item = element("li");
-      item.append(element("strong", (categoryText[group.category] || "其他编译诊断") + " · " + group.count + " 人"));
+      item.append(element("strong", (categoryText[group.category] || "Other compiler diagnostics") + " · " + group.count + (group.count === 1 ? " student" : " students")));
       if (group.example) item.append(element("pre", group.example));
       for (const message of group.repeatedMessages || []) {
-        item.append(element("p", "相同诊断片段 · " + message.count + " 人"),
+        item.append(element("p", "Matching diagnostic · " + message.count + (message.count === 1 ? " student" : " students")),
           element("code", message.text));
       }
       item.append(detailButton(group.studentNumber, state.task.id));
@@ -1113,8 +1113,8 @@ function initializeTeacher() {
     byId("edit-patterns").replaceChildren(...state.editPatterns.map(group => {
       const item = element("li");
       const result = Object.entries(group.outcomes).map(([key, count]) =>
-        (statusText[key] || key) + " " + count + " 人").join("，");
-      item.append(element("strong", "原第 " + group.line + " 行位置 · " + group.count + " 人"),
+        (statusText[key] || key) + " " + count + (count === 1 ? " student" : " students")).join(", ");
+      item.append(element("strong", "Original line " + group.line + " · " + group.count + (group.count === 1 ? " student" : " students")),
         element("pre", [...group.before.map(s => "− " + s), ...group.after.map(s => "+ " + s)].join("\n")),
         element("p", result), detailButton(group.studentNumber, state.task.id));
       return item;
@@ -1150,7 +1150,7 @@ function initializeTeacher() {
     feedback("", false, "publish-feedback");
     feedback("");
     if (next) {
-      byId("room-name").textContent = next.name || "课堂";
+      byId("room-name").textContent = next.name || "Classroom";
       showDashboard();
     } else {
       prepare(false);
@@ -1171,12 +1171,12 @@ function initializeTeacher() {
       qrButton.replaceChildren(qr);
       byId("qr-large").replaceChildren(qr.cloneNode(true));
       byId("projection-qr").replaceChildren(qr.cloneNode(true));
-      byId("share-hint").textContent = "扫描二维码或打开链接即可进入学生页面。点击二维码可放大投影。";
+      byId("share-hint").textContent = "Scan the QR code or open the link to reach the student page. Select the code to enlarge it for projection.";
       qrButton.hidden = false;
     } catch {
       qrButton.hidden = true;
       byId("projection-qr").replaceChildren();
-      byId("share-hint").textContent = "二维码暂不可用，请复制加入链接。";
+      byId("share-hint").textContent = "QR code unavailable. Copy the join link instead.";
     }
   }
 
@@ -1194,29 +1194,29 @@ function initializeTeacher() {
     const archived = Boolean(selectedTask.value);
     renderTasks(state.tasks);
     if (!archived) {
-      byId("projection-task").textContent = state.task?.title || "尚未发布任务";
+      byId("projection-task").textContent = state.task?.title || "No task published yet";
       for (const metric of ["joined", "submitted", "accepted"]) {
         byId("projection-" + metric).textContent = state[metric];
       }
       const rate = state.joined ? Math.round(100 * state.submitted / state.joined) : 0;
       byId("projection-meter").value = rate;
       byId("projection-rate").textContent = state.joined ?
-        state.submitted + " / " + state.joined + " 人已提交（" + rate + "%）" : "等待学生加入";
+        state.submitted + " / " + state.joined + " submitted (" + rate + "%)" : "Waiting for students to join";
     }
     byId("projection-connection").textContent = "";
     byId("room-name").textContent = state.name;
     byId("current-task").textContent = state.task ?
-      (archived ? "往期任务 · " : "当前任务 · ") + state.task.title : "尚未发布任务";
+      (archived ? "Earlier task · " : "Current task · ") + state.task.title : "No task published yet";
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
     byId("judge-state").textContent = state.executionAvailable ? "" :
-      (state.queued ? "评测器暂不可用，等待中的提交已保存，连接恢复后继续。" : "隔离执行器不可用，未评测的提交不会计为未通过。");
+      (state.queued ? "The judge is unavailable. Queued submissions have been saved and will resume when it reconnects." : "The isolated runner is unavailable. Ungraded submissions are excluded from the failure count.");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
-      "最新提交通过率 " + Math.round(100 * state.accepted / judged) + "%（覆盖 " + judged + " 人）" :
-      "暂无已完成的评测，暂不计算通过率。";
-    refreshStatus("每 2 秒更新");
+      "Pass rate for latest submissions: " + Math.round(100 * state.accepted / judged) + "% (based on " + judged + " students)" :
+      "No completed grading results yet. A pass rate will appear after grading.";
+    refreshStatus("Updates every 2 seconds");
     byId("empty-students").hidden = state.students.length > 0;
     const signature = JSON.stringify([archived, state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns, state.pitfallStats]);
     if (signature === analysisSignature) return;
@@ -1224,7 +1224,7 @@ function initializeTeacher() {
     renderAnalysis(state);
     const rows = state.students.map((student) => {
       const row = document.createElement("tr");
-      const status = state.task ? (student.count ? statusText[student.latestStatus] || "结果未知" : "未提交") : "等待任务";
+      const status = state.task ? (student.count ? statusText[student.latestStatus] || "Unknown result" : "No submission") : "Waiting for a task";
       const score = student.total === undefined ? "" : " · " + student.passed + "/" + student.total;
       row.insertCell().textContent = student.name + " #" + student.number;
       const statusCell = row.insertCell();
@@ -1235,11 +1235,11 @@ function initializeTeacher() {
       if (student.count) detail.append(detailButton(student.number, state.task.id));
       const actions = row.insertCell();
       if (archived) return row;
-      const praise = element("button", "嘉奖");
+      const praise = element("button", "Praise");
       praise.type = "button";
       praise.className = "secondary";
       praise.addEventListener("click", () => praiseStudent(student.name, student.number));
-      const remove = element("button", "移出");
+      const remove = element("button", "Remove");
       remove.type = "button";
       remove.className = "secondary";
       remove.addEventListener("click", () => removeStudent(student));
@@ -1251,7 +1251,7 @@ function initializeTeacher() {
       empty.classList.add("empty-row");
       const cell = empty.insertCell();
       cell.colSpan = 5;
-      cell.textContent = "当前暂时无学生加入";
+      cell.textContent = "No students have joined yet";
       rows.push(empty);
     }
     byId("students").replaceChildren(...rows);
@@ -1275,8 +1275,8 @@ function initializeTeacher() {
       selectRoom(null);
       feedback(error.message, true);
     } else {
-      refreshStatus("连接中断，数值可能过时");
-      byId("projection-connection").textContent = "连接中断，数值可能过时";
+      refreshStatus("Connection lost. Figures may be out of date.");
+      byId("projection-connection").textContent = "Connection lost. Figures may be out of date.";
     }
   });
 
@@ -1286,22 +1286,22 @@ function initializeTeacher() {
     const roomId = credentials.id;
     const taskId = selectedTask.value;
     exportButton.disabled = true;
-    exportButton.textContent = "正在导出…";
+    exportButton.textContent = "Exporting…";
     feedback("", false, "export-feedback");
     try {
       const state = await api("/rooms/" + roomId + "/progress" + taskQuery(taskId), {
         headers: { "X-Teacher-Key": credentials.teacherKey }
       });
       if (credentials?.id !== roomId || selectedTask.value !== taskId) {
-        feedback("课堂或任务已切换，请重新导出。", true, "export-feedback");
+        feedback("The classroom or task changed. Export again.", true, "export-feedback");
         return;
       }
       if (!state.task) {
-        feedback("请先发布任务，再导出当前任务结果。", true, "export-feedback");
+        feedback("Publish a task before exporting its results.", true, "export-feedback");
         return;
       }
       if (!Array.isArray(state.students) || state.students.length === 0) {
-        feedback("当前课堂还没有学生，暂无可导出的结果。", true, "export-feedback");
+        feedback("No students have joined this classroom. There are no results to export.", true, "export-feedback");
         return;
       }
       const csv = buildClassroomCsv(state);
@@ -1314,12 +1314,12 @@ function initializeTeacher() {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      feedback("已导出 " + state.students.length + " 名学生的当前任务结果。", false, "export-feedback");
+      feedback("Exported current task results for " + state.students.length + (state.students.length === 1 ? " student." : " students."), false, "export-feedback");
     } catch (error) {
-      feedback("导出失败：" + error.message, true, "export-feedback");
+      feedback("Export failed: " + error.message, true, "export-feedback");
     } finally {
       exportButton.disabled = false;
-      exportButton.textContent = "导出当前任务 CSV";
+      exportButton.textContent = "Export current task as CSV";
     }
   });
 
@@ -1355,17 +1355,17 @@ function initializeTeacher() {
   onSubmit("add-slot", async data => {
     await api(endpoint("/schedule"), { headers: headers(), data: { ...data, day: Number(data.day) } });
     byId("add-slot").reset();
-    feedback("已添加「" + data.name + "」。", false, "schedule-feedback");
+    feedback("Added “" + data.name + "”.", false, "schedule-feedback");
     await refresh();
   }, "schedule-feedback");
 
   onSubmit("publish", async (data) => {
     if (!credentials) return;
     if (composeMode === "prep" && notebook.hasPendingSelection()) {
-      throw new Error("所选组合尚未填入起始代码。请先填入，或从组合移除所选单元。");
+      throw new Error("The selected cells are pending. Apply them to the starter code or remove them from the selection.");
     }
     if (!data.starterCode.trim() && !allowBlank.checked) {
-      throw new Error("请填入起始代码，或勾选「让学生从空白开始」。");
+      throw new Error("Enter starter code or select “Let students start with a blank editor”.");
     }
     if (!data.starterCode.trim()) data.starterCode = "";
     const cases = rowData(caseRows);
@@ -1387,11 +1387,11 @@ function initializeTeacher() {
     } finally {
       composer.inert = false;
     }
-    feedback("任务已发布：「" + data.title + "」。学生端将自动更新。", false, "publish-feedback");
+    feedback("Task published: “" + data.title + "”. Student pages will update automatically.", false, "publish-feedback");
     await refresh();
   }, "publish-feedback");
 
-  byId("copy-link").addEventListener("click", () => copyText(link, "copy-feedback", "加入链接已复制。"));
+  byId("copy-link").addEventListener("click", () => copyText(link, "copy-feedback", "Join link copied."));
   qrButton.addEventListener("click", () => qrDialog.showModal());
 
   if (credentials) {
@@ -1405,9 +1405,9 @@ function initializeTeacher() {
 function renderHistory(history) {
   byId("submission-history").hidden = history.length === 0;
   const rows = history.map(item => {
-    const time = new Date(item.receivedAt * 1000).toLocaleString();
+    const time = new Date(item.receivedAt * 1000).toLocaleString("en");
     const score = item.total === undefined ? "" : " (" + item.passed + "/" + item.total + ")";
-    return element("li", time + " · " + (statusText[item.status] || "状态未知") + score);
+    return element("li", time + " · " + (statusText[item.status] || "Unknown status") + score);
   });
   byId("history-list").replaceChildren(...rows);
 }
@@ -1432,10 +1432,10 @@ function studentClassroomHistory(currentRoom) {
       .filter(Boolean);
     byId("student-classrooms").hidden = !rooms.some(id => id !== currentRoom);
     const rows = rooms.map(id => {
-      const title = typeof saved[id] === "string" ? saved[id] : "课堂 " + id.slice(0, 8);
+      const title = typeof saved[id] === "string" ? saved[id] : "Classroom " + id.slice(0, 8);
       const row = element("li");
       if (id === currentRoom) {
-        row.textContent = title + "（当前课堂）";
+        row.textContent = title + " (current classroom)";
       } else {
         const link = element("a", title);
         link.href = "/join/" + id;
@@ -1484,7 +1484,7 @@ function initializeStudent() {
   const renderSchedule = scheduleView();
 
   function appendRunResultCopy(panel, result) {
-    const button = element("button", "复制结果");
+    const button = element("button", "Copy result");
     button.type = "button";
     button.className = "secondary";
     button.id = "copy-run-result";
@@ -1499,12 +1499,12 @@ function initializeStudent() {
     fallback.hidden = true;
     fallback.readOnly = true;
     fallback.rows = 5;
-    fallback.setAttribute("aria-label", "待手动复制的运行结果");
+    fallback.setAttribute("aria-label", "Run result for manual copying");
 
     button.addEventListener("click", async () => {
       fallback.value = runResultCopyText(result);
       fallback.hidden = false;
-      const copied = await copyText(fallback, "run-copy-feedback", "运行结果已复制。");
+      const copied = await copyText(fallback, "run-copy-feedback", "Run result copied.");
       if (copied) fallback.hidden = true;
     });
     const actions = element("div");
@@ -1563,7 +1563,7 @@ function initializeStudent() {
     forgetLive();
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
-    byId("editor-feedback").textContent = currentTask && !archived ? "已打开最新任务。" : "";
+    byId("editor-feedback").textContent = currentTask && !archived ? "Latest task opened." : "";
     currentTask = state.task;
     syncRunControls();
     byId("task-title").textContent = currentTask.title;
@@ -1596,7 +1596,7 @@ function initializeStudent() {
       feedback(error.message, true);
     } else {
       const target = byId("workspace").hidden ? "feedback" : "connection";
-      feedback("任务刷新失败，系统正在重试。", true, target);
+      feedback("Task refresh failed. Retrying.", true, target);
     }
   });
 
@@ -1612,7 +1612,7 @@ function initializeStudent() {
     await refresh();
   });
 
-  byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
+  byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "Code copied."));
 
   const input = byId("submit").elements.runInput;
   const activeStatuses = new Set(["compiling", "running", "stopping"]);
@@ -1780,27 +1780,27 @@ function initializeStudent() {
     const url = "https://dive4dec.github.io/OPT_CPP/visualize.html#" + state;
     if (url.length > 8192) {
       fallback.hidden = false;
-      optStatus.textContent = "已显示手动复制方式。";
+      optStatus.textContent = "Manual copy options are now available.";
       return;
     }
     // Preserve the teammate's one-click external tab flow; never embed OPT CPP.
     window.open(url, "_blank", "noopener,noreferrer");
   });
-  byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "当前代码已复制。"));
+  byId("copy-opt-code").addEventListener("click", () => copyText(editor, "optcpp-status", "Current code copied."));
 
   byId("reset-code").addEventListener("click", () => {
     if (!currentTask) {
-      feedback("目前没有可恢复的任务。", true, "editor-feedback");
+      feedback("No task is available to restore.", true, "editor-feedback");
       return;
     }
-    if (!window.confirm("确定要放弃当前修改，并恢复教师提供的起始代码吗？")) return;
+    if (!window.confirm("Discard your edits and restore the teacher's starter code?")) return;
     editor.value = currentTask.starterCode || "";
-    saveEditorDraft("已恢复起始代码，草稿也已更新。");
+    saveEditorDraft("Starter code restored and draft updated.");
   });
 
   byId("download-code").addEventListener("click", () => {
     if (!currentTask) {
-      feedback("目前没有可下载的代码。", true, "editor-feedback");
+      feedback("No code is available to download.", true, "editor-feedback");
       return;
     }
     const safeName = (currentTask.title || "classlab-code")
@@ -1817,7 +1817,7 @@ function initializeStudent() {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    byId("editor-feedback").textContent = "C++ 代码已下载。";
+    byId("editor-feedback").textContent = "C++ code downloaded.";
   });
 
   editor.addEventListener("keydown", (event) => {
@@ -1832,7 +1832,7 @@ function initializeStudent() {
       localStorage.setItem(draftKey(currentTask.id), editor.value);
       byId("editor-feedback").textContent = message;
     } catch {
-      byId("editor-feedback").textContent = "草稿无法保存，请在刷新前复制代码。";
+      byId("editor-feedback").textContent = "Could not save your draft. Copy your code before refreshing.";
     }
   }
 
@@ -1841,7 +1841,7 @@ function initializeStudent() {
       byId("run-result").hidden = true;
       byId("run-result").replaceChildren();
     }
-    saveEditorDraft("草稿已保存在此浏览器。");
+    saveEditorDraft("Draft saved in this browser.");
   });
 
   byId("run-code").addEventListener("click", async () => {
@@ -1896,27 +1896,27 @@ function initializeStudent() {
           .map((byte) => byte.toString(16).padStart(2, "0")).join("");
         pendingSubmission = { taskId, code, requestId };
       }
-      feedback("正在保存代码…", false, "submit-feedback");
+      feedback("Saving code…", false, "submit-feedback");
       const receipt = await api(endpoint("/submissions"), { data: pendingSubmission, headers: headers() });
       pendingSubmission = null;
       if (taskId === currentTask?.id) {
         const message = receipt.judgement === "judge_unavailable" ?
-          "代码已保存。隔离执行器不可用，本次提交未评测。" :
+          "Code saved. The isolated runner is unavailable, so this submission is ungraded." :
           receipt.judgement === "queued" || receipt.judgement === "pending" ?
-            "代码已保存，评测进度见下方。" :
+            "Code saved. Grading progress appears below." :
           receipt.judgement === "judge_queue_full" ?
-            "代码已保存，但评测队列已满。稍后可再次提交。" :
-          receipt.judgement ? "代码已保存 · " + (statusText[receipt.judgement] || "状态未知") :
-            "代码已提交，教师可以看到收件状态。";
+            "Code saved, but the grading queue is full. Try submitting again later." :
+          receipt.judgement ? "Code saved · " + (statusText[receipt.judgement] || "Unknown status") :
+            "Code submitted. Your teacher can see that it was received.";
         const receivedAt = Number(receipt.receivedAt);
         const submittedAt = Number.isFinite(receivedAt) && receivedAt > 0
           ? new Date(receivedAt * 1000)
           : new Date();
-        const submittedTime = submittedAt.toLocaleString(undefined, {
+        const submittedTime = submittedAt.toLocaleString("en", {
           dateStyle: "medium",
           timeStyle: "short"
         });
-        feedback(message + " 提交时间：" + submittedTime, false, "submit-feedback");
+        feedback(message + " Submitted at: " + submittedTime, false, "submit-feedback");
         await refresh();
       }
     } catch (error) {

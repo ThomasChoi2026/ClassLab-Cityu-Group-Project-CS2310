@@ -27,7 +27,7 @@ def check(browser):
             teacher.locator("[name=title]").fill("Native run")
             teacher.locator("[name=starterCode]").fill("NO_STDIN")
             teacher.locator("#publish-task").click()
-            expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+            expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
             student = context.new_page()
             student.goto(join)
