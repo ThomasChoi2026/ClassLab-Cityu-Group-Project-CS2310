@@ -41,8 +41,9 @@
     if (marker[1] !== undefined && !marker[1].trim()) return fail("互动标记的冒号后须提供标题，或省略冒号。");
     // Exact %%cpp is the only removable magic. Keep C++ text verbatim except
     // the wrapper and leading whitespace. The marker itself remains a comment.
-    if (/^(?:[ \t]*[%!]|[ \t]*(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\())/m.test(source) ||
-        !/(?:#\s*include\s*[<"]|\b(?:int|void|double|float|char|bool|auto|class|struct|template|constexpr|using|std::)\b)/.test(source) ||
+    const body = source.slice(firstLine(source).length).trim();
+    if (!body || /^(?:[ \t]*[%!]|[ \t]*(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\())/m.test(body) ||
+        !/(?:#\s*include\s*[<"]|\b(?:int|void|double|float|char|bool|auto|class|struct|template|constexpr|using|std::|cin|cout)\b|[;{}])/.test(body) ||
         !str(source, 20000, 65536, true)) {
       return fail("互动单元包含不支持的 Notebook 指令、疑似非 C++ 代码或超长源码。");
     }
