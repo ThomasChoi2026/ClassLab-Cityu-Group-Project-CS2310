@@ -30,6 +30,7 @@ if(BUILD_TESTING)
     find_program(NODE_EXECUTABLE node)
     if(NODE_EXECUTABLE)
         add_test(NAME line_diff COMMAND "${NODE_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/diff.cjs")
+        add_test(NAME notebook_markers COMMAND "${NODE_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/notebook.cjs")
     endif()
     add_executable(classlab_judging_tests tests/judging.cpp)
     target_compile_features(classlab_judging_tests PRIVATE cxx_std_20)
@@ -50,6 +51,8 @@ if(BUILD_TESTING)
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/student_history.py" $<TARGET_FILE:classlab>)
     add_test(NAME judge_protocol
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/judge_protocol.py" $<TARGET_FILE:classlab>)
+    add_test(NAME score_lecture_cpp20
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/score_lecture.py" "${CMAKE_CXX_COMPILER}")
     add_test(NAME native_stdin_probe
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/stdin_probe.py" "${CMAKE_CXX_COMPILER}")
 endif()
