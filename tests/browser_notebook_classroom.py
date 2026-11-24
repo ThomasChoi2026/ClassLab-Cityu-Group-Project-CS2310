@@ -19,6 +19,54 @@ def student_state(page):
     }""")
 
 
+def check_notebook_layout(page, evidence, label):
+    # Test actual container widths rather than the full viewport alone.
+    result = page.evaluate("""() => {
+        const browser = document.querySelector(".notebook-browser");
+        const list = document.querySelector("#notebook-list");
+        const preview = document.querySelector("#notebook-preview");
+        const container = document.querySelector("#notebook-import");
+        const cs = getComputedStyle(container);
+        const contentWidth = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        const columns = getComputedStyle(browser).gridTemplateColumns.split(" ").map(parseFloat);
+        const buttons = [...list.querySelectorAll("button")];
+        const failures = [];
+        let previous = null;
+        for (const button of buttons) {
+            const rect = button.getBoundingClientRect();
+            if (previous && rect.top < previous.bottom - 1) failures.push("overlapping rows");
+            previous = rect;
+            if (button.scrollWidth > button.clientWidth + 1 || button.scrollHeight > button.clientHeight + 1)
+                failures.push("clipped button: " + button.textContent);
+            for (const part of button.querySelectorAll("span")) {
+                const box = part.getBoundingClientRect();
+                if (box.left < rect.left - 1 || box.right > rect.right + 1 ||
+                    box.top < rect.top - 1 || box.bottom > rect.bottom + 1 ||
+                    part.scrollWidth > part.clientWidth + 1)
+                    failures.push("clipped text: " + part.textContent);
+            }
+            if (button.querySelector(".notebook-cell-meta").textContent.includes("课堂互动练习"))
+                failures.push("repeated classification");
+        }
+        if (list.scrollWidth > list.clientWidth + 1) failures.push("horizontal list overflow");
+        if (browser.scrollWidth > browser.clientWidth + 1) failures.push("horizontal container overflow");
+        const split = contentWidth >= 41 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+        if (columns.length !== (split ? 2 : 1)) failures.push("wrong column count for container");
+        if (!split && preview.getBoundingClientRect().width < browser.clientWidth - 2)
+            failures.push("stacked preview too narrow");
+        if (split && columns[1] < 22 * parseFloat(getComputedStyle(document.documentElement).fontSize) - 1)
+            failures.push("split preview too narrow");
+        if (getComputedStyle(preview).whiteSpace !== "pre" || getComputedStyle(preview).overflowX !== "auto")
+            failures.push("preview does not preserve source or scroll independently");
+        return {failures, contentWidth, columns, count: buttons.length,
+            titles: buttons.map(b => b.querySelector(".notebook-cell-title").textContent)};
+    }""")
+    assert result["count"] == 5, (label, result)
+    assert not result["failures"], (label, result)
+    page.locator("#notebook-import").screenshot(path=str(evidence / f"ux-notebook-{label}.png"))
+    return result["titles"]
+
+
 def check(browser, base, evidence):
     notebook = json.loads(LECTURE.read_text(encoding="utf-8"))
     references = json.loads((ROOT / "examples/score_analysis_references.json").read_text(encoding="utf-8"))
@@ -30,6 +78,17 @@ def check(browser, base, evidence):
     public = [{"name": t["name"], "input": t["input"], "expectedOutput": t["expectedOutput"]}
               for t in metadata["testCases"] if t["visibility"] == "public"]
     evidence.mkdir(parents=True, exist_ok=True)
+    # The standalone preparation composer can be much wider than the
+    # half-width classroom composer. Exercise both sides of the query.
+    preparation = browser.new_page(viewport={"width": 1440, "height": 1080})
+    preparation.goto(base)
+    preparation.locator("#open-preparation").click()
+    preparation.locator("#notebook-file").set_input_files(LECTURE)
+    expect(preparation.locator("#notebook-list button")).to_have_count(5)
+    assert set(check_notebook_layout(preparation, evidence, "preparation-wide")) == set(references)
+    preparation.set_viewport_size({"width": 780, "height": 960})
+    assert set(check_notebook_layout(preparation, evidence, "preparation-split")) == set(references)
+    preparation.close()
     errors = []
     teacher = browser.new_page(viewport={"width": 1440, "height": 1080})
     teacher.on("pageerror", lambda error: errors.append(str(error)))
@@ -38,9 +97,25 @@ def check(browser, base, evidence):
     expect(teacher.locator("#demo-banner a")).to_have_count(1)
     expect(teacher.locator("#demo-banner a")).to_contain_text("下载教学 Notebook")
     expect(teacher.locator("#demo-cases")).to_have_count(0)
+    teacher.locator("#open-teacher-guide").click()
+    guide = teacher.locator("#teacher-guide")
+    expect(guide).to_be_visible()
+    for phrase in ("CS2310_Score_Analysis.ipynb", "发布为当前任务", "查看已发布任务", "@classlab exercise", "Judge"):
+        expect(guide).to_contain_text(phrase)
+    guide.get_by_role("button", name="关闭").click()
+    expect(guide).to_be_hidden()
     teacher.locator("#create input").fill("CS2310 Score Analysis")
     teacher.get_by_role("button", name="创建课堂", exact=True).click()
     expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
+    expect(teacher.locator("#compose-prep")).to_have_attribute("aria-pressed", "true")
+    expect(teacher.locator("#notebook-file")).to_be_visible()
+    teacher.locator("#compose-quick").click()
+    expect(teacher.locator("#notebook-import")).to_be_hidden()
+    teacher.locator("[name=title]").fill("Quick draft stays")
+    teacher.locator("#compose-prep").click()
+    expect(teacher.locator("[name=title]")).to_have_value("")
+    teacher.locator("#compose-quick").click()
+    expect(teacher.locator("[name=title]")).to_have_value("Quick draft stays")
     teacher.locator("#compose-prep").click()
     upload = teacher.locator("#notebook-file")
     expect(upload).to_be_visible()
@@ -54,6 +129,16 @@ def check(browser, base, evidence):
     expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：5")
     expect(teacher.locator("#notebook-filter")).to_have_value("exercise")
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
+    for width in (1440, 1280, 1100, 960, 860, 768, 600, 390):
+        teacher.set_viewport_size({"width": width, "height": 1080})
+        assert set(check_notebook_layout(teacher, evidence, str(width))) == set(references)
+    # Desktop zoom reduces the available layout viewport. These are equivalent
+    # CSS viewport widths for 125% and 150% at 1440 physical pixels, not a
+    # claim that Chromium's browser-chrome zoom control was exercised.
+    for zoom in (1.25, 1.5):
+        teacher.set_viewport_size({"width": round(1440 / zoom), "height": round(1080 / zoom)})
+        check_notebook_layout(teacher, evidence, f"effective-{int(zoom * 100)}pct")
+    teacher.set_viewport_size({"width": 1440, "height": 1080})
     assert teacher.locator("[name=title]").input_value() == "Preserve this draft"
     expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
     teacher.locator("#notebook-search").fill("Find the maximum correctly")
@@ -109,9 +194,10 @@ def check(browser, base, evidence):
         expect(teacher.locator("#pitfall-rows .case-row")).to_have_count(0)
         expect(teacher.locator("#preparation-counts")).to_have_text("0 个用例 · 0 个易错点")
         expect(teacher.locator("#notebook-list button")).to_have_count(5)
+        return task["id"]
 
     teacher.locator("#notebook-filter").select_option("exercise")
-    publish_marked(title, starter, metadata)
+    first_task_id = publish_marked(title, starter, metadata)
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
     join = teacher.locator("#join-link").input_value()
     students = []
@@ -202,7 +288,7 @@ def check(browser, base, evidence):
             f"{len(fields['testCases'])} 个用例 · {len(fields['pitfalls'])} 个易错点"
         )
         expect(teacher.locator("#current-task")).to_contain_text(last_title)
-        publish_marked(next_title, code, fields)
+        next_task_id = publish_marked(next_title, code, fields)
         expect(student.locator("#task-title")).to_have_text(next_title)
         expect(student.locator("#student-code")).to_have_value(code)
         expect(student.locator("#task-description")).to_have_text(fields["description"])
@@ -212,6 +298,20 @@ def check(browser, base, evidence):
             for case in fields["testCases"] if case["visibility"] == "public"
         ], next_title
         assert "pitfalls" not in task, next_title
+        if last_title == title:
+            # Inspect the first task by its actual ID, while students follow
+            # the second task. Its previous statistics must remain unchanged.
+            teacher.locator("#teacher-task-picker").select_option(first_task_id)
+            expect(teacher.locator("#current-task")).to_contain_text(title)
+            expect(teacher.locator("#submitted")).to_have_text("3")
+            expect(teacher.locator("#accepted")).to_have_text("2")
+            expect(teacher.locator("#failed")).to_have_text("1")
+            assert student_state(student)["task"]["id"] == next_task_id
+            expect(student.locator("#task-title")).to_have_text(next_title)
+            teacher.screenshot(path=str(evidence / "ux-first-task-history.png"), full_page=True)
+            teacher.locator("#teacher-task-picker").select_option("")
+            expect(teacher.locator("#current-task")).to_contain_text(next_title)
+            expect(teacher.locator("#submitted")).to_have_text("0")
         last_title = next_title
     expect(teacher.locator("#notebook-overview")).to_contain_text(LECTURE.name)
     # Replacing the Notebook must work in-place, without publishing or altering the task.

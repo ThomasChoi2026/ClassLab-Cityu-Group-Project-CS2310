@@ -364,13 +364,19 @@ function initializeNotebookImport(form, loadExercise) {
   function renderList() {
     const entries = matchingCells().map(({cell, position}) => {
       const label = cell.exercise ? "课堂互动练习" : cell.protected ? "仅教师预览 / 不可载入" : kindOf(cell) === "cpp" ? "C++" : kindOf(cell) === "markdown" ? "Markdown" : "其他代码";
-      const button = element("button", "Cell " + (cell.index + 1) + " · " + label + " · " + (cell.exercise?.title || summaryOf(cell)));
+      const button = element("button");
+      const meta = element("span", "Cell " + (cell.index + 1) +
+        (cell.exercise && filter.value === "exercise" ? "" : " · " + label) + " ");
+      meta.className = "notebook-cell-meta";
+      const title = element("span", cell.exercise?.title || summaryOf(cell));
+      title.className = "notebook-cell-title";
+      button.append(meta, title);
       button.type = "button";
       button.className = "notebook-cell-entry" + (position === current ? " active" : "");
       button.setAttribute("aria-pressed", String(position === current));
       if (selected.has(position)) {
         button.classList.add("chosen");
-        button.textContent += " · 已选入组合";
+        meta.textContent += " · 已选入组合";
       }
       button.addEventListener("click", () => {
         current = position;
@@ -753,6 +759,8 @@ function taskQuery(taskId) {
 }
 
 function initializeTeacher() {
+  const guide = byId("teacher-guide");
+  byId("open-teacher-guide").addEventListener("click", () => guide.showModal());
   const storageKey = "classlab.teacher";
   const roomsKey = storageKey + ".classrooms";
   const roomPicker = byId("teacher-room-picker");
@@ -926,7 +934,7 @@ function initializeTeacher() {
 
   // Keep quick paste and lesson preparation drafts independent while switching tabs.
   // This only affects the teacher form; the existing local lesson library is unchanged.
-  let composeMode = "quick";
+  let composeMode = "prep";
   let composeBuffers = {quick: null, prep: null};
   const roomDrafts = new Map();
 
@@ -966,7 +974,7 @@ function initializeTeacher() {
 
   byId("compose-quick").addEventListener("click", () => selectComposeMode("quick"));
   byId("compose-prep").addEventListener("click", () => selectComposeMode("prep"));
-  selectComposeMode("quick");
+  selectComposeMode("prep");
 
   function project(enabled) {
     if (qrDialog.open) qrDialog.close();
@@ -1118,7 +1126,7 @@ function initializeTeacher() {
       composeBuffers[composeMode] = draftValues();
       roomDrafts.set(credentials?.id || "", {mode: composeMode, buffers: composeBuffers});
       const draft = roomDrafts.get(next?.id || "");
-      composeMode = draft?.mode || "quick";
+      composeMode = draft?.mode || "prep";
       composeBuffers = draft?.buffers || {quick: null, prep: null};
       restoreCompose(composeBuffers[composeMode]);
       selectComposeMode(composeMode);
@@ -1203,7 +1211,7 @@ function initializeTeacher() {
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
-    byId("judge-state").textContent = state.demo ? "演示评测只回放固定夹具。加入和提交是实时记录。" : state.executionAvailable ? "" :
+    byId("judge-state").textContent = state.demo || state.executionAvailable ? "" :
       (state.queued ? "评测器暂不可用，等待中的提交已保存，连接恢复后继续。" : "隔离执行器不可用，未评测的提交不会计为未通过。");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
@@ -1549,7 +1557,7 @@ function initializeStudent() {
     const runStatus = byId("run-state");
     const runMessage = archived ? "" : running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
       stdinPending ? (demoMode ? "输入预置测试数据后，可再次点击回放。" : "程序已请求标准输入。填写后再次点击运行，将从头执行程序。") :
-      state.demo ? "仅回放匹配的预置代码与支持的输入；请使用本题公开用例。不编译或运行任意 C++。" :
+      state.demo ? "仅匹配预置代码和输入；请使用本题公开用例。" :
       state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
       "隔离执行器不可用，暂时无法运行代码。";
     if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
