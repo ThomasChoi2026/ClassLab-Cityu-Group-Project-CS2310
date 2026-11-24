@@ -2,7 +2,7 @@
 
 ## Download the sample
 
-Open the [sample Notebook on GitHub](../examples/CS2310_Score_Analysis.ipynb) and choose **Download raw file**. You can download it before starting ClassLab. The sample and new exercises can be imported. Actual execution and grading require an accepted Judge.
+Open the [sample Notebook on GitHub](../examples/CS2310_Score_Analysis.ipynb) and choose **Download raw file**. You can download it before starting ClassLab. The sample and new exercises can be imported. Actual execution and grading require an accepted isolated Judge or the reviewed-source experimental worker. Unapproved sources are not executed by the latter.
 
 ## Mark your own exercise
 

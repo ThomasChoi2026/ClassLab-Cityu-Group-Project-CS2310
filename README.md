@@ -1,4 +1,14 @@
-# ClassLab
+# ClassLab — Trusted Native GCC (experimental)
+
+> **Private, trusted test sessions only.** No replay and no per-program sandbox. Only the repository's reviewed example sources and explicitly approved local C++ files can be compiled and run. Never use this worker as an unrestricted online judge. The separate [sandbox-only branch](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/tree/release/sandbox-only) is the release path for actual student programs after isolation acceptance.
+
+After building, launch on a non-root Linux test host with GCC and prlimit:
+
+~~~bash
+python3 judge/trusted_native.py --trusted-local-only --port 8080
+~~~
+
+Only use the private preview. For a new locally reviewed program, restart with `--approve-source /path/to/reviewed.cpp`. The worker pins the exact source at startup and compiles it on every execution; outputs and grades are not prerecorded. Other source variants are saved but marked not evaluated.
 
 **Turn C++ lecture notebooks into interactive classroom exercises.**
 
@@ -14,7 +24,7 @@ The project's distinctive contribution is this **Notebook → exercise → stude
 
 [**Get the sample Notebook (.ipynb)**](examples/CS2310_Score_Analysis.ipynb) on GitHub. Choose **Download raw file** to save it before opening ClassLab. The file contains 74 cells and five marked exercises.
 
-Import the file through **课前备课 (Lesson Preparation)**. The sample remains a teaching resource, not a replay mechanism. This branch retains the isolated Judge; native execution requires a validated host. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
+Import the file through **课前备课 (Lesson Preparation)**. The sample remains a teaching resource, not a replay mechanism. This experimental branch offers reviewed-source native execution. The isolated Judge remains available as a separate deployment path. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
 
 ## Quick Start
 
@@ -25,7 +35,7 @@ Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C+
 For a fresh checkout:
 
 ~~~bash
-git clone --branch release/sandbox-only https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch experiment/trusted-native-compile https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 ~~~
 
@@ -56,7 +66,7 @@ Create a classroom, import a Notebook or paste any C++ starter code, and collect
 
 ## One-minute classroom demo
 
-Use the sample Notebook (74 cells, five exercises). Publish Cell 22, join three student sessions, correct `score > 60` to `score >= 60`, and submit. With an accepted Judge the public input `60` produces `FAIL` then `PASS`, and the classroom shows actual verdicts. Without a Judge, show source differences and submission counts; do not claim grading. See [rehearsal guide](docs/COURSEWORK_DEMO.md).
+Use the sample Notebook (74 cells, five exercises). Publish Cell 22, join three student sessions, correct `score > 60` to `score >= 60`, and submit. With the reviewed-source worker or an accepted isolated Judge the public input `60` produces `FAIL` then `PASS`, and the classroom shows actual verdicts. Without a Judge, show source differences and submission counts; do not claim grading. See [rehearsal guide](docs/COURSEWORK_DEMO.md).
 
 ## Teacher workflow
 

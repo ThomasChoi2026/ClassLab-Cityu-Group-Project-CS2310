@@ -53,7 +53,7 @@ The integration check also ran the actual upstream assets from revision 654cd74 
 
 ## Repeatable classroom demonstration
 
-Use the [authored score-analysis Notebook](../examples/CS2310_Score_Analysis.ipynb), publish Cell 22, join three separate browser sessions, correct the boundary and submit. Actual Run and grades require an accepted Judge. Without it, demonstrate saved submissions and source changes only. See [the rehearsal guide](COURSEWORK_DEMO.md).
+Use the [authored score-analysis Notebook](../examples/CS2310_Score_Analysis.ipynb), publish Cell 22, join three separate browser sessions, correct the boundary and submit. Actual Run and grades require an accepted isolated Judge or a reviewed source in the trusted native experiment. Without it, demonstrate saved submissions and source changes only. See [the rehearsal guide](COURSEWORK_DEMO.md).
 
 ## Architecture and evidence
 

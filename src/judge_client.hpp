@@ -133,6 +133,7 @@ private:
     static Json failure(const Json& result) {
         try {
             const auto status = result.value("status", "");
+            if (status == "source_not_approved") return {{"status", status}, {"error", "This source has not been approved by the local operator. No code was compiled."}};
             if (status == "compilation_error") {
                 return {{"status", status}, {"diagnostic", limited_text(result, "diagnostic", 16384)}};
             }

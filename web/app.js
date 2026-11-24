@@ -126,6 +126,7 @@ const statusText = {
   success: "运行成功",
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
+  source_not_approved: "未评测 · 此源码未经本地操作人员审查",
   pending: "评测中",
   queued: "等待评测",
   judge_queue_full: "未评测 · 队列已满",
@@ -154,6 +155,7 @@ function exportedStatus(status, count) {
     judge_unavailable: "Not evaluated (Judge unavailable)",
     judge_queue_full: "Not evaluated (evaluation queue full)",
     judge_error: "Evaluation service error",
+    source_not_approved: "Not evaluated (source not approved)",
     accepted: "All tests passed",
     wrong_answer: "Tests not all passed (wrong answer)",
     compilation_error: "Compilation error",
@@ -182,7 +184,7 @@ function buildClassroomCsv(state, exportedAt = new Date()) {
       exportedStatus(student.latestStatus, student.count),
       hasScore ? student.passed : "",
       hasScore ? student.total : "",
-      "Normal",
+      "Trusted Native",
       exportedAtUtc,
     ].map(csvCell).join(",");
   });
