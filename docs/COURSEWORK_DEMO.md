@@ -25,9 +25,9 @@ If the response differs from `{"status":"ready","demo":true}`, check the startup
 If your existing checkout has uncommitted changes, use a separate worktree for this English submission:
 
 ```bash
-git fetch origin submission/english
+git fetch origin main
 DEMO_DIR=$(mktemp -d /tmp/classlab-coursework.XXXXXX)
-git worktree add --detach "$DEMO_DIR" origin/submission/english
+git worktree add --detach "$DEMO_DIR" origin/main
 cd "$DEMO_DIR"
 bash demo/start_coursework.sh 8082
 ```
