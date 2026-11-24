@@ -510,6 +510,8 @@ function initializeNotebookImport(form, loadExercise) {
 
 function showDemoBanner(state) {
   byId("demo-banner").hidden = !state.demo;
+  const notebookDownload = byId("normal-notebook-download");
+  if (notebookDownload) notebookDownload.hidden = Boolean(state.demo);
 }
 
 function renderDiff(original, code) {

@@ -1,6 +1,10 @@
 # Notebook Classroom Integration
 
-## Minimal workflow
+## Download the sample
+
+Open the [sample Notebook on GitHub](../examples/CS2310_Score_Analysis.ipynb) and choose **Download raw file**. You can download it before starting ClassLab. The same file imports in Normal Mode and Demo Mode. A new exercise you author can be published in either mode. Actual execution and grading require an accepted Judge in Normal Mode. Demo plays only its supplied fixtures.
+
+## Mark your own exercise
 
 In a normal Jupyter Notebook v4 **Code** cell, put a single C++ comment on the first nonblank line:
 
@@ -14,17 +18,31 @@ int main() {
 }
 ```
 
-Alternatively use just `// @classlab exercise`; the default title is `ClassLab Exercise · Cell N` (the original one-based Cell number). A bare `%%cpp` on the first nonblank line is also supported; put the marker on the following first nonblank line. Case-sensitive, exact syntax. Markdown, later comments, strings and unrelated magics are not exercise markers. A colon must be followed by a nonempty title. The parser is a conservative source importer, **not a compiler**: a C++ fragment with no apparent main is identified with a warning, not certified as independently executable. `%%cpp` arguments, Python, `%%hermes` and additional Notebook commands need manual conversion.
+Use the exact lowercase marker:
+
+| First nonblank line in a C++ Code cell | What ClassLab loads |
+| --- | --- |
+| `// @classlab exercise: Fix the grade boundary` | A marked exercise titled “Fix the grade boundary”. |
+| `// @classlab exercise` | A marked exercise using the optional Cell Metadata title or the default `ClassLab Exercise · Cell N`. |
+| `// @classlab exercise;` or `// Web Class: Fix the grade boundary` | An ordinary cell if no ClassLab Metadata is present. These spellings are unrecognized. |
+
+Use a colon (`:`) only when followed by a title. The marker is a comment and takes no semicolon. Keep normal C++ semicolons in the program below it. If your Notebook kernel uses a bare `%%cpp` first, put the marker on the next nonblank line. Markdown cells, later comments and string literals cannot mark an exercise.
+
+Include the C++ source below the marker and save the Notebook as `.ipynb`. The importer checks the format and reports unsupported cells. Code fragments can be recognized with a warning when no `main()` is apparent. Convert `%%hermes`, `%%cpp` with arguments, Python and other Notebook commands manually before importing them as C++.
+
+## Import, check and publish
 
 1. Open **课前备课**; the file selector is directly visible. Upload a local .ipynb file (up to 2 MiB). The file is read only in the teacher browser, not rewritten or sent to the server.
 2. The filename, original total cell count, recognized exercise count and invalid-metadata count appear. Marked exercises are the initial filter when present; otherwise All is selected. The preview opens without loading or publishing.
 3. Click an exercise to load its title, description, starter, tests and pitfalls. Existing edited work triggers a replacement confirmation; choosing Cancel preserves it. The **载入互动练习** button can retry. Unchanged imported exercise drafts can be switched without repeated confirmation. Save drafts to the existing lesson library when needed.
-4. Review and edit all fields, including the test visibility and pitfall/test associations. Click **发布为当前任务** only when ready. The Notebook remains loaded after publishing, so the next exercise needs no re-upload.
+4. Review and edit all fields, including the test visibility and pitfall/test associations. Click **发布为当前任务** only when ready. The Notebook remains loaded in the current page after publishing, so the next exercise needs no re-upload. Refreshing or closing the page clears the import.
 5. Ordinary code and Markdown retain preview, search, filters and code composition. Unmarked code may be inserted manually; marked exercises load independently to avoid mixing unrelated programs/tests. A reference cell is preview-only; it cannot enter a combination, starter or public description through the import controls.
 
 ## Optional Cell Metadata (version 1)
 
-The basic comment is sufficient. If desired, edit the cell's standard Jupyter Metadata (not notebook-level metadata). For example:
+The basic comment is sufficient. You can add tests in the ClassLab teacher editor under **测试用例与易错点** after loading the exercise. To preload them from your file, select the marked Code cell and use your Notebook editor's Cell Metadata view. Add the `classlab` object to that cell's metadata, alongside other cell metadata. The JSON belongs in Cell Metadata. Keep only the C++ code and marker in the source editor.
+
+This example preloads a prompt, one public test, one hidden test and a common pitfall. The starter intentionally uses `> 60` so the public test at `60` guides students toward `>= 60`.
 
 ```json
 {

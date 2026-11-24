@@ -41,6 +41,9 @@ def check(browser, base):
     expect(page.locator("#prep-library")).not_to_have_attribute("open", "")
     expect(page.locator("#teacher-optional-settings")).not_to_have_attribute("open", "")
     expect(page.locator("#demo-banner")).to_be_hidden()
+    download = page.get_by_role("link", name="下载教学 Notebook 示例（74 Cells / 5 题）")
+    expect(download).to_be_visible()
+    expect(download).to_have_attribute("href", re.compile(r"/blob/main/examples/CS2310_Score_Analysis\.ipynb$"))
     assert page.locator("#notebook-import").evaluate("(el) => el.compareDocumentPosition(document.querySelector('[name=title]')) & Node.DOCUMENT_POSITION_FOLLOWING")
 
     notebook = synthetic_notebook()

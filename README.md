@@ -10,6 +10,12 @@ The project's distinctive contribution is this **Notebook → exercise → stude
 
 [Quick Start](#quick-start) · [Classroom Demo](#one-minute-classroom-demo) · [Teacher Guide](#teacher-workflow) · [Student Guide](#student-workflow) · [Testing](#testing-and-evidence) · [Team](#team-contributions)
 
+## Download the sample Notebook before starting
+
+[**Get the sample Notebook (.ipynb)**](examples/CS2310_Score_Analysis.ipynb) on GitHub. Choose **Download raw file** to save it before opening ClassLab. The file contains 74 cells and five marked exercises.
+
+Import the same file through **课前备课 (Lesson Preparation)** in either mode. Demo Mode supplies labelled replay for the five sample exercises. Normal Mode uses the Notebook for real classroom activity and requires a validated Judge for native execution and grading. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
+
 ## Quick Start
 
 **Same repository, same application, two startup modes.** No separate website, branch or Docker installation is needed to try the classroom workflow.
@@ -19,7 +25,7 @@ The project's distinctive contribution is this **Notebook → exercise → stude
 | Normal Mode（正式版） | `CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab` | 8080 |
 | Demo Mode（作业演示） | `python3 demo/run.py --port 8082` | 8082 |
 
-For the coursework presentation, use Demo Mode with the [supplied 74-cell Notebook](examples/CS2310_Score_Analysis.ipynb). For actual classroom records, use Normal Mode. To enable real C++ execution, see [the school-server setup guide](docs/RUN_CLASSLAB.md).
+To enable native C++ execution in Normal Mode, see the [school-server setup guide](docs/RUN_CLASSLAB.md).
 
 ### 1. Build once
 
@@ -90,7 +96,7 @@ The two modes can run simultaneously in separate terminals on these ports. Stop 
 
 **Use Demo Mode for a reliable coursework presentation without configuring a native Judge.**
 
-Download the full original teaching Notebook: [CS2310_Score_Analysis.ipynb](examples/CS2310_Score_Analysis.ipynb), also available via the Demo teacher banner's single **下载教学 Notebook（74 Cells / 5 题）** link. On GitHub, click **Download raw file** and save it to the teacher's computer.
+Use the [sample Notebook download above](#download-the-sample-notebook-before-starting). The same file is linked from the Demo teacher banner and from **课前备课** in Normal Mode.
 
 1. Create a classroom and switch to **课前备课 (Lesson Preparation)**.
 2. Upload the downloaded Notebook directly. ClassLab identifies **5 exercises among 74 cells**. Select **Fix the grade boundary — Cell 22**.
@@ -117,7 +123,7 @@ Additional teacher controls include praise, student removal and a weekly timetab
 
 ### Notebook classroom integration
 
-Add a marker as the first nonblank line of a C++ Code Cell (or the first nonblank line after a bare `%%cpp`):
+In Jupyter, create a **Code** cell and add the marker on its first nonblank line. If the cell starts with a bare `%%cpp`, put the marker on the first nonblank line after it:
 
 ~~~cpp
 // @classlab exercise: Fix the grade boundary
@@ -131,7 +137,9 @@ int main() {
 }
 ~~~
 
-The shorter `// @classlab exercise` also works and uses the original cell number as the default title. Optional `metadata.classlab` supplies the task description, tests and anticipated pitfalls. Without markers, the ordinary Notebook browser remains available, including search, filtering, previews and multi-cell code assembly.
+The marker is a case-sensitive C++ comment. Use a colon (`:`) before a custom title. You can omit both the colon and title with `// @classlab exercise`. The importer uses the title from Cell Metadata if provided, then falls back to the original Cell number. The marker itself needs no semicolon.
+
+Save as `.ipynb`, then import it in **课前备课**. ClassLab detects marked exercises, shows their count and loads the chosen exercise into the editor. Review the fields, add any missing tests, and use **发布为当前任务** to share it. Optional `metadata.classlab` preloads instructions, tests and anticipated pitfalls. See the [authoring guide](docs/NOTEBOOK_CLASSROOM.md) for an example with public and hidden tests. Unmarked cells remain available for browsing and manual insertion.
 
 The Notebook is parsed locally in the teacher browser (Notebook v4, up to 2 MiB). Ordinary cells are previewed before insertion; marked exercises load their preset fields. Draft replacement requires confirmation when necessary. The teacher must publish explicitly; the app blocks an unintended empty starter or uninserted code combination. Advanced combination, test settings and the lesson library are collapsed by default. Mark teacher reference cells with `// @classlab answer` or Metadata role `answer` / `reference` so the import controls cannot insert them into a student task. Keep private answers and hidden inputs out of the public description and starter code; do not distribute a teacher Notebook containing them.
 
