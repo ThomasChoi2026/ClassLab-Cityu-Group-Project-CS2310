@@ -557,7 +557,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
         response.set_header("Cache-Control", "no-store");
         response.set_file_content(CLASSLAB_WEB_DIR "/student.html", "text/html; charset=utf-8");
     });
-    server.Get(R"(/(app\.js|diff\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
+    server.Get(R"(/(app\.js|diff\.js|notebook\.js|style\.css|vendor/qrcode\.js))", [](const Request& request, Response& response) {
         response.set_header("Cache-Control", "no-store");
         const auto type = request.path.ends_with(".js") ? "text/javascript" : "text/css";
         response.set_file_content(std::string(CLASSLAB_WEB_DIR) + request.path, type);
