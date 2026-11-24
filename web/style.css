@@ -45,6 +45,12 @@ button:disabled { opacity: .6; cursor: wait; }
 :focus-visible { outline: 2px solid #118979; outline-offset: 2px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
 .section-heading span { color: var(--muted); font-size: .8rem; }
+.progress-heading { align-items: center; flex-wrap: wrap; }
+.progress-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .6rem; }
+.progress-actions #refresh-state { color: var(--muted); font-size: .8rem; }
+.run-result-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin-top: .75rem; }
+.run-result-actions .inline-status { margin: 0; }
+.run-result-actions textarea { flex-basis: 100%; font-family: ui-monospace, monospace; }
 .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
 .metrics div { background: #eef7f4; padding: .7rem; border-radius: 8px; }
 .metrics dt { color: var(--muted); font-size: .8rem; }
