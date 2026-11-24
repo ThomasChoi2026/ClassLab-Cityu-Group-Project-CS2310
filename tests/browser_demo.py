@@ -111,7 +111,7 @@ def rehearse(browser, base, evidence_dir=None):
     with teacher.expect_download() as csv_download:
         teacher.locator("#export-current-csv").click()
     csv_raw = Path(csv_download.value.path()).read_bytes()
-    assert csv_raw.startswith(b"\\xef\\xbb\\xbf")
+    assert csv_raw.startswith(b"\xef\xbb\xbf")
     csv_rows = list(csv.DictReader(StringIO(csv_raw.decode("utf-8-sig"))))
     assert len(csv_rows) == 3
     assert {row["Mode"] for row in csv_rows} == {"Demo"}
