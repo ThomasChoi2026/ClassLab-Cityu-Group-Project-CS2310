@@ -38,6 +38,7 @@
       if (meta !== undefined) return fail("ClassLab Metadata 必须与开头的合法 exercise 标记配合。");
       return cell;
     }
+    if (marker[1] !== undefined && !marker[1].trim()) return fail("互动标记的冒号后须提供标题，或省略冒号。");
     // Exact %%cpp is the only removable magic. Keep C++ text verbatim except
     // the wrapper and leading whitespace. The marker itself remains a comment.
     if (/^(?:[ \t]*[%!]|[ \t]*(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\())/m.test(source) ||
@@ -61,7 +62,7 @@
       return fail("测试用例缺少字段、长度超限或可见性无效；请修正 Notebook。");
     }
     if (!pitfalls.every(p => fields(p, ["name", "note", "needle", "testNumber"]) &&
-        str(p.name, 80, 240, true) && str(p.note ?? "", 400, 1200) && str(p.needle ?? "", 200, 640) &&
+        str(p.name, 60, 240, true) && str(p.note ?? "", 300, 1200) && str(p.needle ?? "", 160, 640) &&
         (p.needle == null || p.needle === "" || p.needle.trim()) &&
         (p.testNumber === undefined || p.testNumber === "" ||
          (typeof p.testNumber === "string" && /^(?:[1-9]|1[0-2])$/.test(p.testNumber) && Number(p.testNumber) <= testCases.length)) &&
