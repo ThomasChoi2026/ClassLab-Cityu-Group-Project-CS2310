@@ -243,7 +243,7 @@ function initializeNotebookImport(form, loadExercise) {
     if (cell.kind === "markdown") return "markdown";
     const source = cell.code.trimStart();
     const magic = source.match(/^%%([\w-]+)/)?.[1]?.toLowerCase();
-    if (magic) return magic === "cpp" || magic === "hermes" ? "cpp" : "other";
+    if (magic) return magic === "cpp" && /^%%cpp[ \t]*(?:\r?\n|$)/.test(source) ? "cpp" : "other";
     if (/^(?:from\s+\S+\s+import\s+|import\s+\w+|def\s+\w+\s*\()/m.test(source)) return "other";
     return /(?:#\s*include\s*[<"]|\bstd::|\b(?:int\s+main|class|struct|template|constexpr|using\s+namespace)\b)/.test(source)
       ? "cpp" : "other";
@@ -598,12 +598,14 @@ function initializeTeacher() {
   const management = byId("management-view");
   const classroom = byId("classroom-view");
   const toggle = byId("toggle-classroom");
+  let lastExerciseDraft = null;
   initializeNotebookImport(byId("publish"), lesson => {
     const previous = draftValues();
     const occupied = ["title", "description", "starterCode"].some(key => previous[key]?.trim()) || previous.testCases.length || previous.pitfalls.length;
-    if (occupied && !confirm("载入互动练习将替换当前题目、代码、测试用例及易错点。请先保存需要的草稿。确定载入？")) return false;
+    if (occupied && JSON.stringify(previous) !== lastExerciseDraft && !confirm("载入互动练习将替换当前题目、代码、测试用例及易错点。请先保存需要的草稿。确定载入？")) return false;
     restoreCompose(lesson);
     detachDraft();
+    lastExerciseDraft = JSON.stringify(draftValues());
     return true;
   });
 
