@@ -52,6 +52,7 @@ if(BUILD_TESTING)
     add_test(NAME score_lecture_cpp20
         COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/score_lecture.py" "${CMAKE_CXX_COMPILER}")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_test(NAME native_interactive_real_flow COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/interactive_native.py" $<TARGET_FILE:classlab>)
         add_test(NAME trusted_native_real_flow COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/tests/trusted_native.py" $<TARGET_FILE:classlab>)
     endif()
     add_test(NAME native_stdin_probe

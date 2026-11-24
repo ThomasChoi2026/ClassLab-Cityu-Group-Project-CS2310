@@ -54,6 +54,8 @@ jobs:
           .venv/bin/python tests/browser_run_first.py ./build/classlab
           .venv/bin/python tests/browser_classroom_export.py http://127.0.0.1:18080
           .venv/bin/python tests/browser_run_output.py http://127.0.0.1:18080
+      - name: Actual Chromium plus GCC persistent stdin
+        run: .venv/bin/python tests/browser_interactive_native.py ./build/classlab
       - name: Upload accepted classroom screenshots
         uses: actions/upload-artifact@v4
         with:

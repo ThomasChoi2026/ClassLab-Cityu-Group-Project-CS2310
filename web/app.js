@@ -1700,6 +1700,11 @@ function initializeStudent() {
   async function pollLive() {
     const run = live;
     if (!run?.id || livePolling || liveAction) return;
+    if (Date.now() - run.started > 150000) {
+      forgetLive();
+      showRunResult({status: "request_error", error: "执行会话已超过最大生命周期，请重新运行。"});
+      return;
+    }
     livePolling = true;
     const revision = run.revision || 0;
     try {
@@ -1850,7 +1855,7 @@ function initializeStudent() {
     panel.hidden = true;
     panel.replaceChildren();
     if (interactive) {
-      const run = {taskId, code, id: null, status: "compiling", stdinOpen: false};
+      const run = {taskId, code, id: null, status: "compiling", stdinOpen: false, started: Date.now()};
       live = run;
       input.value = "";
       syncRunControls();
