@@ -49,7 +49,12 @@ jobs:
                   if p.is_closed(): return
                   sequence+=1
                   stem=f'{sequence:03d}-{current}-{label}'
+                  if label.startswith('real-gcc-') or label in ['run-stopped','unapproved-source-rejected']:
+                      p.locator('#run-result').scroll_into_view_if_needed()
+                  if label=='real-graded-submission': p.locator('#student-result').scroll_into_view_if_needed()
+                  if label=='real-teacher-accepted': p.locator('#classroom-progress').scroll_into_view_if_needed()
                   p.screenshot(path=str(OUT/(stem+'.png')),animations='disabled')
+                  if label.startswith('real-'): p.screenshot(path=str(OUT/(stem+'-full.png')),full_page=True,animations='disabled')
                   print('CAPTURE',stem,flush=True)
               except Exception as exc:
                   print('Capture warning',str(exc)[:150],flush=True)
@@ -98,7 +103,7 @@ jobs:
           after('    expect(panel.locator("pre")).to_have_text("150",timeout=12000)','shot(student,"real-gcc-150")')
           after('    expect(panel).to_contain_text("Stopped",timeout=10000)','shot(student,"run-stopped")')
           after('    expect(panel).to_contain_text("Source not approved by the local operator",timeout=10000)','shot(student,"unapproved-source-rejected")')
-          after('    assert not errors,errors','editor.fill(correct)\n    student.locator("#submit-code").click()\n    expect(student.locator("#submit-feedback")).to_contain_text("Code submitted")\n    expect(teacher.locator("#accepted")).to_have_text("1",timeout=60000)\n    shot(student,"real-graded-submission")\n    shot(teacher,"real-teacher-accepted")')
+          after('    assert not errors,errors','editor.fill(correct)\n    student.locator("#submit-code").click()\n    expect(student.locator("#submit-feedback")).to_contain_text("Code saved")\n    expect(teacher.locator("#accepted")).to_have_text("1",timeout=60000)\n    shot(student,"real-graded-submission")\n    shot(teacher,"real-teacher-accepted")')
           native.write_text(src)
           sys.path.insert(0,str(ROOT/'tests'))
           sys.argv=[str(native),str(ROOT/'build/classlab')]
