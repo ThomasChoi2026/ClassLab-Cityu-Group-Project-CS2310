@@ -1,0 +1,134 @@
+name: Temporary ClassLab product capture
+on:
+  push:
+    branches: [capture/product-materials-20261124]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare isolated capture environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/classlab-capture/source
+          git archive 36c5c0eac78f4d8cd909ff4a43b3b0957c5e2e3b | tar -x -C /tmp/classlab-capture/source
+          cd /tmp/classlab-capture
+          cat > Dockerfile <<'EOF'
+          FROM mcr.microsoft.com/playwright/python:v1.51.1-noble
+          RUN apt-get update && apt-get install -y --no-install-recommends g++ cmake make ca-certificates && rm -rf /var/lib/apt/lists/*
+          RUN python -m pip install --no-cache-dir playwright==1.51.1 pillow zxing-cpp
+          WORKDIR /work
+          COPY source/ /work/
+          RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
+          COPY capture.py /work/capture.py
+          RUN mkdir -p /out/videos && chown -R pwuser:pwuser /out /work
+          USER pwuser
+          CMD ["python","/work/capture.py"]
+          EOF
+          cat > capture.py <<'PY'
+          import os, sys, runpy, subprocess, tempfile, json, re, shutil
+          from pathlib import Path
+          from playwright.sync_api import Browser, Page, Locator
+          ROOT=Path('/work')
+          OUT=Path('/out')
+          assert os.geteuid()!=0
+          sequence=0
+          current='native'
+          def shot(p,label):
+              global sequence
+              try:
+                  if p.is_closed(): return
+                  sequence+=1
+                  stem=f'{sequence:03d}-{current}-{label}'
+                  p.screenshot(path=str(OUT/(stem+'.png')),animations='disabled')
+                  print('CAPTURE',stem,flush=True)
+              except Exception as exc:
+                  print('Capture warning',str(exc)[:150],flush=True)
+          orig_context=Browser.new_context
+          def context(self,**kw):
+              kw['record_video_dir']=str(OUT/'videos')
+              kw['record_video_size']={'width':1440,'height':900}
+              return orig_context(self,**kw)
+          Browser.new_context=context
+          orig_goto=Page.goto
+          def goto(self,*a,**kw):
+              result=orig_goto(self,*a,**kw)
+              shot(self,'page-open')
+              return result
+          Page.goto=goto
+          orig_click=Locator.click
+          def click(self,*a,**kw):
+              result=orig_click(self,*a,**kw)
+              label=str(self).lower()
+              if any(k in label for k in ['dialog','guide','publish','run-code','send-stdin','stop-run','submit-code','show-qr','notebook-list','toggle-classroom','export-current','create','join','common','history','summary']):
+                  shot(self.page,'click')
+              return result
+          Locator.click=click
+          orig_fill=Locator.fill
+          def fill(self,*a,**kw):
+              result=orig_fill(self,*a,**kw)
+              if any(k in str(self) for k in ['runInput','run-stdin','student-code','notebook-search','join input']):
+                  shot(self.page,'input')
+              return result
+          Locator.fill=fill
+          orig_upload=Locator.set_input_files
+          def upload(self,*a,**kw):
+              result=orig_upload(self,*a,**kw)
+              self.page.wait_for_timeout(350)
+              shot(self.page,'notebook-upload')
+              return result
+          Locator.set_input_files=upload
+          # Insert explicit post-condition screenshots into a disposable test copy.
+          native=ROOT/'tests/browser_interactive_native.py'
+          src=native.read_text()
+          def after(line,code):
+              global src
+              assert src.count(line)==1,(line,src.count(line))
+              src=src.replace(line,line+'\n    '+code,1)
+          after('    expect(panel.locator("pre")).to_have_text("100")','shot(student,"real-gcc-100")')
+          after('    expect(panel.locator("pre")).to_have_text("150",timeout=12000)','shot(student,"real-gcc-150")')
+          after('    expect(panel).to_contain_text("Stopped",timeout=10000)','shot(student,"run-stopped")')
+          after('    expect(panel).to_contain_text("Source not approved by the local operator",timeout=10000)','shot(student,"unapproved-source-rejected")')
+          after('    assert not errors,errors','editor.fill(correct)\n    student.locator("#submit-code").click()\n    expect(student.locator("#submit-feedback")).to_contain_text("Code submitted")\n    expect(teacher.locator("#accepted")).to_have_text("1",timeout=60000)\n    shot(student,"real-graded-submission")\n    shot(teacher,"real-teacher-accepted")')
+          native.write_text(src)
+          sys.path.insert(0,str(ROOT/'tests'))
+          sys.argv=[str(native),str(ROOT/'build/classlab')]
+          runpy.run_path(str(native),run_name='__main__')
+          current='classroom'
+          # The existing notebook acceptance script exercises all five tasks.
+          # Run with the actual server and temporary data, no simulated grades.
+          import workflow
+          with tempfile.TemporaryDirectory() as td, workflow.server(Path(td)/'rooms.json') as base:
+              for filename in ['browser_notebook_classroom.py','browser_teacher_ux.py','browser_classroom_records.py','browser_classroom_export.py','browser_run_output.py']:
+                  current=filename.removeprefix('browser_').removesuffix('.py')
+                  path=ROOT/'tests'/filename
+                  sys.argv=[str(path),base]
+                  if filename=='browser_notebook_classroom.py':
+                      sys.argv+=['--evidence-dir',str(OUT/'notebook-evidence')]
+                  runpy.run_path(str(path),run_name='__main__')
+          (OUT/'COMPLETE.txt').write_text('Real browser acceptance capture completed. Native sequence uses actual reviewed GCC. Classroom sequence uses real no-Judge submissions.')
+          PY
+          docker build -t classlab-capture-local .
+      - name: Capture real browser operation without host credentials or external network
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/classlab-material"
+          cid=$(docker create --network none --cap-drop ALL --security-opt no-new-privileges --shm-size 1g --pids-limit 512 classlab-capture-local)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          status=0
+          docker start -a "$cid" || status=$?
+          docker cp "$cid:/out/." "${RUNNER_TEMP}/classlab-material/"
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: classlab-product-material
+          path: ${{ runner.temp }}/classlab-material/
+          if-no-files-found: warn
