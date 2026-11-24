@@ -1,56 +1,223 @@
 # ClassLab
 
-ClassLab 是 CityUHK CS2310 的 C++ Agentic Coding Project。教师可以在课堂上发布 C++ 练习，学生通过链接获取题目、编辑并提交代码，教师可以看到班级的参与和提交进度。
+**Turn C++ lecture notebooks into interactive classroom exercises.**
 
-ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers prepare exercises from Notebook cells, add public or hidden tests and anticipated pitfalls, and publish to a classroom. Students join by QR code, edit and submit code, and review their own attempts. Teachers can inspect per-student diffs and class-wide submission and test evidence.
+City University of Hong Kong · CS2310 Computer Programming · Agentic Coding Group Project
 
-[English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
+ClassLab connects a teacher's existing Jupyter Notebook to a live classroom. Teachers select exercises, publish starter code and tests, and share a QR code. Students edit and submit C++ in their browsers. The teacher can then inspect common code changes, test failures and class participation to decide what to explain next.
 
-## 当前开发与快速验收
+The project's distinctive contribution is this **Notebook → exercise → student submissions → classroom feedback** workflow. It complements existing C++ visualizers and automated judges rather than recreating them.
 
-ClassLab 持续开发。`main` 保留最近经过验证的版本，是复现和后续开发的起点。新任务从最新 `main` 创建独立功能分支，经测试和审核后合并。各阶段分支保留供查阅和协作。
+[Quick Start](#quick-start) · [Classroom Demo](#one-minute-classroom-demo) · [Teacher Guide](#teacher-workflow) · [Student Guide](#student-workflow) · [Testing](#testing-and-evidence) · [Team](#team-contributions)
 
-在 Linux 或 WSL 中运行下列命令。需要 Git、CMake 3.24+、C++20 编译器和 Python 3；首次构建需联网。
+## Quick Start
 
-~~~sh
+**Choose one of two launch modes. Both use the same source code on main.** No separate website, branch or Docker installation is needed to try the classroom workflow.
+
+### 1. Build once
+
+Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C++20 compiler (such as GCC), and Python 3. Node.js is needed for the complete test suite. The first build requires internet access to fetch pinned dependencies. No separate frontend build is required.
+
+For a fresh checkout:
+
+~~~bash
 git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
-python3 demo/run.py
 ~~~
 
-打开 <http://127.0.0.1:8080>。从仓库下载 [完整成绩分析教学 Notebook](examples/CS2310_Score_Analysis.ipynb) 到教师设备，创建课堂，进入「课前备课」并直接上传文件。默认显示 5 道互动练习（共 74 Cell），选择 **Fix the grade boundary（Cell 22）** 自动载入题目与用例，检查后发布。学生输入 `60` 回放时，错误版本显示 `FAIL`；将 `score > 60` 修正为 `score >= 60` 后显示 `PASS`。一人提交错误版本、两人提交修正版，教师端显示 3 人提交、2 人通过、1 人失败及共同修改。教师页面与学生设备须访问同一地址。
+If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. Ensure the checkout contains the latest desired main revision before building; preserve any uncommitted work.
 
-演示中的加入、源代码和人数都是实时数据，评测使用标明的固定回放。任意新代码不会在演示中执行。普通课堂服务使用下方的启动命令，真实评测仍须通过独立 Judge 的隔离验收。
+~~~bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 2
+~~~
 
-### 演示每周课表与时间冲突
+### 2. Choose a mode
 
-1. 创建课堂，在教师工作台展开 **每周课表**。加入课堂的学生也可展开课表查看已保存的时段。
-2. 添加 **CS2310 Lecture**，选择星期一 **10:00–12:00**。再添加 **CS2310 Lab**，选择星期一 **11:00–13:00**。提示会列出与 Lecture 重叠的 **11:00–12:00**，并保留 Lab 的输入供修改。
-3. 将 Lab 的开始时间改为 **12:00** 再提交即可保存。课表按星期和开始时间排列。教师可移除时段，学生页面会自动更新。每个课堂独立保存一份每周重复的课表，每个时段须在同一天内结束。
+#### A. Normal Mode — 正式课堂模式 (port 8080)
 
-### 教师如何解读反馈
+~~~bash
+CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab
+~~~
 
-- 提交详情逐行对齐，保留空格、空行和末尾换行的差异，统一 CRLF/LF。大范围重写超出对齐预算时直接展示完整源码。
-- 共同修改按每人本题最后一次提交计数。仅收录去除相同首尾后，原文和新文各不超过三行、每行不超过 240 字节的修改。相同位置和内容至少出现两次才显示，按人数取前六组。
-- 每组直接列出这些学生的评测状态。教师可结合各用例的失败类型、编译器诊断原文和示例提交判断是否重讲。相同修改或共同失败本身不能确定学生的思路。
+Open **http://127.0.0.1:8080** on the same machine, or use the private Codespaces preview for port **8080**.
 
-## 开发记录
+Create a classroom, import a Notebook or paste any C++ starter code, and collect actual student submissions. Classroom data persists in `data/classrooms.json` by default.
 
-| 阶段 | 主要变化 | 代表提交 |
+**The command above deliberately launches without a Judge.** Code submission, class progress and source comparison still work. Native Run and automatic grading require a separately installed and security-accepted Judge (see [Judge deployment](docs/PHASE_4.md)). The external OPT CPP link remains available.
+
+#### B. Demo Mode — 作业演示模式 (port 8082)
+
+~~~bash
+python3 demo/run.py --port 8082
+~~~
+
+Open **http://127.0.0.1:8082** on the same machine, or use the private Codespaces preview for port **8082**.
+
+A yellow banner identifies Demo Mode. It supports the full classroom workflow and **clearly labelled prerecorded results** for the supplied teaching exercises. It does not compile or execute arbitrary student source code. Classroom data is temporary and is removed on normal shutdown.
+
+For a one-command build, test and Demo launch from a fresh checkout, use `bash demo/start_coursework.sh 8082` instead.
+
+### 3. Open the correct page in Codespaces
+
+1. On GitHub, open the repository's **main** branch and choose **Code → Codespaces**.
+2. Build and launch the desired mode in the Codespace terminal using the commands above.
+3. Open the **Ports** panel. Forward **8080** for Normal Mode or **8082** for Demo Mode, keep the port **Private**, and click **Open in Browser**.
+4. The forwarded HTTPS URL opens the teacher page. Students use its generated join link or QR code. Other devices need a GitHub account authorized to access that private preview.
+
+The two modes can run simultaneously in separate terminals on these ports. Stop either with **Ctrl+C** in its terminal. Do not expose the Judge socket or the Demo service publicly. If the browser cannot open a forwarded page, first check that the matching server is running and that its port is forwarded correctly.
+
+### Normal Mode vs. Demo Mode
+
+| Capability | Normal Mode (8080) | Demo Mode (8082) |
 | --- | --- | --- |
-| Initial / MVP | 项目初始化、课堂发布、学生提交和教师统计 | `19b0c3d`、`4fb68b0` |
-| Phase 2 | 二维码加入和跨设备体验 | `0c76b02` |
-| Phase 3 | 公开与隐藏测试、评测反馈和课堂统计 | `92a93ef` |
-| Phase 4 | 独立 C++ Judge 与判题接入 | `1b27053` |
-| Phase 5 | 持久化评测队列与限额检查 | `4bcae25` |
-| Phase 6 | Notebook 导入、投影和受限演示 | `f9ae94f`、`4bfc3e8` |
-| Classroom Analysis | 代码逐行对比、全班共性和诊断分组 | `959e256` |
-| Teaching Workflow | 多单元备课、练习库和预期易错点反馈 | `a7dda84` |
+| Classroom creation, QR join, Notebook import | Yes | Yes |
+| Code editing, submissions, classroom analytics | Real classroom records | Real classroom records |
+| Native Run and automatic grading | Requires a validated Judge | Prerecorded fixture results only |
+| Arbitrary C++20 execution | Only with a validated Judge | No |
+| External OPT CPP handoff | Yes | Yes |
+| Server-side classroom data | Persistent | Temporary |
+| Yellow Demo banner | No | Yes |
 
-完整提交、作者及分支关系可在 [main 提交历史](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/) 或通过 `git log --graph --oneline --all` 查看。
+## One-minute classroom demo
+
+**Use Demo Mode for a reliable coursework presentation without configuring a native Judge.**
+
+Download the full original teaching Notebook: [CS2310_Score_Analysis.ipynb](examples/CS2310_Score_Analysis.ipynb). On GitHub, open the file and click **Download raw file**. Save it to the computer running the teacher's browser. This is the current 74-cell lecture, not either of the legacy synthetic addition notebooks.
+
+1. Create a classroom and switch to **课前备课 (Lesson Preparation)**.
+2. Upload the downloaded Notebook directly. ClassLab identifies **5 exercises among 74 cells**. Select **Fix the grade boundary — Cell 22**.
+3. Review the automatically populated title, description, starter code, five test cases (three public, two hidden) and teacher-only pitfall. Click **发布为当前任务 (Publish)**. Do not use the legacy three-case fill button.
+4. Open the student join link in separate browser sessions. Click **演示 Run（回放）**, enter the public input `60`, then click again. The starter produces the prerecorded output `FAIL`. Replace only `score > 60` with `score >= 60`; the same input now produces the prerecorded output `PASS`.
+5. Have one student submit the starter and two submit the exact corrected code. The teacher dashboard shows **3 submitted, 2 accepted, 1 failed**. Open the shared code change, explain the boundary error, and choose the next exercise without re-uploading the Notebook.
+
+In a single-minute presentation, prepare the browser sessions and example submissions in advance. The interaction and stored submission records are real; the Demo verdicts are not live C++ execution.
+
+[Detailed rehearsal guide and 60-second English script](docs/COURSEWORK_DEMO.md) · [Verified browser screenshots](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934/artifacts/14903579794) (GitHub access and artifact retention apply)
+
+## Teacher workflow
+
+| Stage | What the teacher does |
+| --- | --- |
+| Prepare | Choose **快速课堂 (Quick Classroom)** to paste C++, or **课前备课 (Lesson Preparation)** to import a Notebook and manage locally saved exercises. |
+| Configure | Set the task title, optional public description, starter code, up to 12 public/hidden test cases and up to 8 anticipated pitfalls. |
+| Publish | Review the editor and publish explicitly; importing or selecting a Notebook cell does not publish a task. |
+| Share | Invite students using the join link or QR code; switch to classroom projection for a simplified class display. |
+| Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
+| Continue | Publish the next exercise; the imported Notebook remains available and the dashboard switches to the active task. |
+
+Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records.
+
+### Notebook classroom integration
+
+Add a marker as the first nonblank line of a C++ Code Cell (or the first nonblank line after a bare `%%cpp`):
+
+~~~cpp
+// @classlab exercise: Fix the grade boundary
+#include <iostream>
+
+int main() {
+    int score;
+    std::cin >> score;
+    if (score > 60) std::cout << "PASS\n";
+    else std::cout << "FAIL\n";
+}
+~~~
+
+The shorter `// @classlab exercise` also works and uses the original cell number as the default title. Optional `metadata.classlab` supplies the task description, tests and anticipated pitfalls. Without markers, the ordinary Notebook browser remains available, including search, filtering, previews and multi-cell code assembly.
+
+The Notebook is parsed locally in the teacher browser (Notebook v4, up to 2 MiB). Loading an exercise protects edited drafts with a confirmation and requires a separate publish action. Mark teacher reference cells with `// @classlab answer` or Metadata role `answer` / `reference` so the import controls cannot insert them into a student task. Keep private answers and hidden inputs out of the public description and starter code; do not distribute a teacher Notebook containing them.
+
+| Original lecture cell | Interactive exercise | Learning objective |
+| ---: | --- | --- |
+| 22 | Fix the grade boundary | Conditional boundaries |
+| 35 | Debug the accumulation loop | Loop iteration counts |
+| 48 | Find the maximum correctly | Array traversal and initialization |
+| 63 | Fix the average function | Numeric types and integer division |
+| 72 | Complete the score analyser | Function decomposition and transfer |
+
+All five support exact-source Demo playback. The full lecture also contains 22 ordinary teaching programs; the five reference implementations are separate from the Notebook.
+
+[Marker and Metadata specification](docs/NOTEBOOK_CLASSROOM.md) · [Full lecture](examples/CS2310_Score_Analysis.ipynb) · [Separate instructor references](examples/score_analysis_references.json)
+
+## Student workflow
+
+Join through the teacher's QR code or link, enter a nickname, and work on the current exercise in the browser.
+
+- **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
+- **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
+- **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
+- **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source and optional external stdin. It remains a separate tool; ClassLab does not import its runtime output as a grade.
+
+For long source code, the external handoff offers a blank visualizer link and manual copy controls. The external site can read the transmitted source and input; avoid sending sensitive information.
+
+[Detailed student controls and external-tool privacy](docs/COURSE_DELIVERY.md#student-workflow)
+
+## Architecture
+
+~~~text
+Teacher browser                         Student browsers
+Notebook parser / exercise editor       C++ editor / Run / Submit
+                   \                       /
+                    HTTP classroom API
+                            |
+                   C++20 ClassLab server
+             Classroom records / queue / analytics
+                            |
+                     Private Unix socket
+                     /                  \
+        Normal: isolated Judge       Demo: fixed fixtures
+        (validated host required)   (no arbitrary execution)
+~~~
+
+| Path | Responsibility |
+| --- | --- |
+| `web/` | Teacher and student interfaces, Notebook parsing, QR generation and code comparison |
+| `src/` | C++20 HTTP server, classroom permissions, persistence, submission queue and Judge client |
+| `judge/` | Independent C++20 execution worker with deployment isolation checks |
+| `demo/` | Explicitly labelled fixed-result classroom rehearsal with temporary storage |
+| `examples/` | Original teaching Notebook, separate sample references and legacy examples |
+| `tests/` | CTest, protocol checks, trusted C++ fixtures and Playwright browser regression |
+| `docs/` | Deployment, classroom usage and development review |
+
+The server uses cpp-httplib and nlohmann/json. Classroom progress refreshes every two seconds; hidden tests are filtered from student-facing task and result details. The browser holds its own role-specific access key and drafts.
+
+## Testing and evidence
+
+From the repository root after building:
+
+~~~bash
+ctest --test-dir build --output-on-failure
+~~~
+
+The Notebook classroom acceptance workflow at commit `0eb71c2` passed **11/11 CTest suites** with Node.js installed, plus five Chromium browser checks. This includes the 135-cell marker parser, draft protection, private test visibility, original OPT CPP handoff, student history, teacher workflow and full marked-Notebook classroom rehearsal. The lecture test actually compiled and ran 27 code cells and five reference implementations, and verified the 23 exercise cases against both source variants and Demo fixtures.
+
+[Successful GitHub Actions run](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934) · [Notebook integration PR #16](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/16) · [All workflows](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions)
+
+For local browser acceptance, install Playwright, Chromium, Pillow and zxing-cpp and follow the [rehearsal guide](docs/COURSEWORK_DEMO.md).
+
+**Verification boundary:** trusted lecture compilation and mock-Judge browser tests do not establish that arbitrary student programs can safely run on a particular host. Full production isolation acceptance is still required.
+
+## Native Judge deployment and current limitations
+
+Normal Mode defaults to submission collection without a Judge. For real C++20 execution, follow the [Judge deployment and security acceptance guide](docs/PHASE_4.md) on a suitable dedicated Linux host. Only after acceptance, configure the Web server to connect to the running Judge:
+
+~~~bash
+CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 \
+  CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock ./build/classlab
+~~~
+
+The example assumes the approved worker is already running at that socket path. Do not bypass the sandbox checks or run arbitrary submissions directly on the Web host. A Codespace with Docker installed is not automatically a valid Judge host.
+
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| CLASSLAB_HOST | 127.0.0.1 | Web listen address |
+| CLASSLAB_PORT | 8080 | Web listen port |
+| CLASSLAB_DATA | data/classrooms.json | Normal classroom store; one server per file |
+| CLASSLAB_JUDGE_SOCKET | empty | Path to an accepted local execution service |
+| CLASSLAB_DEMO | unset | Managed by the Demo launcher; do not manually enable replay in Normal Mode |
+
+ClassLab is a coursework prototype for small, trusted classrooms, not a public production SaaS platform. Nicknames are not verified accounts; browser access keys must be retained. The server has no account recovery, multi-process storage or public deployment protection. Demo replay recognizes only registered source variants and inputs: a different correct solution may have no corresponding fixture. Public deployment and long-term operations are outside the coursework scope.
 
 ## Team Contributions
 
@@ -67,116 +234,16 @@ The table records CS2310 team accounts and the work traceable to their original 
 
 See the [classroom MVP commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/4fb68b0921305a08e3cad88a62193acf9f17237e) and [Notebook lesson preparation commit](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commit/a7dda8450da2b95796ecc2d80550e4aaa537a7d5) for development records.
 
-## 开发阶段验收与演示
+## Development and further documentation
 
-GitHub 保存完整代码、构建与测试命令，供组员协作和教授复现。课堂分析阶段在 WSL 完成构建和测试。课堂演示可直接使用本机浏览器，也可使用已有的临时私有预览。
+The latest verified source is maintained on main. New work uses feature branches, automated tests and pull requests. Merge commits preserve original team authors and history.
 
-验收重点是从干净目录构建、运行测试，并演示创建课堂、发布任务、学生提交和教师看到状态的完整流程。公开部署、长期运营和商业级账户系统不在本课程交付范围内。未经验证的隔离环境不得执行学生提交的 C++ 代码。
-
-## 构建与运行
-
-需要 Linux、支持 C++20 的编译器、CMake 3.24 或更新版本，以及用于运行测试的 Python 3。首次构建从 GitHub 下载固定版本的 cpp-httplib 和 nlohmann/json，并校验 SHA-256。前端无需单独构建。
-
-~~~sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-./build/classlab
-~~~
-
-从仓库根目录启动后，在同一台机器的浏览器打开 http://127.0.0.1:8080 。教师创建课堂后可以复制加入链接，也可以点击二维码放大投影。发布标题、说明和 C++ 起始代码后，学生可扫码或打开链接填写昵称、编辑并提交。可以在同一浏览器的另一个标签页扮演学生。
-
-课堂进度每两秒刷新，显示全班加入人数、当前任务已提交人数、提交总次数，以及每位学生的提交状态和次数。发布新任务后统计切换为新任务，历史任务和提交仍保存在数据文件中。学生页面会自动接收新任务。身份及各题草稿保存在此浏览器和站点地址下，刷新页面可恢复当前任务的未提交草稿。
-
-## Native Run-first practice (Judge required)
-
-The student editor initially hides stdin. When the isolated ClassLab Judge is available, the first **运行代码** click runs a disposable probe with a one-byte stdin file. The trusted wrapper checks whether the program **actually consumed stdin**, supporting ordinary C++ `cin`, `getline`, C `scanf` and POSIX `read(0,...)` without inspecting source text. If stdin was consumed, ClassLab shows the input box and the student clicks Run again; this performs a **fresh execution from the start** with the supplied input, not a live resumable session. If no stdin was read, the first run's output appears immediately. Compilation errors and execution-limit errors appear normally. Input is reset when the task changes.
-
-This feature does **not** enable or weaken the native Judge: without a separately configured and security-accepted Docker/gVisor worker, the native Run button stays disabled and official grading remains unavailable. OPT CPP remains a separate external link, not an embedded runtime. The teammate's original **抄送至OPT_CPP** button sits beside Copy Code for a single-click external tab. An optional collapsed OPT CPP input field is independent from native Judge stdin.
-
-The new trusted-fixture test `tests/stdin_probe.py` runs only hard-coded C++20 programs on the host. It does not certify untrusted-code isolation, which still requires the checks in `docs/PHASE_4.md`.
-
-## Student editor and external practice
-
-Students can restore the teacher's starter code, download their current editor contents as a .cpp file, and review the newest 50 formal submissions for the current task. The original **抄送至OPT_CPP** control opens the external visualizer in one click with the current code and optional external-practice stdin. It is available even when the ClassLab Judge is disabled.
-
-See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
-
-## Notebook Classroom Integration
-
-在普通 C++ Code Cell 的第一条非空行（或裸 `%%cpp` 后第一条非空行）添加：
-
-```cpp
-// @classlab exercise: Fix the grade boundary
-#include <iostream>
-int main() {
-    int score;
-    std::cin >> score;
-    std::cout << (score > 60 ? "PASS" : "FAIL") << '\n';
-}
-```
-
-- 省略冒号和标题即可使用原始 Cell 编号自动命名。进入 **课前备课 → 直接上传 Notebook → 选择互动练习**，自动载入预设内容。无标记 Notebook 仍显示全部 Cell，普通搜索、筛选、预览、组合继续可用。
-- 在可选 Cell Metadata 中填写公开说明、公开/隐藏测试、预期输出及易错点。检查后手动发布；上传不会覆盖草稿或自动发布。已编辑的草稿需确认才会被互动练习替换，发布后可直接选择下一题。
-- 教师答案请单独保存，或使用 `// @classlab answer` / Metadata role=answer/reference，使其仅可预览。隐藏测试和易错点不进入学生端任务数据。不要把私密材料写进公开说明或起始代码。
-- [标记及 Metadata 完整规范](docs/NOTEBOOK_CLASSROOM.md) · [完整教学 Notebook（74 Cells / 5 题）](examples/CS2310_Score_Analysis.ipynb) · [课堂 Demo 指南](docs/COURSEWORK_DEMO.md)。
-
-教师可以通过原有练习库保存、更新草稿，或在全班分析中查看用例失败与源码片段命中情况；这些是复核线索，不应直接认定学生的思路。
-
-原创示例 [polymorphism-slicing.ipynb](examples/polymorphism-slicing.ipynb) 包含继承层次、接收参数的函数及 main，分三个代码单元。组合后，输入 0 预期输出 animal，输入 1 预期输出 meow。起始版本把 Cat 按 Animal 值传递，实际输出 animal。学生将参数改为 const Animal& animal 后可保留动态派发。教师可用 const Animal animal 作为复核片段，并关联第二个用例。CTest 编译并运行这两个固定示例，还验证错误的 override 签名产生编译诊断。
-
-当前 Codex Cloud 的 Docker cgroup driver 为 none，runsc 忽略 cgroups，另一个用户命名空间探针也因 UID 映射只读被拒绝。网页依旧遵守安全门槛。课程范围内优先复用学校已有的专用 Linux VM，配置已有的独立 Judge，验证 CPU、内存、PID、文件和网络限制后再启用。浏览器 WebAssembly 若要接受学生输入的 C++，还需在浏览器提供经过验证的 C++20 编译工具链及执行限制，现有网站没有该能力。课堂文件和学生代码无需发送给外部评测服务。参见 [执行环境验收](docs/PHASE_4.md)。
-
-## Phase 6 教学演示
-
-教师可直接粘贴 C++，也可选择本地的 Notebook v4 文件并将一个代码单元填入任务编辑器。Notebook 只在浏览器解析。教师切换到课堂投影后，屏幕只保留课堂名称、加入二维码、任务标题与汇总进度。
-
-构建完成后，可运行 `bash demo/start_coursework.sh 8082` 进行完整作业演示；它先执行 CTest，再启动临时课堂。演示模式可在学生页面点击「演示 Run（回放）」、输入预置 stdin 并查看明确标注的结果，但**不会编译或执行任意学生 C++**，也不开放正式 Judge。五道完整教学练习支持预置源码/输入回放（自由 Run 仅支持其公开输入），旧版合成题仍可用。用 Ctrl+C 停止并清理演示数据；完整 60 秒流程见 [作业 Demo 指南](docs/COURSEWORK_DEMO.md)。
-
-~~~sh
-python3 demo/run.py
-~~~
-
-[演示用例、完整操作和课程交付检查表](docs/COURSE_DELIVERY.md)
-
-## Phase 5 独立评测与提交队列
-
-配置独立 Judge 后，正式提交先保存到数据文件并立即返回，随后显示等待评测、评测中及最终结果。全站同时保留最多 64 项待评测与评测中任务，按保存顺序逐项处理。队列满时仍保存源码并标记未评测，学生可以稍后重交。学生的最新状态按提交顺序计算，评测完成顺序不会改变它。自由运行继续使用自定义输入，不计入提交次数。
-
-Judge 断线时保留等待项，恢复连接后继续。Web 服务重启时继续处理已保存的等待项，中断的评测记为评测服务错误，避免重复执行。教师可查看等待人数及最新结果。关闭或未配置 Judge 的普通预览仍可保存代码，显示未评测。实际启用步骤和隔离门槛见 [执行与部署验收](docs/PHASE_4.md)。
-
-## 用 GitHub Codespaces 私有预览
-
-在 GitHub 选择要验收的分支，在该分支的 Codespace 网页终端执行同一组构建和启动命令。进入 **Ports** 面板，转发 8080 并保持 **Private**，点 **Open in Browser** 打开教师页。二维码及复制链接都使用此 HTTPS 地址。另一台设备也需要登录有权访问该私有端口的 GitHub 账号。用 Ctrl+C 停止网站，完成后在 GitHub 停止 Codespace。Judge 的 Unix socket 只留在服务端。
-
-判断已有 Codespace 能否作为 Judge 宿主，请在其网页终端运行下列只读命令：
-
-~~~sh
-docker --host unix:///var/run/docker.sock info --format 'cgroup={{.CgroupVersion}} driver={{.CgroupDriver}} security={{json .SecurityOptions}} runsc={{json (index .Runtimes "runsc")}}'
-cat /sys/fs/cgroup/cgroup.controllers
-~~~
-
-Docker 不可达、驱动为 none 或所选运行时忽略 cgroups 时，继续使用仅收件预览。即使输出符合预期，仍需在实际主机通过 [执行验收](docs/PHASE_4.md) 后才能启用学生执行。当前 Codex Cloud 检查结果不能用来判定你的 Codespace。
-
-二维码由浏览器使用随项目提供的 [qrcode-generator 1.4.4](https://www.npmjs.com/package/qrcode-generator/v/1.4.4) 生成，课堂链接不会发送给外部二维码服务。开源许可见 [web/vendor/qrcode.LICENSE](web/vendor/qrcode.LICENSE)。
-
-## 环境变量
-
-| 变量 | 默认值 | 用途 |
-| --- | --- | --- |
-| CLASSLAB_HOST | 127.0.0.1 | 监听地址。本机演示使用默认值，转发服务端口时可设置为 0.0.0.0 |
-| CLASSLAB_PORT | 8080 | 监听端口 |
-| CLASSLAB_JUDGE_SOCKET | 空 | 可选的独立 Judge 本机 Unix socket 路径 |
-| CLASSLAB_DATA | data/classrooms.json | 以进程工作目录为基准的数据文件，可设为绝对路径 |
-
-跨设备演示时，教师应从学生设备可访问的同一站点地址打开教师页，生成的加入链接会沿用该站点地址。在云端运行时需要另行配置支持该端口的访问入口。
-
-## 保存、权限和限制
-
-- C++ 服务保存课堂、任务、学生身份和提交源代码。一个数据文件仅供一个进程使用，进程内通过互斥锁保护读写。每次写入先完成同目录临时文件，再原子替换数据文件。写入失败会向客户端报错，内存状态保留上一次成功保存的版本。
-- 教师在创建课堂时获得独立访问密钥，发布任务和读取进度都需要该密钥。知道加入链接的人可以用昵称加入，学生使用独立随机会话密钥访问题目和提交。教师密钥、学生会话和草稿保存在浏览器本地。清除浏览器数据会丢失相应访问权限和草稿。每个浏览器来源的教师页面目前保留一个课堂，没有课堂列表、教师账号或密钥恢复功能。
-- MVP 用于小规模、受信任的课堂演示。昵称未验证，加入链接可转发。数据文件需由运行者妥善保护。每次写入会重写数据快照，尚无跨进程扩容、断电持久性保证、数据清理策略或公网运营所需的登录、限流和 HTTPS。跨设备演示所用的 HTTPS 应由外部代理提供。
-- 提交成功表示服务器已收件。默认配置只保存提交。自动评测需要独立且验收合格的 Judge。学生能查看本题最近 50 次提交。跨任务归档、学生账号及 Jupyter 扩展尚未实现。
+- [Course delivery and architecture review](docs/COURSE_DELIVERY.md)
+- [Notebook integration specification](docs/NOTEBOOK_CLASSROOM.md)
+- [Coursework demonstration guide](docs/COURSEWORK_DEMO.md)
+- [Native Judge acceptance requirements](docs/PHASE_4.md)
+- [Project context and handoff](docs/PROJECT_CONTEXT.md)
+- [Complete main commit history](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/commits/main/)
 
 ## Acknowledgements and third-party tools
 
@@ -197,5 +264,3 @@ OPT CPP builds on the visualization work of **Philip J. Guo**, who created **Pyt
 3. Python Tutor. [Official C++ Visualizer](https://pythontutor.com/cpp.html).
 4. Python Tutor. [Official link integration guide](https://pythontutor.com/for-ai-assistants.html).
 5. Guo, P. J. (2013). Online Python Tutor: Embeddable Web-Based Program Visualization for CS Education. *Proceedings of the 44th ACM Technical Symposium on Computer Science Education (SIGCSE '13)*, 579–584. [https://doi.org/10.1145/2445196.2445368](https://doi.org/10.1145/2445196.2445368).
-
-项目交接背景见 [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)。交接文档包含规划，当前功能以本页为准。
