@@ -14,7 +14,11 @@ def check(browser, base):
     teacher.goto(base)
     teacher.locator("#create input").fill("Run output copy test")
     teacher.get_by_role("button", name="创建课堂", exact=True).click()
-    join_url = teacher.locator("#join-link").input_value()
+    join_link = teacher.locator("#join-link")
+    # Classroom creation is asynchronous; wait until the server returns the student URL.
+    expect(join_link).not_to_have_value("")
+    join_url = join_link.input_value()
+    assert join_url.startswith(("http://", "https://")), join_url
     teacher.locator("[name=title]").fill("Copy Run output")
     teacher.locator("[name=starterCode]").fill("int main() { return 0; }")
     teacher.locator("#publish-task").click()
