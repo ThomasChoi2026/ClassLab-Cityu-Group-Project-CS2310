@@ -1,7 +1,8 @@
 """Optional smoke test against demo/run.py, using fresh headless Chromium contexts."""
 import argparse
+import csv
 import re
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -81,6 +82,20 @@ def rehearse(browser, base, evidence_dir=None):
         expect(page.locator("#run-result")).to_contain_text("预置演示回放")
         expect(page.locator("#run-result")).to_contain_text("5" if change else "-1")
         expect(page.locator("#stdin-panel")).to_be_hidden()
+        page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
+        page.locator("#copy-run-result").click()
+        expect(page.locator("#run-copy-feedback")).to_have_text("运行结果已复制。")
+        copied = page.evaluate("navigator.clipboard.readText()")
+        assert "DEMO REPLAY" in copied and "预置演示回放" in copied
+        assert "标准输出：" in copied
+        assert ("5" in copied) if change else ("-1" in copied)
+        page.evaluate("""() => Object.defineProperty(navigator, "clipboard", {
+            configurable: true,
+            value: { writeText: () => Promise.reject(new Error("clipboard blocked")) }
+        })""")
+        page.locator("#copy-run-result").click()
+        expect(page.locator("#run-copy-fallback")).to_be_visible()
+        expect(page.locator("#run-copy-feedback")).to_contain_text("已选中文本")
         if evidence_dir is not None and index == 2:
             page.screenshot(path=str(evidence_dir / "student-run-replay.png"), full_page=True)
         code.press("Control+Enter")
@@ -93,6 +108,17 @@ def rehearse(browser, base, evidence_dir=None):
     expect(teacher.locator("#submitted")).to_have_text("3", timeout=8000)
     expect(teacher.locator("#accepted")).to_have_text("2")
     expect(teacher.locator("#failed")).to_have_text("1")
+    with teacher.expect_download() as csv_download:
+        teacher.locator("#export-current-csv").click()
+    csv_raw = Path(csv_download.value.path()).read_bytes()
+    assert csv_raw.startswith(b"\xef\xbb\xbf")
+    csv_rows = list(csv.DictReader(StringIO(csv_raw.decode("utf-8-sig"))))
+    assert len(csv_rows) == 3
+    assert {row["Mode"] for row in csv_rows} == {"Demo"}
+    assert {row["Latest Submission Status"] for row in csv_rows} == {
+        "All tests passed", "Tests not all passed (wrong answer)"
+    }
+    assert all("Student Session" not in key and "Code" not in key for key in csv_rows[0])
     if evidence_dir is not None:
         teacher.screenshot(path=str(evidence_dir / "teacher-dashboard.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")

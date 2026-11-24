@@ -80,10 +80,12 @@ async function copyText(field, status, success) {
   try {
     await navigator.clipboard.writeText(field.value);
     byId(status).textContent = success;
+    return true;
   } catch {
     field.focus();
     field.select();
     byId(status).textContent = "已选中文本，请使用浏览器的复制操作。";
+    return false;
   }
 }
 
@@ -136,6 +138,87 @@ const statusText = {
   time_limit: "运行超时",
   resource_limit: "资源超限",
 };
+
+function csvCell(value) {
+  const text = value === null || value === undefined ? "" : String(value);
+  // Prefix formula-like text before CSV quoting so Excel treats it as literal data.
+  const safe = /^[\s\uFEFF]*[=+\-@]/u.test(text) ? "'" + text : text;
+  return '"' + safe.replace(/"/g, '""') + '"';
+}
+
+function exportedStatus(status, count) {
+  if (!count) return "Not submitted";
+  const labels = {
+    received: "Submitted (not evaluated)",
+    queued: "Waiting for evaluation",
+    pending: "Evaluating",
+    judge_unavailable: "Not evaluated (Judge unavailable)",
+    judge_queue_full: "Not evaluated (evaluation queue full)",
+    judge_error: "Evaluation service error",
+    demo_no_fixture: "Not evaluated (no matching Demo fixture)",
+    accepted: "All tests passed",
+    wrong_answer: "Tests not all passed (wrong answer)",
+    compilation_error: "Compilation error",
+    runtime_error: "Runtime error",
+    time_limit: "Time limit exceeded",
+    resource_limit: "Resource limit exceeded",
+  };
+  return labels[status] || (status ? "Unknown status (" + status + ")" : "Submitted (status unavailable)");
+}
+
+function buildClassroomCsv(state, exportedAt = new Date()) {
+  const headers = [
+    "Classroom Name", "Task Title", "Student Number", "Student Name",
+    "Submission Count", "Latest Submission Status", "Passed Test Cases",
+    "Total Test Cases", "Mode", "Exported At (UTC)"
+  ];
+  const exportedAtUtc = exportedAt.toISOString();
+  const rows = state.students.map(student => {
+    const hasScore = Number.isFinite(student.passed) && Number.isFinite(student.total);
+    return [
+      state.name,
+      state.task.title,
+      student.number,
+      student.name,
+      Number.isFinite(student.count) ? student.count : "",
+      exportedStatus(student.latestStatus, student.count),
+      hasScore ? student.passed : "",
+      hasScore ? student.total : "",
+      state.demo ? "Demo" : "Normal",
+      exportedAtUtc,
+    ].map(csvCell).join(",");
+  });
+  return "\uFEFF" + [headers.map(csvCell).join(","), ...rows].join("\r\n") + "\r\n";
+}
+
+function safeFilePart(value) {
+  return String(value || "ClassLab")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")
+    .replace(/\s+/g, "-")
+    .slice(0, 70) || "ClassLab";
+}
+
+function runResultCopyText(result, demoMode) {
+  const sections = [];
+  if (demoMode || result.demoFixture) {
+    sections.push("DEMO REPLAY — 预置演示回放；没有编译或执行当前 C++ 代码。");
+  }
+  if (result.status) {
+    sections.push("运行状态：" + (statusText[result.status] || result.status));
+  }
+  if (result.error) sections.push("运行错误：\n" + String(result.error));
+  if (result.diagnostic) sections.push("编译诊断：\n" + String(result.diagnostic));
+  if (Object.hasOwn(result, "stdout")) {
+    sections.push("标准输出：\n" + String(result.stdout ?? ""));
+  }
+  if (Object.hasOwn(result, "stderr")) {
+    sections.push("标准错误：\n" + String(result.stderr ?? ""));
+  }
+  if (Object.hasOwn(result, "exitCode")) {
+    sections.push("退出状态：" + String(result.exitCode));
+  }
+  return sections.length ? sections.join("\n\n") : "运行结果：没有可复制的输出。";
+}
 
 const categoryText = {
   missing_semicolon: "可能缺少分号",
@@ -1198,6 +1281,49 @@ function initializeTeacher() {
     }
   });
 
+  const exportButton = byId("export-current-csv");
+  exportButton.addEventListener("click", async () => {
+    if (!credentials || exportButton.disabled) return;
+    const roomId = credentials.id;
+    const taskId = selectedTask.value;
+    exportButton.disabled = true;
+    exportButton.textContent = "正在导出…";
+    feedback("", false, "export-feedback");
+    try {
+      const state = await api("/rooms/" + roomId + "/progress" + taskQuery(taskId), {
+        headers: { "X-Teacher-Key": credentials.teacherKey }
+      });
+      if (credentials?.id !== roomId || selectedTask.value !== taskId) {
+        feedback("课堂或任务已切换，请重新导出。", true, "export-feedback");
+        return;
+      }
+      if (!state.task) {
+        feedback("请先发布任务，再导出当前任务结果。", true, "export-feedback");
+        return;
+      }
+      if (!Array.isArray(state.students) || state.students.length === 0) {
+        feedback("当前课堂还没有学生，暂无可导出的结果。", true, "export-feedback");
+        return;
+      }
+      const csv = buildClassroomCsv(state);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ClassLab-" + safeFilePart(state.task.title) + "-results.csv";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      feedback("已导出 " + state.students.length + " 名学生的当前任务结果。", false, "export-feedback");
+    } catch (error) {
+      feedback("导出失败：" + error.message, true, "export-feedback");
+    } finally {
+      exportButton.disabled = false;
+      exportButton.textContent = "导出当前任务 CSV";
+    }
+  });
+
   selectedTask.addEventListener("change", () => {
     if (submissionDialog.open) submissionDialog.close();
     void refresh();
@@ -1360,6 +1486,36 @@ function initializeStudent() {
   const draftKey = (id) => storageKey + ".draft." + id;
   const renderSchedule = scheduleView();
 
+  function appendRunResultCopy(panel, result) {
+    const button = element("button", "复制结果");
+    button.type = "button";
+    button.className = "secondary";
+    button.id = "copy-run-result";
+
+    const status = element("p");
+    status.id = "run-copy-feedback";
+    status.className = "inline-status";
+    status.setAttribute("role", "status");
+
+    const fallback = element("textarea");
+    fallback.id = "run-copy-fallback";
+    fallback.hidden = true;
+    fallback.readOnly = true;
+    fallback.rows = 5;
+    fallback.setAttribute("aria-label", "待手动复制的运行结果");
+
+    button.addEventListener("click", async () => {
+      fallback.value = runResultCopyText(result, demoMode);
+      fallback.hidden = false;
+      const copied = await copyText(fallback, "run-copy-feedback", "运行结果已复制。");
+      if (copied) fallback.hidden = true;
+    });
+    const actions = element("div");
+    actions.className = "run-result-actions";
+    actions.append(button, status, fallback);
+    panel.append(actions);
+  }
+
   function showTask(state) {
     demoMode = Boolean(state.demo);
     byId("stdin-label").textContent = demoMode ? "预置演示输入（stdin）" : "程序正在读取标准输入（stdin）";
@@ -1415,6 +1571,7 @@ function initializeStudent() {
     if (!state.task || state.task.id === currentTask?.id) return;
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
+    byId("run-result").replaceChildren();
     clearStdinPrompt(true);
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
@@ -1569,6 +1726,7 @@ function initializeStudent() {
     byId("run-controls").disabled = true;
     byId("run-state").textContent = demoMode ? "正在读取预置演示结果…" : "正在编译和运行…";
     panel.hidden = true;
+    panel.replaceChildren();
     try {
       const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
         data: { taskId, code: editor.value, input: runInput, probe: !provideInput } });
@@ -1583,6 +1741,7 @@ function initializeStudent() {
         if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
         if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
         panel.hidden = false;
+        appendRunResultCopy(panel, result);
         input.focus();
         return;
       }
@@ -1593,10 +1752,12 @@ function initializeStudent() {
       if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
       if (result.error) panel.append(element("p", result.error));
       panel.hidden = false;
+      appendRunResultCopy(panel, result);
     } catch (error) {
       if (taskId === currentTask?.id) {
         panel.replaceChildren(element("p", error.message));
         panel.hidden = false;
+        appendRunResultCopy(panel, { status: "request_error", error: error.message });
       }
     } finally {
       running = false;
