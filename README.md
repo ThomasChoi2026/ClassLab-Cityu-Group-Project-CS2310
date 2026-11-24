@@ -111,7 +111,7 @@ In a single-minute presentation, prepare the browser sessions and example submis
 | Publish | Review the editor and publish explicitly; importing or selecting a Notebook cell does not publish a task. |
 | Share | Invite students using the join link or QR code; switch to classroom projection for a simplified class display. |
 | Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
-| Continue | Publish the next exercise; the imported Notebook remains available and the dashboard switches to the active task. |
+| Continue | Publish the next exercise without re-uploading. The Notebook stays available in the current page, while the editor clears and the dashboard switches to the active task. Reloading or closing the page requires re-importing the Notebook. |
 
 Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records.
 
@@ -202,6 +202,14 @@ The Notebook classroom acceptance workflow at commit `0eb71c2` passed **11/11 CT
 [Notebook integration acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45361246934) · [Subsequent UI regression acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45364191659) · [Notebook integration PR #16](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/16) · [All workflows](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions)
 
 For local browser acceptance, install Playwright, Chromium, Pillow and zxing-cpp and follow the [rehearsal guide](docs/COURSEWORK_DEMO.md).
+
+To verify consecutive publication, start Normal Mode on port 8080 and run:
+
+~~~bash
+python3 tests/browser_notebook_publish.py http://127.0.0.1:8080
+~~~
+
+The [Notebook classroom workflow](.github/workflows/notebook-classroom.yml) also runs this check in GitHub Actions.
 
 **Verification boundary:** trusted lecture compilation and mock-Judge browser tests do not establish that arbitrary student programs can safely run on a particular host. Full production isolation acceptance is still required.
 
