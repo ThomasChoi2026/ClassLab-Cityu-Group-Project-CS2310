@@ -13,7 +13,7 @@
 </head>
 <body data-view="teacher">
   <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>预置演示结果 · 加入和提交实时记录 · 评测仅回放固定夹具 <a href="/demo-notebook.ipynb" download>下载简版 Notebook</a> · <a href="/demo-lecture.ipynb" download>下载旧版合成教学 Notebook</a> · 完整标记教学版：<a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">从仓库下载（教师）</a></div>
+  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo 模式 · 课堂操作实时记录，运行与评测为预置回放。 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">下载教学 Notebook（74 Cells / 5 题）</a></div>
   <main>
     <section id="setup" class="intro">
       <div><h1>开设编程课堂</h1><p>发布 C++ 练习，与学生共享加入链接。</p></div>
@@ -88,23 +88,7 @@
             <button type="button" id="compose-prep" class="secondary" aria-pressed="false">课前备课</button>
           </div>
           <p id="compose-hint" role="status">临时粘贴 C++ 代码，填写标题即可直接发布；说明和测试用例均可选。</p>
-          <div id="prep-library" hidden>
-          <fieldset class="case-editor">
-            <legend>备课练习库</legend>
-            <p>草稿保存在当前浏览器。载入草稿会替换当前编辑器。</p>
-            <label>已保存练习<select id="draft-library"><option value="">选择练习</option></select></label>
-            <div class="lesson-actions">
-              <button id="save-draft" type="button" class="secondary">保存新练习</button>
-              <button id="load-draft" type="button" class="secondary" disabled>载入</button>
-              <button id="update-draft" type="button" class="secondary" hidden>更新已载入练习</button>
-              <button id="delete-draft" type="button" class="secondary" disabled>删除所选练习</button>
-            </div>
-            <p id="draft-feedback" class="inline-status" role="status"></p>
-          </fieldset>
-          </div>
           <form id="publish">
-            <label>标题<input name="title" required maxlength="53"></label>
-            <label>任务说明（可选）<textarea name="description" maxlength="3000" rows="4"></textarea></label>
             <section id="notebook-import" class="notebook-import" hidden aria-label="Notebook 导入">
               <strong>导入 Notebook</strong>
               <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
@@ -129,23 +113,28 @@
                 </div>
                 <div class="lesson-actions">
                   <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
-                  <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
                   <button type="button" class="secondary" id="append-notebook-text" hidden>追加到题目说明</button>
                 </div>
-                <p id="selected-prep-cells"></p>
-                <button type="button" class="secondary" id="assemble-notebook" disabled>将组合填入起始代码</button>
+                <details id="notebook-combination" hidden>
+                  <summary>多 Cell 组合（高级）</summary>
+                  <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
+                  <p id="selected-prep-cells"></p>
+                  <button type="button" class="secondary" id="assemble-notebook" disabled>将组合填入起始代码</button>
+                </details>
               </div>
               <p id="notebook-status" class="inline-status" role="status"></p>
             </section>
+            <label>标题<input name="title" required maxlength="53"></label>
+            <label>任务说明（可选）<textarea name="description" maxlength="3000" rows="4"></textarea></label>
             <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <details id="teacher-optional-settings" class="teacher-optional-settings">
-              <summary>测试用例与预期易错点（可选）</summary>
+              <summary>测试用例与易错点（<span id="preparation-counts">0 个用例 · 0 个易错点</span>）</summary>
             <fieldset class="case-editor">
               <legend>自动评测用例</legend>
               <p>每题最多 12 项。未添加用例时只收集提交。发布后，用例随任务保存。</p>
               <div id="case-editor-rows"></div>
               <button id="add-case" type="button" class="secondary">添加测试用例</button>
-              <button id="demo-cases" type="button" class="secondary" hidden>填入三个演示用例</button>
+
             </fieldset>
             <fieldset class="case-editor">
               <legend>预期易错点（仅教师可见）</legend>
@@ -154,6 +143,21 @@
               <button id="add-pitfall" type="button" class="secondary">添加易错点</button>
             </fieldset>
             </details>
+          <details id="prep-library" hidden>
+            <summary>备课练习库（可选）</summary>
+          <fieldset class="case-editor">
+            <legend>已保存草稿</legend>
+            <p>草稿保存在当前浏览器。载入草稿会替换当前编辑器。</p>
+            <label>已保存练习<select id="draft-library"><option value="">选择练习</option></select></label>
+            <div class="lesson-actions">
+              <button id="save-draft" type="button" class="secondary">保存新练习</button>
+              <button id="load-draft" type="button" class="secondary" disabled>载入</button>
+              <button id="update-draft" type="button" class="secondary" hidden>更新已载入练习</button>
+              <button id="delete-draft" type="button" class="secondary" disabled>删除所选练习</button>
+            </div>
+            <p id="draft-feedback" class="inline-status" role="status"></p>
+          </fieldset>
+          </details>
             <button id="publish-task">发布为当前任务</button>
             <p id="publish-feedback" role="status" class="feedback"></p>
           </form>
