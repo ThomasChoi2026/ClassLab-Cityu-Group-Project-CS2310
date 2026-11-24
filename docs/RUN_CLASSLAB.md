@@ -7,7 +7,7 @@ ClassLab uses one repository and one C++20 web binary. The demo is a separate st
 On a supported Linux or WSL machine, with Git, CMake 3.24+, a C++20 compiler, Python 3 and Node.js (for all CTest tests):
 
 ```sh
-git clone --branch submission/english https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
