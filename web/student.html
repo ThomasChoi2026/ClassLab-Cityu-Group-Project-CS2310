@@ -4,57 +4,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClassLab · Student classroom</title>
+  <title>ClassLab · Student Learning Portal</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body data-view="student">
-  <header class="top"><div><strong>ClassLab</strong><span>Student classroom</span></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo mode · Runs and grading replay prerecorded results. Classroom activity is recorded live. Arbitrary C++ is not executed.</div>
+  <header class="top"><div><strong>ClassLab</strong><span>Student Learning Portal</span></div></header>
+  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo Mode · Execution and assessment results are replayed from predefined fixtures; submitted C++ programs are not compiled or executed. Classroom activities continue to be recorded in real time.</div>
   <main class="student">
     <section id="setup" class="intro">
-      <div><h1>Join a programming classroom</h1><p>Enter a nickname so your teacher can recognize your submissions.</p></div>
+      <div><h1>Join the Classroom</h1><p>Enter a display name so that your instructor can identify your submissions.</p></div>
       <div class="panel">
         <form id="join">
-          <label>Your nickname<input name="name" required maxlength="40" autocomplete="nickname"></label>
-          <button>Join classroom</button>
+          <label>Display Name<input name="name" required maxlength="40" autocomplete="nickname"></label>
+          <button>Join Classroom</button>
         </form>
       </div>
     </section>
     <details id="student-classrooms" class="panel" hidden>
-      <summary>Your classrooms</summary>
+      <summary>Enrolled Classes</summary>
       <ul id="student-classroom-list" class="case-results"></ul>
     </details>
     <section id="workspace" hidden>
       <div class="heading"><div><h1 id="room-name"></h1><p id="student-name"></p></div></div>
       <p id="connection" role="status" class="feedback error"></p>
       <details class="panel timetable">
-        <summary>Weekly timetable</summary>
-        <p id="schedule-empty">No classes scheduled.</p>
+        <summary>Weekly Schedule</summary>
+        <p id="schedule-empty">No scheduled class sessions are currently available.</p>
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <section class="panel">
-        <label id="student-task-navigation" hidden>Published tasks in this classroom
+        <label id="student-task-navigation" hidden>Available Assignments
           <select id="student-task-picker"><option value="">Latest task</option></select>
         </label>
-        <p id="archive-notice" class="inline-status" hidden>You are viewing an earlier task. Return to the latest task to run and submit code.</p>
-        <p id="waiting">Waiting for your teacher to publish a task. This page updates automatically.</p>
+        <p id="archive-notice" class="inline-status" hidden>You are viewing a previous assignment. Return to the latest assignment to run programs and submit solutions.</p>
+        <p id="waiting">Waiting for the instructor to publish an assignment. This page will update automatically.</p>
         <div id="assignment" hidden>
           <h2 id="task-title"></h2>
           <p id="task-description" class="description"></p>
           <details id="public-tests" hidden>
-            <summary>Public test cases</summary>
+            <summary>Public Test Cases</summary>
             <div id="student-public-tests"></div>
           </details>
           <form id="submit">
             <div class="editor-field">
               <div class="section-heading">
-                <label for="student-code">Your C++ code</label>
+                <label for="student-code">Your C++ Source Code</label>
                 <div class="lesson-actions">
-                  <button id="copy-code" type="button" class="secondary">Copy code</button>
+                  <button id="copy-code" type="button" class="secondary">Copy Code</button>
                   <button id="open-optcpp" type="button" class="secondary" title="Open the external OPT CPP visualizer in a new tab">Send to OPT CPP</button>
-                  <button id="reset-code" type="button" class="secondary">Restore starter code</button>
-                  <button id="download-code" type="button" class="secondary">Download .cpp</button>
+                  <button id="reset-code" type="button" class="secondary">Restore Starter Code</button>
+                  <button id="download-code" type="button" class="secondary">Download .cpp File</button>
                 </div>
               </div>
               <textarea id="student-code" class="editor" name="code" required rows="14" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
@@ -62,40 +62,40 @@
             </div>
             <div id="stdin-panel" hidden>
               <label for="run-stdin"><span id="stdin-label">The program is reading standard input (stdin)</span>
-                <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false" placeholder="Enter the data your program needs, e.g. 5 3"></textarea>
+                <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false" placeholder="Enter program input here (e.g., 5 3)"></textarea>
               </label>
               <p id="stdin-hint" class="inline-status">Enter input and select Provide input and rerun. The isolated judge restarts the program. Leave the field empty to send EOF.</p>
             </div>
             <fieldset id="run-controls" class="run-controls" disabled aria-describedby="run-state">
-              <legend>ClassLab practice run</legend>
+              <legend>ClassLab Program Execution</legend>
               <button id="run-code" type="button" class="secondary">Run code</button>
             </fieldset>
-            <p id="run-state" role="status">The isolated runner is unavailable. Code cannot run right now.</p>
-            <section id="run-result" aria-label="Run result" hidden></section>
+            <p id="run-state" role="status">The execution environment is currently unavailable. Program execution cannot be performed at this time.</p>
+            <section id="run-result" aria-label="Program Execution Results" hidden></section>
             <div id="optcpp-fallback" hidden>
-              <p>The code is too long to send directly. Open a blank OPT CPP editor and copy the code manually.</p>
+              <p>The source code exceeds the transfer limit. Please open a blank OPT_CPP workspace and copy the code manually.</p>
               <div class="lesson-actions">
                 <a href="https://dive4dec.github.io/OPT_CPP/visualize.html" target="_blank" rel="noopener noreferrer">Open blank OPT CPP</a>
-                <button id="copy-opt-code" type="button" class="secondary">Copy current code</button>
+                <button id="copy-opt-code" type="button" class="secondary">Copy Current Code</button>
               </div>
             </div>
             <p id="optcpp-status" class="inline-status" role="status"></p>
             <button id="submit-code" type="submit" aria-keyshortcuts="Control+Enter Meta+Enter">Submit code</button>
-            <small id="submit-shortcut">Press Ctrl + Enter or ⌘ + Enter in the editor to submit.</small>
+            <small id="submit-shortcut">Press Ctrl + Enter (Windows/Linux) or ⌘ + Enter (macOS) to submit directly from the editor.</small>
             <p id="submit-feedback" role="status" class="feedback"></p>
           </form>
           <section id="latest-result" hidden>
-            <h3>Latest formal submission</h3>
+            <h3>Latest Assessment Result</h3>
             <div id="student-result"></div>
           </section>
           <details id="submission-history" hidden>
-            <summary>Submission history for this task (latest 50)</summary>
+            <summary>Submission and Assessment History (Most Recent 50 Attempts)</summary>
             <ol id="history-list"></ol>
           </details>
         </div>
       </section>
     </section>
-    <p id="praise-toast" class="praise-toast" role="status">🏅 Well done!</p>
+    <p id="praise-toast" class="praise-toast" role="status">🏅 Excellent Work!</p>
     <p id="feedback" role="status" class="feedback"></p>
   </main>
 </body>
