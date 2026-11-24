@@ -66,7 +66,7 @@ void reply(Response& response, const Json& body, int status = 200) {
 Json body_of(const Request& request) {
     auto body = Json::parse(request.body, nullptr, false);
     if (!body.is_object()) {
-        throw ApiError{400, "The request body must be a JSON object."};
+        throw ApiError{400, "Request body must be a JSON object."};
     }
     return body;
 }
@@ -74,11 +74,11 @@ Json body_of(const Request& request) {
 std::string field(const Json& body, const char* key, std::size_t limit, bool allow_empty = false) {
     const auto value = body.find(key);
     if (value == body.end() || !value->is_string()) {
-        throw ApiError{400, "Complete all required fields."};
+        throw ApiError{400, "Please complete all required fields."};
     }
     auto text = value->get<std::string>();
     if (text.size() > limit || (!allow_empty && text.find_first_not_of(" \t\r\n") == std::string::npos)) {
-        throw ApiError{400, "The field is empty or exceeds the length limit."};
+        throw ApiError{400, "Field cannot be empty or exceed the maximum length."};
     }
     return text;
 }
@@ -150,21 +150,21 @@ template <typename Rooms>
 auto& room_for(Rooms& rooms, const Request& request) {
     const auto found = rooms.find(request.matches[1].str());
     if (found == rooms.end()) {
-        throw ApiError{404, "Classroom not found. Check your join link."};
+        throw ApiError{404, "Classroom not found. Please verify the join link."};
     }
     return *found;
 }
 
 void require_teacher(const Json& room, const Request& request) {
     if (room.at("teacherKey") != request.get_header_value("X-Teacher-Key")) {
-        throw ApiError{403, "Teacher access is required for this classroom."};
+        throw ApiError{403, "You do not have instructor access to this classroom."};
     }
 }
 
 std::string require_student(const Json& room, const Request& request) {
     auto key = request.get_header_value("X-Student-Key");
     if (!room.at("students").contains(key)) {
-        throw ApiError{403, "Join the classroom first."};
+        throw ApiError{403, "Please join the classroom first."};
     }
     return key;
 }
@@ -176,7 +176,8 @@ Json active_task(const Json& room) {
 
 const Json* find_task(const Json& room, std::string_view id) {
     const auto& tasks = room.at("tasks");
-    const auto found = std::find_if(tasks.rbegin(), tasks.rend(), [&](const Json& task) {
+    const auto found = std::find_if(tasks.rbegin(), tasks.rend(),
+    [&](const auto& task) {
         return task.at("id") == id;
     });
     return found == tasks.rend() ? nullptr : &*found;
@@ -221,14 +222,14 @@ bool valid_time(std::string_view value) {
 ClassSlot parse_slot(const Json& body) {
     const auto day = body.find("day");
     if (day == body.end() || !day->is_number_integer() || *day < 1 || *day > 7) {
-        throw ApiError{400, "Select a valid day of the week."};
+        throw ApiError{400, "Please select a valid weekday."};
     }
     ClassSlot slot{random_id(), field(body, "name", 160), day->get<int>(),
                    field(body, "start", 5), field(body, "end", 5)};
     if (!valid_time(slot.start) || !valid_time(slot.end)) {
-        throw ApiError{400, "Enter the time in 24-hour HH:MM format."};
+        throw ApiError{400, "Please enter time using the 24-hour HH:MM format."};
     }
-    if (slot.start >= slot.end) throw ApiError{400, "The end time must be later than the start time on the same day."};
+    if (slot.start >= slot.end) throw ApiError{400, "End time must be later than the start time on the same day."};
     return slot;
 }
 
@@ -246,7 +247,8 @@ void add_slot(Json& room, const ClassSlot& slot) {
         }
     }
     if (!conflicts.empty()) {
-        throw ApiError{409, "Schedule conflict for " + slot.name + ". Choose another time slot. Overlap with:" + conflicts};
+        throw ApiError{409, "Time conflict detected for \"" + slot.name +
+"\". Please select a different time slot. Conflicting classes:" + conflicts};
     }
     slots.push_back(slot);
     std::sort(slots.begin(), slots.end(), [](const ClassSlot& a, const ClassSlot& b) {
@@ -265,7 +267,7 @@ Json test_cases(const Json& body) {
         if (!test.is_object()) throw ApiError{400, "Invalid test case format."};
         const auto visibility = field(test, "visibility", 6);
         if (visibility != "public" && visibility != "hidden") {
-            throw ApiError{400, "Test cases must be public or hidden."};
+            throw ApiError{400, "Test cases must be marked as either public or hidden."};
         }
         normalized.push_back({{"id", std::to_string(normalized.size() + 1)},
             {"name", field(test, "name", 120)}, {"visibility", visibility},
@@ -289,9 +291,9 @@ Json task_pitfalls(const Json& body, const Json& task) {
         const auto test = item.contains("testNumber") ? field(item, "testNumber", 2, true) : "";
         if (!test.empty() && std::none_of(tests.begin(), tests.end(), [&](const Json& candidate) {
             return candidate.at("id") == test;
-        })) throw ApiError{400, "The linked test case number does not exist."};
+        })) throw ApiError{400, "Referenced test case number does not exist."};
         if (!needle.empty() && needle.find_first_not_of(" \t\r\n") == std::string::npos) {
-            throw ApiError{400, "The source snippet cannot contain only whitespace."};
+            throw ApiError{400, "Source-code hint cannot contain only whitespace."};
         }
         items.push_back({{"name", field(item, "name", 240)}, {"note", note},
                          {"needle", needle}, {"testNumber", test}});
@@ -564,12 +566,12 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             reply(response, {{"error", failure.message}}, failure.status);
         } catch (const std::exception& failure) {
             std::cerr << "ClassLab request error: " << failure.what() << '\n';
-            reply(response, {{"error", "The server could not complete the request. Please try again."}}, 500);
+            reply(response, {{"error", "The server could not complete the request. Please try again later."}}, 500);
         }
     });
     server.set_error_handler([](const Request& request, Response& response) {
         if (request.path.starts_with("/api/") && response.body.empty()) {
-            reply(response, {{"error", "Invalid request URL or size."}}, response.status);
+            reply(response, {{"error", "Invalid request path or payload size."}}, response.status);
         }
     });
 
@@ -643,7 +645,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             auto slots = room.value("schedule", std::vector<ClassSlot>{});
             const auto id = request.matches[2].str();
             if (!std::erase_if(slots, [&](const ClassSlot& slot) { return slot.id == id; })) {
-                throw ApiError{404, "Time slot not found. Refresh the timetable."};
+                throw ApiError{404, "Schedule entry not found. Please refresh the timetable."};
             }
             room["schedule"] = slots;
             return {{"removed", true}};
@@ -667,7 +669,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 const auto& room = room_for(rooms, request);
                 require_teacher(room, request);
                 const auto* task = find_task(room, request.get_param_value("taskId"));
-                if (!task) throw ApiError{409, "Task not found. Reopen the submission history."};
+                if (!task) throw ApiError{409, "Assignment not found. Please reopen the submission record."};
                 const auto number = std::stoull(request.matches[2].str());
                 for (const auto& student : room.at("students")) {
                     if (student.at("number") != number) continue;
@@ -684,7 +686,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     }
                     break;
                 }
-                throw ApiError{404, "No submission found for this student."};
+                throw ApiError{404, "No submission was found for this student."};
             }));
         });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/students)", [&](const Request& request, Response& response) {
@@ -757,7 +759,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
         if (body.contains("probe") && !body.at("probe").is_boolean()) {
-            throw ApiError{400, "The input detection parameter must be a boolean."};
+            throw ApiError{400, "The probe parameter must be a boolean value."};
         }
         const bool probe = body.value("probe", false);
         store.read([&](const Json& rooms) -> Json {
@@ -765,26 +767,26 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             require_student(room, request);
             const auto task = active_task(room);
             if (task.is_null() || task.at("id") != field(body, "taskId", 32)) {
-                throw ApiError{409, "Your teacher updated the task. Refresh it before running your code."};
+                throw ApiError{409, "The instructor has updated the assignment. Please refresh before running."};
             }
             field(body, "code", 65536);
             const auto input_text = field(body, "input", 8192, true);
             if (probe && !input_text.empty()) {
-                throw ApiError{400, "Input detection cannot include standard input."};
+                throw ApiError{400, "Input probing cannot be performed together with standard input."};
             }
             return nullptr;
         });
         auto slot = judge.reserve();
-        if (!slot && judge.configured()) throw ApiError{429, "The judge is processing another request. Please try again."};
+        if (!slot && judge.configured()) throw ApiError{429, "The judge is currently processing another request. Please try again later."};
         if (!judge.available()) {
             reply(response, {{"status", "judge_unavailable"},
-                             {"error", "The isolated runner is unavailable. The program did not run."}}, 503);
+                             {"error", "The isolated execution environment is unavailable. The program was not executed."}}, 503);
             return;
         }
         const auto waiting = store.read([](const Json& rooms) -> Json {
             return !queue_state(rooms).submission.empty();
         });
-        if (waiting == true) throw ApiError{429, "A formal submission is waiting for grading. Try the practice run again later."};
+        if (waiting == true) throw ApiError{429, "There are pending submissions awaiting assessment. Please try running your program later."};
         auto result = judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe);
         if (judge.demo()) result["demoFixture"] = true;
         reply(response, result);
@@ -798,7 +800,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             const auto student_key = require_student(room, request);
             const auto task = active_task(room);
             if (task.is_null() || task.at("id") != task_id) {
-                throw ApiError{409, "Your teacher updated the task. Refresh it before submitting."};
+                throw ApiError{409, "The instructor has updated the assignment. Please refresh before submitting."};
             }
             auto& submissions = room["students"][student_key]["submissions"];
             Json submission = {{"taskId", task_id}, {"code", code}, {"receivedAt", now()}};
@@ -806,7 +808,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 const auto request_id = field(body, "requestId", 64);
                 for (const auto& saved : submissions) {
                     if (saved.at("taskId") != task_id || saved.value("requestId", "") != request_id) continue;
-                    if (saved.at("code") != code) throw ApiError{409, "The submission ID does not match the saved code."};
+                    if (saved.at("code") != code) throw ApiError{409, "Submission identifier does not match the previously saved source code."};
                     return receipt_for(saved);
                 }
                 submission["requestId"] = request_id;
