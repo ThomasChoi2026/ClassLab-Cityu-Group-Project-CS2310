@@ -159,8 +159,8 @@ The server uses cpp-httplib and nlohmann/json; the frontend uses HTML, CSS and J
 ctest --test-dir build --output-on-failure
 ~~~
 
-- [Secure interactive implementation: full CTest and Chromium regression](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45406604880) (pre-English integration).
-- [Trusted-native implementation: real GCC and Chromium persistent-input acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45406575004) (pre-English integration).
+- [Final English secure implementation: 10/10 CTest and Chromium classroom regression](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45407812347) (tested commit `abd7e42`; actual-host isolation acceptance remains outstanding).
+- [Final English trusted-native experiment: 12/12 CTest, real GCC and Chromium persistent-input acceptance](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions/runs/45407992696) (tested commit `8a27a63`; reviewed-source execution only).
 - [Original team English translation merge, PR #25](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/pull/25).
 - [Current GitHub Actions results](https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/actions).
 
