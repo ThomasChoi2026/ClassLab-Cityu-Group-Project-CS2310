@@ -1,28 +1,28 @@
-# Phase 3 验收与评测边界
+# Phase 3 acceptance and grading boundaries
 
 > Historical Phase 3 record. For the later Judge adapter and its deployment requirements, see [Phase 4](PHASE_4.md). For current student features, see the [student workflow](COURSE_DELIVERY.md#student-workflow).
 
-## 当前可演示的课堂流程
+## Classroom workflow demonstrated in this phase
 
-教师创建课堂、投影二维码，在发布任务前添加公开或隐藏用例。学生进入课堂后可以展开公开样例、编辑代码并提交。教师在仪表板看到未提交、已提交和未评测人数，并可用教师权限打开当前任务中任一学生的最新提交。切换任务会创建新快照，旧任务和提交仍在原数据文件中。学生刷新页面时可以恢复身份、草稿和当前任务的最新提交状态。
+Teachers create a classroom, project its QR code, and add public or hidden cases before publishing. Students can expand the public examples, edit the starter code, and submit. The dashboard shows counts for students who have submitted, those who have yet to submit, and ungraded attempts. Authorized teachers can open each student's latest submission for the current task. Publishing another task creates a new snapshot and keeps prior tasks and submissions in the data file. Refreshing the student page restores their identity, draft, and latest submission status for the current task.
 
-评测任务有 1–12 条用例。每条需要名称、可见性，以及两个文本字段。空输入或空输出都有效，例如无需标准输入的程序。未添加用例可发布仅收集提交的任务。用例保存后无法原地改动。标准输出比较逻辑已有单元测试，规则为将 CRLF 化为 LF，再忽略一个末尾 LF。其余空格、换行和字符按原样比较。当前实际提交未调用这一比较逻辑。
+A graded task has 1–12 cases. Each case needs a name, visibility, input text, and expected output text. Either text field may be empty. A task without cases collects submissions only. Published cases cannot be edited in place. Unit tests cover output comparison: normalize CRLF to LF, ignore one final LF, and compare all remaining characters, including spaces and newlines. Live Phase 3 submissions did not invoke this comparator.
 
-## 已实现的结果与统计
+## Results and statistics
 
-- 支持读取持久化的最新评测记录，区分运行器不可用、评测服务错误、答错和其他评测状态。公开用例可返回实际输出。隐藏用例只返回通用编号与枚举状态，不包含课堂原编号、名称、标准输入、预期输出、实际输出或运行错误文本。
-- 教师统计按当前任务中每位学生的最新正式提交计算。通过率的分母只含有结论的提交。执行器不可用和系统错误计入未评测。单项用例的通过率只使用有通过或失败记录的学生。编译失败导致未运行的用例不计入分母。
-- 诊断分类用编译器首条错误行的可解释模式，提供代表消息和授权查看入口。类别是诊断线索，不能证明根本原因。共同失败的用例也不代表所有学生犯了相同错误。
-- Phase 2 数据无需迁移。既有无用例任务继续收件，既有无评测记录的提交继续显示为已提交。Phase 3 会用独立字段保留用例快照与未评测状态。测试夹具只在自动化测试的临时数据文件中加载，正常服务不会生成演示评测结果。
+- ClassLab reads persisted latest grading records and distinguishes runner outages, service errors, wrong answers, and other verdicts. Public cases may expose actual output. For a hidden case, the student receives only a generic number and status. The classroom's original case ID, name, input, expected and actual output, and runtime error text stay private.
+- Teacher statistics count each student's latest formal submission for the current task. The pass-rate denominator includes only conclusive verdicts. Runner outages and system errors count as ungraded. Each test's pass rate uses only students with a pass or fail record for that case. A case skipped after a compilation failure contributes nothing to the denominator.
+- Diagnostic categories use recognizable patterns in the compiler's first error line. Teachers can inspect a representative message and the original submission. The category is a clue for review. Students who fail the same case may have made different mistakes.
+- Phase 2 data needs no migration. Older tasks without cases still collect code, and submissions without a grading record still show as submitted. Phase 3 stores case snapshots and ungraded status separately. Automated tests load synthetic fixtures only into temporary data files. The standard service does not create demo grades.
 
-## 执行门槛与探针
+## Execution checks and probe results
 
-本云端环境的 Docker 可以用 runsc 启动可信的 BusyBox 探针。探针使用非特权 UID、清空 capabilities、只读根文件系统及无外网接口的容器配置。实际观察到 UID 65534、CapEff 为零、网络只存在回环接口、根挂载为只读。探针看不到项目工作区、Docker Socket 或检查的 GitHub、SSH 和云端凭据环境变量。运行时另行挂载了可写的 /tmp，报告约 16.6 GiB，文件写入上限也未达到要求。Docker 报告 rootless 且 cgroup driver 为 none，其 runsc 参数包含 --ignore-cgroups。探针无法读取有效的 CPU、内存及进程数限制。宿主直接尝试用户命名空间和 Bubblewrap 均因无法写入 UID 映射失败。
+In the Phase 3 cloud environment, Docker started a trusted BusyBox probe under runsc with an unprivileged UID, dropped capabilities, a read-only root filesystem, and no external network interface. The probe observed UID 65534, zero effective capabilities, only loopback networking, and a read-only root mount. It could not see the workspace, Docker socket, or checked environment variables for GitHub, SSH, or cloud credentials. The runtime separately mounted writable `/tmp` with roughly 16.6 GiB available. The file write limit also exceeded the requirement. Docker reported rootless mode, no cgroup driver, and `--ignore-cgroups` for runsc. Effective CPU, memory, and process limits could not be verified. Direct user-namespace and Bubblewrap attempts on the host failed to write the UID mapping.
 
-因此真实执行保持禁用。调用具备学生权限的 POST /api/rooms/{room}/run 时，提交当前任务 ID、源代码和自定义标准输入会得到 HTTP 503 和 judge_unavailable，不会执行或写入提交记录。POST /api/rooms/{room}/submissions 仅保存源码与明确的未评测状态。重复发送同一学生、任务和请求编号的相同源码不会重复增加正式提交次数。
+Live execution therefore stayed disabled in Phase 3. An authenticated student sending the current task ID, source, and custom stdin to `POST /api/rooms/{room}/run` received HTTP 503 with `judge_unavailable`. The request neither executed code nor created a submission. `POST /api/rooms/{room}/submissions` saved the code with an explicit ungraded status. Repeating the same source for the same student, task, and request ID did not increment the attempt count.
 
-下一步需要在可实施并验证有效资源控制的专用执行环境中实现适配器。启用前覆盖编译和运行两阶段，验证 CPU、内存、进程、文件及输出上限、墙钟超时和进程清理、只读与临时工作区边界、无业务数据及凭据、无控制套接字、无外网和并发限制。评测进程应在主服务外，使用固定版本编译器和隔离执行环境。每项测试需使用独立的临时工作区，以免隐藏测试数据或状态流入公开用例的输出。评测结果只由受信任的执行器写入，写入前应验证状态和用例编号并限制诊断及输出长度。本轮没有运行无限循环、资源滥用或禁区访问程序，这些端到端隔离测试均为 **Not Verified**。编译失败、答错、崩溃等来自真实运行器的结果也尚未端到端验证。
+The next phase called for a dedicated runner with verifiable controls for both compilation and execution. Required checks cover CPU, memory, process, file and output limits, wall-clock timeouts, cleanup, read-only and temporary filesystem boundaries, credentials, classroom data, control sockets, external networking, and concurrency. The judge should run outside the web service with a pinned compiler and isolated runtime. Each test needs its own temporary workspace so hidden data and state cannot reach public output. Only trusted workers should record results, after validating statuses and case IDs and limiting output and diagnostic lengths. End-to-end isolation for infinite loops, resource abuse, and access to restricted resources was **not verified** in this phase. Compilation errors, wrong answers, and crashes from a real runner also awaited end-to-end verification.
 
-## 验收及隐私
+## Acceptance and privacy
 
-运行 README 的 CMake 和 CTest 命令。集成测试覆盖权限、用例验证、隐藏数据过滤、并发与去重、重启恢复、任务切换及执行器不可用。另以明确标识的合成记录验证结果投影与课堂统计。使用现有 Codespace 的私有端口 8080 预览；手机需通过同一预览入口的 GitHub 授权。录制时使用示例题目和演示昵称。共同授课前，确认预览权限、数据文件访问权限、测试用例内容和学生提交数据的保留范围。需要自动评测的课堂试用必须先通过执行门槛。
+Use the CMake and CTest commands in the README. Integration tests cover authorization, test-case validation, hidden data filtering, concurrency, deduplication, restart recovery, task changes, and runner outages. Clearly identified synthetic records check the student-facing results and classroom statistics. Use private port 8080 in the existing Codespace. Phones need GitHub authorization for the same preview. Record with sample tasks and demo nicknames. Before using a shared classroom, confirm preview and data-file access, test content, and submission retention. Classroom trials with automatic grading require a verified runner.

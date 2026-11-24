@@ -66,7 +66,7 @@ void reply(Response& response, const Json& body, int status = 200) {
 Json body_of(const Request& request) {
     auto body = Json::parse(request.body, nullptr, false);
     if (!body.is_object()) {
-        throw ApiError{400, "请求内容必须是 JSON 对象。"};
+        throw ApiError{400, "The request body must be a JSON object."};
     }
     return body;
 }
@@ -74,11 +74,11 @@ Json body_of(const Request& request) {
 std::string field(const Json& body, const char* key, std::size_t limit, bool allow_empty = false) {
     const auto value = body.find(key);
     if (value == body.end() || !value->is_string()) {
-        throw ApiError{400, "请填写所有必填字段。"};
+        throw ApiError{400, "Complete all required fields."};
     }
     auto text = value->get<std::string>();
     if (text.size() > limit || (!allow_empty && text.find_first_not_of(" \t\r\n") == std::string::npos)) {
-        throw ApiError{400, "字段不能为空或超出长度限制。"};
+        throw ApiError{400, "The field is empty or exceeds the length limit."};
     }
     return text;
 }
@@ -150,21 +150,21 @@ template <typename Rooms>
 auto& room_for(Rooms& rooms, const Request& request) {
     const auto found = rooms.find(request.matches[1].str());
     if (found == rooms.end()) {
-        throw ApiError{404, "找不到这个课堂，请检查加入链接。"};
+        throw ApiError{404, "Classroom not found. Check your join link."};
     }
     return *found;
 }
 
 void require_teacher(const Json& room, const Request& request) {
     if (room.at("teacherKey") != request.get_header_value("X-Teacher-Key")) {
-        throw ApiError{403, "缺少此课堂的教师访问权限。"};
+        throw ApiError{403, "Teacher access is required for this classroom."};
     }
 }
 
 std::string require_student(const Json& room, const Request& request) {
     auto key = request.get_header_value("X-Student-Key");
     if (!room.at("students").contains(key)) {
-        throw ApiError{403, "请先加入课堂。"};
+        throw ApiError{403, "Join the classroom first."};
     }
     return key;
 }
@@ -186,7 +186,7 @@ Json view_task(const Json& room, const httplib::Request& request) {
     const auto id = request.get_param_value("taskId");
     if (id.empty()) return active_task(room);
     const auto* task = find_task(room, id);
-    if (!task) throw ApiError{400, "找不到这项课堂任务。"};
+    if (!task) throw ApiError{400, "Classroom task not found."};
     return *task;
 }
 
@@ -221,14 +221,14 @@ bool valid_time(std::string_view value) {
 ClassSlot parse_slot(const Json& body) {
     const auto day = body.find("day");
     if (day == body.end() || !day->is_number_integer() || *day < 1 || *day > 7) {
-        throw ApiError{400, "请选择有效的星期。"};
+        throw ApiError{400, "Select a valid day of the week."};
     }
     ClassSlot slot{random_id(), field(body, "name", 160), day->get<int>(),
                    field(body, "start", 5), field(body, "end", 5)};
     if (!valid_time(slot.start) || !valid_time(slot.end)) {
-        throw ApiError{400, "请使用 24 小时制 HH:MM 填写时间。"};
+        throw ApiError{400, "Enter the time in 24-hour HH:MM format."};
     }
-    if (slot.start >= slot.end) throw ApiError{400, "结束时间必须晚于同一天的开始时间。"};
+    if (slot.start >= slot.end) throw ApiError{400, "The end time must be later than the start time on the same day."};
     return slot;
 }
 
@@ -246,7 +246,7 @@ void add_slot(Json& room, const ClassSlot& slot) {
         }
     }
     if (!conflicts.empty()) {
-        throw ApiError{409, "「" + slot.name + "」时间冲突，请选择其他时段。重叠的课程和时间：" + conflicts};
+        throw ApiError{409, "Schedule conflict for " + slot.name + ". Choose another time slot. Overlap with:" + conflicts};
     }
     slots.push_back(slot);
     std::sort(slots.begin(), slots.end(), [](const ClassSlot& a, const ClassSlot& b) {
@@ -258,14 +258,14 @@ void add_slot(Json& room, const ClassSlot& slot) {
 Json test_cases(const Json& body) {
     const auto& tests = body.at("testCases");
     if (!tests.is_array() || tests.empty() || tests.size() > 12) {
-        throw ApiError{400, "每项评测任务需要 1 到 12 个测试用例。"};
+        throw ApiError{400, "Each graded task needs 1 to 12 test cases."};
     }
     Json normalized = Json::array();
     for (const auto& test : tests) {
-        if (!test.is_object()) throw ApiError{400, "测试用例格式无效。"};
+        if (!test.is_object()) throw ApiError{400, "Invalid test case format."};
         const auto visibility = field(test, "visibility", 6);
         if (visibility != "public" && visibility != "hidden") {
-            throw ApiError{400, "测试用例只能设为公开或隐藏。"};
+            throw ApiError{400, "Test cases must be public or hidden."};
         }
         normalized.push_back({{"id", std::to_string(normalized.size() + 1)},
             {"name", field(test, "name", 120)}, {"visibility", visibility},
@@ -278,20 +278,20 @@ Json test_cases(const Json& body) {
 Json task_pitfalls(const Json& body, const Json& task) {
     const auto& input = body.at("pitfalls");
     if (!input.is_array() || input.size() > 8) {
-        throw ApiError{400, "每题最多设置 8 个预期易错点。"};
+        throw ApiError{400, "Each task can have up to 8 expected pitfalls."};
     }
     const auto tests = judging::cases_for(task);
     Json items = Json::array();
     for (const auto& item : input) {
-        if (!item.is_object()) throw ApiError{400, "易错点格式无效。"};
+        if (!item.is_object()) throw ApiError{400, "Invalid pitfall format."};
         const auto note = item.contains("note") ? field(item, "note", 1200, true) : "";
         const auto needle = item.contains("needle") ? field(item, "needle", 640, true) : "";
         const auto test = item.contains("testNumber") ? field(item, "testNumber", 2, true) : "";
         if (!test.empty() && std::none_of(tests.begin(), tests.end(), [&](const Json& candidate) {
             return candidate.at("id") == test;
-        })) throw ApiError{400, "易错点所关联的用例编号不存在。"};
+        })) throw ApiError{400, "The linked test case number does not exist."};
         if (!needle.empty() && needle.find_first_not_of(" \t\r\n") == std::string::npos) {
-            throw ApiError{400, "源码线索不能只有空白。"};
+            throw ApiError{400, "The source snippet cannot contain only whitespace."};
         }
         items.push_back({{"name", field(item, "name", 240)}, {"note", note},
                          {"needle", needle}, {"testNumber", test}});
@@ -564,12 +564,12 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             reply(response, {{"error", failure.message}}, failure.status);
         } catch (const std::exception& failure) {
             std::cerr << "ClassLab request error: " << failure.what() << '\n';
-            reply(response, {{"error", "服务器未能完成请求，请稍后重试。"}}, 500);
+            reply(response, {{"error", "The server could not complete the request. Please try again."}}, 500);
         }
     });
     server.set_error_handler([](const Request& request, Response& response) {
         if (request.path.starts_with("/api/") && response.body.empty()) {
-            reply(response, {{"error", "请求地址或大小无效。"}}, response.status);
+            reply(response, {{"error", "Invalid request URL or size."}}, response.status);
         }
     });
 
@@ -643,7 +643,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             auto slots = room.value("schedule", std::vector<ClassSlot>{});
             const auto id = request.matches[2].str();
             if (!std::erase_if(slots, [&](const ClassSlot& slot) { return slot.id == id; })) {
-                throw ApiError{404, "找不到这个时段，请刷新课表。"};
+                throw ApiError{404, "Time slot not found. Refresh the timetable."};
             }
             room["schedule"] = slots;
             return {{"removed", true}};
@@ -667,7 +667,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 const auto& room = room_for(rooms, request);
                 require_teacher(room, request);
                 const auto* task = find_task(room, request.get_param_value("taskId"));
-                if (!task) throw ApiError{409, "找不到这项课堂任务，请重新打开提交记录。"};
+                if (!task) throw ApiError{409, "Task not found. Reopen the submission history."};
                 const auto number = std::stoull(request.matches[2].str());
                 for (const auto& student : room.at("students")) {
                     if (student.at("number") != number) continue;
@@ -684,7 +684,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     }
                     break;
                 }
-                throw ApiError{404, "没有找到这位学生的提交。"};
+                throw ApiError{404, "No submission found for this student."};
             }));
         });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/students)", [&](const Request& request, Response& response) {
@@ -713,7 +713,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     return {{"removed", number}};
                 }
             }
-            throw ApiError{404, "没有找到这位学生。"};
+            throw ApiError{404, "Student not found."};
         }));
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/students/([1-9][0-9]{0,15})/praise)", [&](const Request& request, Response& response) {
@@ -727,7 +727,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     return {{"praiseSeq", student.at("praiseSeq")}};
                 }
             }
-            throw ApiError{404, "没有找到这位学生。"};
+            throw ApiError{404, "Student not found."};
         }), 201);
     });
     server.Get(R"(/api/rooms/([a-f0-9]{32})/task)", [&](const Request& request, Response& response) {
@@ -757,7 +757,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);
         if (body.contains("probe") && !body.at("probe").is_boolean()) {
-            throw ApiError{400, "输入检测参数必须是布尔值。"};
+            throw ApiError{400, "The input detection parameter must be a boolean."};
         }
         const bool probe = body.value("probe", false);
         store.read([&](const Json& rooms) -> Json {
@@ -765,26 +765,26 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             require_student(room, request);
             const auto task = active_task(room);
             if (task.is_null() || task.at("id") != field(body, "taskId", 32)) {
-                throw ApiError{409, "教师已更新任务，请刷新后再运行。"};
+                throw ApiError{409, "Your teacher updated the task. Refresh it before running your code."};
             }
             field(body, "code", 65536);
             const auto input_text = field(body, "input", 8192, true);
             if (probe && !input_text.empty()) {
-                throw ApiError{400, "输入检测不能同时提供标准输入。"};
+                throw ApiError{400, "Input detection cannot include standard input."};
             }
             return nullptr;
         });
         auto slot = judge.reserve();
-        if (!slot && judge.configured()) throw ApiError{429, "评测器正在处理另一请求，请稍后重试。"};
+        if (!slot && judge.configured()) throw ApiError{429, "The judge is processing another request. Please try again."};
         if (!judge.available()) {
             reply(response, {{"status", "judge_unavailable"},
-                             {"error", "隔离执行器不可用，程序未运行。"}}, 503);
+                             {"error", "The isolated runner is unavailable. The program did not run."}}, 503);
             return;
         }
         const auto waiting = store.read([](const Json& rooms) -> Json {
             return !queue_state(rooms).submission.empty();
         });
-        if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
+        if (waiting == true) throw ApiError{429, "A formal submission is waiting for grading. Try the practice run again later."};
         auto result = judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe);
         if (judge.demo()) result["demoFixture"] = true;
         reply(response, result);
@@ -798,7 +798,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             const auto student_key = require_student(room, request);
             const auto task = active_task(room);
             if (task.is_null() || task.at("id") != task_id) {
-                throw ApiError{409, "教师已更新任务，请刷新任务后再提交。"};
+                throw ApiError{409, "Your teacher updated the task. Refresh it before submitting."};
             }
             auto& submissions = room["students"][student_key]["submissions"];
             Json submission = {{"taskId", task_id}, {"code", code}, {"receivedAt", now()}};
@@ -806,7 +806,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                 const auto request_id = field(body, "requestId", 64);
                 for (const auto& saved : submissions) {
                     if (saved.at("taskId") != task_id || saved.value("requestId", "") != request_id) continue;
-                    if (saved.at("code") != code) throw ApiError{409, "提交编号与已保存的代码不一致。"};
+                    if (saved.at("code") != code) throw ApiError{409, "The submission ID does not match the saved code."};
                     return receipt_for(saved);
                 }
                 submission["requestId"] = request_id;

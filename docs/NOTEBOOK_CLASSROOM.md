@@ -32,10 +32,10 @@ Include the C++ source below the marker and save the Notebook as `.ipynb`. The i
 
 ## Import, check and publish
 
-1. Open **课前备课**; the file selector is directly visible. Upload a local .ipynb file (up to 2 MiB). The file is read only in the teacher browser, not rewritten or sent to the server.
+1. Open **Lesson preparation**; the file selector is directly visible. Upload a local .ipynb file (up to 2 MiB). The file is read only in the teacher browser, not rewritten or sent to the server.
 2. The filename, original total cell count, recognized exercise count and invalid-metadata count appear. Marked exercises are the initial filter when present; otherwise All is selected. The preview opens without loading or publishing.
-3. Click an exercise to load its title, description, starter, tests and pitfalls. Existing edited work triggers a replacement confirmation; choosing Cancel preserves it. The **载入互动练习** button can retry. Unchanged imported exercise drafts can be switched without repeated confirmation. Save drafts to the existing lesson library when needed.
-4. Review and edit all fields, including the test visibility and pitfall/test associations. Click **发布为当前任务** only when ready. The Notebook remains loaded in the current page after publishing, so the next exercise needs no re-upload. Refreshing or closing the page clears the import.
+3. Click an exercise to load its title, description, starter, tests and pitfalls. Existing edited work triggers a replacement confirmation; choosing Cancel preserves it. The **Load interactive exercise** button can retry. Unchanged imported exercise drafts can be switched without repeated confirmation. Save drafts to the existing lesson library when needed.
+4. Review and edit all fields, including the test visibility and pitfall/test associations. Click **Publish as current task** only when ready. The Notebook remains loaded in the current page after publishing, so the next exercise needs no re-upload. Refreshing or closing the page clears the import.
 5. Ordinary code and Markdown retain preview, search, filters and code composition. Unmarked code may be inserted manually; marked exercises load independently to avoid mixing unrelated programs/tests. A reference cell is preview-only; it cannot enter a combination, starter or public description through the import controls.
 
 ## Optional Cell Metadata (version 1)
@@ -46,7 +46,7 @@ The [sample Notebook](../examples/CS2310_Score_Analysis.ipynb) already stores it
 
 1. In your Notebook editor, select the marked **Code** cell for the exercise. Open that cell's **Cell Metadata** editor. If your editor has no metadata view, save a copy of the `.ipynb` and open the copy as JSON in a text editor. Find the cell by its exercise marker inside the `source` field in the `cells` array. Edit the neighboring `metadata` object. For the sample's Cell 22, the path is `cells[21].metadata` because JSON arrays start at zero.
 2. Add the `classlab` object shown below inside that cell's metadata. Keep existing metadata keys. Put tests in `testCases` in the order you want teachers to see them. Under `pitfalls`, give each expected mistake a `name`, then optionally add a teacher `note`, a literal code fragment in `needle`, and a linked test position in `testNumber`. Use a string such as `"1"` for the first test. If you reorder the tests, update the linked number. Keep the marker and C++ in `source`.
-3. Save the `.ipynb`. In ClassLab, import the file under **课前备课**, click the exercise, then expand **测试用例与易错点** to verify the prefilled entries before publishing. You can also add or adjust them in the website's task editor. Those website edits apply to the task or saved exercise. The original Notebook file stays as saved in your Notebook editor.
+3. Save the `.ipynb`. In ClassLab, import the file under **Lesson preparation**, click the exercise, then expand **Test cases and pitfalls** to verify the prefilled entries before publishing. You can also add or adjust them in the website's task editor. Those website edits apply to the task or saved exercise. The original Notebook file stays as saved in your Notebook editor.
 
 This example preloads a prompt, one public test, one hidden test and a common pitfall. The starter intentionally uses `> 60` so the public test at `60` guides students toward `>= 60`.
 

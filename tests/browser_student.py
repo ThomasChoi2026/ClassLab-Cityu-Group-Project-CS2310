@@ -30,7 +30,7 @@ def check(browser, base):
     starter = "int main() {}"
     teacher.locator("[name=starterCode]").fill(starter)
     teacher.locator("#publish-task").click()
-    expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+    expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
     student = context.new_page()
     errors = []
@@ -46,13 +46,13 @@ def check(browser, base):
     expect(student.locator("#optcpp-options, #optcpp-input, #copy-opt-input")).to_have_count(0)
     expect(student.locator("#submit textarea")).to_have_count(2)  # editor and native Run-first stdin
     expect(student.locator("#run-code")).to_be_disabled()
-    expect(student.locator(".editor-field #open-optcpp")).to_have_text("抄送至OPT_CPP")
+    expect(student.locator(".editor-field #open-optcpp")).to_have_text("Send to OPT CPP")
     assert student.evaluate("document.documentElement.scrollWidth === innerWidth")
     assert student.evaluate("""() => {
         const row = document.querySelector(".editor-field .section-heading");
         return row.scrollWidth === row.clientWidth;
     }""")
-    code = "// synthetic 中文 & # + %\nint main() { return 0; }\n"
+    code = "// synthetic café & # + %\nint main() { return 0; }\n"
     samples = (
         code,
         "#include <iostream>\nint main() { int x; std::cin >> x; std::cout << x; }",
@@ -89,17 +89,17 @@ def check(browser, base):
     download = downloaded.value
     assert download.suggested_filename.endswith(".cpp") and "/" not in download.suggested_filename
     assert download.path().read_bytes() == code.encode()
-    editor.fill("// long " + "中" * 3000)
+    editor.fill("// long " + "€" * 3000)
     student.locator("#open-optcpp").click()
     expect(student.locator("#optcpp-fallback")).to_be_visible()
     assert len(external) == len(samples)
     if browser.browser_type.name == "chromium":
         context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
         student.locator("#copy-opt-code").click()
-        expect(student.locator("#optcpp-status")).to_have_text("当前代码已复制。")
-        assert student.evaluate("navigator.clipboard.readText()") == "// long " + "中" * 3000
+        expect(student.locator("#optcpp-status")).to_have_text("Current code copied.")
+        assert student.evaluate("navigator.clipboard.readText()") == "// long " + "€" * 3000
     with student.expect_popup() as blank:
-        student.get_by_role("link", name="打开空白 OPT CPP").click()
+        student.get_by_role("link", name="Open blank OPT CPP").click()
     blank.value.wait_for_load_state("domcontentloaded")
     assert blank.value.url == EXTERNAL
     blank.value.close()
@@ -107,17 +107,17 @@ def check(browser, base):
 
     student.once("dialog", lambda dialog: dialog.dismiss())
     student.locator("#reset-code").click()
-    expect(editor).to_have_value("// long " + "中" * 3000)
+    expect(editor).to_have_value("// long " + "€" * 3000)
     student.once("dialog", lambda dialog: dialog.accept())
     student.locator("#reset-code").click()
     expect(editor).to_have_value(starter)
     student.reload()
     expect(editor).to_have_value(starter)
     for attempt in (1, 2):
-        student.get_by_role("button", name="提交代码").click()
+        student.get_by_role("button", name="Submit code").click()
         expect(student.locator("#history-list li")).to_have_count(attempt)
     student.locator("#submission-history summary").click()
-    expect(student.locator("#history-list li").first).to_contain_text("已提交")
+    expect(student.locator("#history-list li").first).to_contain_text("Submitted")
     expect(teacher.locator("#attempts")).to_have_text("2")
     assert not errors, errors
     context.close()
