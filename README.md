@@ -307,6 +307,10 @@ Open **Classroom Progress** to see student participation, submission counts, att
 
 The teacher's view is based on formal submissions, not each student's unsent editor changes or private Run activity.
 
+<img src="docs/images/classlab-submission-diff.png" width="530" alt="Individual submission showing the boundary condition changed from greater than 60 to greater than or equal to 60">
+
+*Example submission review: the line-by-line comparison shows a student correcting the boundary condition. This screenshot was captured without an active Judge, so no grade is reported.*
+
 ### 13. Review shared classroom problems
 
 | Section | What to review |
@@ -317,6 +321,10 @@ The teacher's view is based on formal submissions, not each student's unsent edi
 | **Expected pitfalls and submission feedback** | Evidence related to teacher-defined text snippets and linked tests |
 
 For example, several students may change `score > 60` to `score >= 60`. Use this observation to discuss inclusive boundaries. Source comparison works without a Judge; test and compiler evidence require execution results. Do not infer actual understanding or assign a pass/fail grade solely from a code pattern.
+
+<img src="docs/images/classlab-classroom-feedback.png" width="430" alt="Classroom analytics showing expected pitfalls and a shared source-code edit by two students">
+
+*Classroom feedback from a demonstration session: two students made the same boundary correction. Source-based feedback is available even when the Judge is unavailable; test results are not fabricated.*
 
 ### 14. Project the classroom
 
@@ -347,6 +355,10 @@ Click **Export Current Assignment CSV** in **Classroom Progress**. The export co
 Open the teacher's classroom link or scan the QR code. Enter a **Display Name** and click **Join Classroom**. No separate ClassLab account is required. If no task has been published, wait for the teacher to publish one.
 
 Read the task title, optional description and starter code. Expand **Public Test Cases** to see available example inputs and expected outputs. Edit your answer in **Your C++ Source Code**.
+
+<img src="docs/images/classlab-student-workspace.png" width="700" alt="Student coding workspace with starter code, OPT CPP, restore, download and submit controls">
+
+*Student workspace in the official classroom without a Judge: learners can edit and submit code and use OPT CPP, while native Run remains disabled.*
 
 ### 2. Run and debug C++
 
