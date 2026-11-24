@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClassLab · Teacher dashboard</title>
+  <title>ClassLab · Teacher Dashboard</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/vendor/qrcode.js" defer></script>
   <script src="/diff.js" defer></script>
@@ -12,112 +12,112 @@
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
-  <header class="top"><div><strong>ClassLab</strong><span>Teacher dashboard</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">User guide</button></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo mode · Classroom activity is recorded live. Runs and grading use prerecorded results. <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/submission/english/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download teaching notebook (74 cells / 5 exercises)</a></div>
+  <header class="top"><div><strong>ClassLab</strong><span>Teacher Dashboard</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">User Guide</button></div></header>
+  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo mode · Classroom activity is recorded live. Runs and grading use prerecorded results. <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download teaching notebook (74 cells / 5 exercises)</a></div>
   <main>
     <section id="setup" class="intro">
-      <div><h1>Create a programming classroom</h1><p>Publish C++ exercises and share the join link with your students.</p></div>
+      <div><h1>Create a Programming Class</h1><p>Publish C++ exercises and share the join link with students.</p></div>
       <div class="panel">
         <form id="create">
-          <label>Classroom name<input name="name" required maxlength="40" placeholder="e.g. C++ Programming"></label>
+          <label>Class Name<input name="name" required maxlength="40" placeholder="e.g. C++ Programming"></label>
           <button>Create classroom</button>
-          <button id="open-preparation" type="button" class="secondary">Lesson preparation</button>
+          <button id="open-preparation" type="button" class="secondary">Lesson Preparation</button>
         </form>
       </div>
     </section>
-    <label id="teacher-room-navigation" hidden>Switch classrooms
-      <select id="teacher-room-picker"><option value="">Select a classroom</option></select>
+    <label id="teacher-room-navigation" hidden>Switch Managed Classrooms
+      <select id="teacher-room-picker"><option value="">Select a Classroom</option></select>
     </label>
     <section id="dashboard" hidden>
       <div class="heading section-heading classroom-heading">
         <h1 id="room-name"></h1>
-        <button id="exit-preparation" type="button" class="secondary" hidden>Back to classroom setup</button>
-        <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">Classroom projection</button>
-        <button id="new-classroom" type="button" class="secondary">Create a new classroom</button>
+        <button id="exit-preparation" type="button" class="secondary" hidden>Return to Create Classroom</button>
+        <button id="toggle-classroom" type="button" class="secondary" aria-pressed="false">Classroom Projection</button>
+        <button id="new-classroom" type="button" class="secondary">Create New Classroom</button>
       </div>
-      <section id="classroom-view" class="panel classroom-view" aria-label="Classroom projection" hidden>
+      <section id="classroom-view" class="panel classroom-view" aria-label="Classroom Projection" hidden>
         <div class="projection-invite">
-          <h2>Scan to join the classroom</h2>
+          <h2>Scan to Join the Classroom</h2>
           <div id="projection-qr"></div>
-          <a id="projection-link">Open student join page</a>
+          <a id="projection-link">Open Student Join Page</a>
         </div>
         <div class="projection-progress">
           <h2 id="projection-task">No task published yet</h2>
           <dl class="metrics">
             <div><dt>Joined</dt><dd id="projection-joined">0</dd></div>
             <div><dt>Submitted</dt><dd id="projection-submitted">0</dd></div>
-            <div><dt>All tests passed</dt><dd id="projection-accepted">0</dd></div>
+            <div><dt>All Passed</dt><dd id="projection-accepted">0</dd></div>
           </dl>
-          <label for="projection-meter">Submission progress</label>
+          <label for="projection-meter">Submission Progress</label>
           <progress id="projection-meter" value="0" max="100"></progress>
-          <p id="projection-rate">Waiting for students to join</p>
+          <p id="projection-rate">Waiting for Students to Join</p>
           <p id="projection-connection"></p>
         </div>
       </section>
       <div id="management-view">
       <section class="panel share" aria-labelledby="share-title">
-        <button id="show-qr" class="qr-trigger" type="button" aria-label="Enlarge join QR code" aria-haspopup="dialog" hidden></button>
+        <button id="show-qr" class="qr-trigger" type="button" aria-label="Enlarge Join QR Code" aria-haspopup="dialog" hidden></button>
         <div>
-          <h2 id="share-title">Invite students</h2>
-          <p id="share-hint">Scan the QR code or open the link to reach the student page.</p>
-          <label for="join-link">Classroom join link</label>
-          <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">Copy link</button></div>
+          <h2 id="share-title">Invite Students to Join</h2>
+          <p id="share-hint">Scan the QR code or open the link to access the student page.</p>
+          <label for="join-link">Classroom Join Link</label>
+          <div class="link-field"><input id="join-link" readonly><button id="copy-link" type="button" class="secondary">Copy Link</button></div>
           <p id="copy-feedback" class="inline-status" role="status"></p>
         </div>
       </section>
       <details id="class-schedule" class="panel timetable">
-        <summary>Weekly timetable</summary>
+        <summary>Weekly Schedule</summary>
         <form id="add-slot">
-          <label>Class name<input name="name" required maxlength="40" placeholder="e.g. CS2310 Lecture"></label>
-          <label>Day of the week<select name="day">
+          <label>Course Name<input name="name" required maxlength="40" placeholder="e.g. CS2310 Lecture"></label>
+          <label>Day of Week<select name="day">
             <option value="1">Monday</option><option value="2">Tuesday</option>
             <option value="3">Wednesday</option><option value="4">Thursday</option>
             <option value="5">Friday</option><option value="6">Saturday</option>
             <option value="7">Sunday</option>
           </select></label>
-          <label>Start time<input type="time" name="start" required></label>
-          <label>End time<input type="time" name="end" required></label>
-          <button>Add time slot</button>
+          <label>Start Time<input type="time" name="start" required></label>
+          <label>End Time<input type="time" name="end" required></label>
+          <button>Add Time Slot</button>
         </form>
         <p id="schedule-feedback" class="feedback" role="status"></p>
-        <p id="schedule-empty">No classes scheduled.</p>
+        <p id="schedule-empty">No class sessions scheduled.</p>
         <ul id="schedule-list" class="case-results"></ul>
       </details>
       <div class="layout">
         <section class="panel" id="teacher-composer">
-          <h2>Create a C++ exercise</h2>
-          <div class="compose-switch" role="group" aria-label="Exercise creation mode">
-            <button type="button" id="compose-quick" class="secondary" aria-pressed="false">Quick classroom</button>
-            <button type="button" id="compose-prep" aria-pressed="true">Lesson preparation</button>
+          <h2>Create a C++ Exercise</h2>
+          <div class="compose-switch" role="group" aria-label="Exercise Creation Method">
+            <button type="button" id="compose-quick" class="secondary" aria-pressed="false">Quick Classroom</button>
+            <button type="button" id="compose-prep" aria-pressed="true">Lesson Preparation</button>
           </div>
-          <p id="compose-hint" role="status">Browse the notebook, add the cells you need to the starter code, then review and publish.</p>
+          <p id="compose-hint" role="status">Browse the Notebook, insert the required cells into the starter code, then review and publish.</p>
           <form id="publish">
-            <section id="notebook-import" class="notebook-import" aria-label="Notebook import">
-              <strong>Import notebook</strong>
-              <p id="normal-notebook-download"><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/submission/english/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download sample teaching notebook (74 cells / 5 exercises)</a></p>
-              <label>Notebook file<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
+            <section id="notebook-import" class="notebook-import" aria-label="Notebook Import">
+              <strong>Import Notebook</strong>
+              <p id="normal-notebook-download"><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download sample teaching notebook (74 cells / 5 exercises)</a></p>
+              <label>Notebook File<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
               <p id="notebook-overview" role="status" hidden></p>
               <div id="notebook-cells" hidden>
                 <div class="notebook-search-row">
-                  <label>Search cells<input type="search" id="notebook-search" placeholder="Cell number or source keyword" autocomplete="off"></label>
-                  <label>Filter by type<select id="notebook-filter">
-                    <option value="all">All cells</option>
-                    <option value="exercise">Interactive exercise</option>
-                    <option value="cpp">C++ code</option>
-                    <option value="other">Other code</option>
+                  <label>Search Cells<input type="search" id="notebook-search" placeholder="Cell number or source code keyword" autocomplete="off"></label>
+                  <label>Filter Type<select id="notebook-filter">
+                    <option value="all">All Cells</option>
+                    <option value="exercise">Interactive Classroom Exercise</option>
+                    <option value="cpp">C++ Code</option>
+                    <option value="other">Other Code</option>
                     <option value="markdown">Markdown</option>
                   </select></label>
                 </div>
                 <div class="notebook-browser">
-                  <div id="notebook-list" class="notebook-list" role="group" aria-label="Notebook cells"></div>
+                  <div id="notebook-list" class="notebook-list" role="group" aria-label="Notebook Cell List"></div>
                   <div class="notebook-detail">
                     <strong id="notebook-current-label"></strong>
                     <pre id="notebook-preview"></pre>
                   </div>
                 </div>
                 <div class="lesson-actions">
-                  <button type="button" class="secondary" id="use-notebook-cell">Use this cell as starter code</button>
-                  <button type="button" class="secondary" id="append-notebook-text" hidden>Append to task description</button>
+                  <button type="button" class="secondary" id="use-notebook-cell">Use This Cell as Starter Code</button>
+                  <button type="button" class="secondary" id="append-notebook-text" hidden>Append to Task Description</button>
                 </div>
                 <details id="notebook-combination" hidden>
                   <summary>Combine cells (advanced)</summary>
@@ -129,37 +129,37 @@
               <p id="notebook-status" class="inline-status" role="status"></p>
             </section>
             <label>Title<input name="title" required maxlength="53"></label>
-            <label>Task description (optional)<textarea name="description" maxlength="3000" rows="4"></textarea></label>
-            <label>C++ starter code (sent to students)<textarea aria-describedby="starter-code-status" class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+            <label>Task Description (Optional)<textarea name="description" maxlength="3000" rows="4"></textarea></label>
+            <label>C++ Starter Code (Code Students Will Receive)<textarea aria-describedby="starter-code-status" class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
             <p id="starter-code-status" class="inline-status" role="status"></p>
-            <label id="empty-starter-choice" class="empty-starter-choice"><input id="allow-empty-starter" type="checkbox">Let students start with a blank editor</label>
+            <label id="empty-starter-choice" class="empty-starter-choice"><input id="allow-empty-starter" type="checkbox">Let Students Start from a Blank Template</label>
             <details id="teacher-optional-settings" class="teacher-optional-settings">
               <summary>Test cases and pitfalls (<span id="preparation-counts">Test cases: 0 · Pitfalls: 0</span>)</summary>
             <fieldset class="case-editor">
-              <legend>Automated test cases</legend>
-              <p>Add up to 12 cases per task. Without cases, the classroom only collects submissions. Publishing saves the cases with the task.</p>
+              <legend>Automated Evaluation Test Cases</legend>
+              <p>Up to 12 items per problem. If no test cases are added, only submissions will be collected. After publication, test cases are saved with the assignment.</p>
               <div id="case-editor-rows"></div>
-              <button id="add-case" type="button" class="secondary">Add test case</button>
+              <button id="add-case" type="button" class="secondary">Add Test Case</button>
 
             </fieldset>
             <fieldset class="case-editor">
-              <legend>Expected pitfalls (teacher only)</legend>
-              <p>Add a source snippet to look for or link a test case by number. A match flags a submission for review.</p>
+              <legend>Expected Pitfalls (Teacher Only)</legend>
+              <p>You may attach source-code snippets to search for or related test case IDs. Matches are review hints only.</p>
               <div id="pitfall-rows"></div>
-              <button id="add-pitfall" type="button" class="secondary">Add pitfall</button>
+              <button id="add-pitfall" type="button" class="secondary">Add Pitfall</button>
             </fieldset>
             </details>
           <details id="prep-library">
-            <summary>Exercise library (optional)</summary>
+            <summary>Lesson Preparation Exercise Library (Optional)</summary>
           <fieldset class="case-editor">
-            <legend>Saved drafts</legend>
-            <p>Drafts are saved in this browser. Loading a draft replaces the current editor contents.</p>
-            <label>Saved exercises<select id="draft-library"><option value="">Select an exercise</option></select></label>
+            <legend>Saved Drafts</legend>
+            <p>Drafts are stored in the current browser. Loading a draft will replace the current editor contents.</p>
+            <label>Saved Exercises<select id="draft-library"><option value="">Select Exercise</option></select></label>
             <div class="lesson-actions">
-              <button id="save-draft" type="button" class="secondary">Save new exercise</button>
+              <button id="save-draft" type="button" class="secondary">Save New Exercise</button>
               <button id="load-draft" type="button" class="secondary" disabled>Load</button>
-              <button id="update-draft" type="button" class="secondary" hidden>Update loaded exercise</button>
-              <button id="delete-draft" type="button" class="secondary" disabled>Delete selected exercise</button>
+              <button id="update-draft" type="button" class="secondary" hidden>Update Loaded Exercise</button>
+              <button id="delete-draft" type="button" class="secondary" disabled>Delete Selected Exercise</button>
             </div>
             <p id="draft-feedback" class="inline-status" role="status"></p>
           </fieldset>
@@ -170,32 +170,32 @@
         </section>
         <section class="panel" id="classroom-progress">
           <div class="section-heading progress-heading">
-            <h2>Classroom progress</h2>
+            <h2>Classroom Progress</h2>
             <div class="progress-actions">
               <span id="refresh-state" role="status">Loading</span>
-              <button id="export-current-csv" type="button" class="secondary">Export current task as CSV</button>
+              <button id="export-current-csv" type="button" class="secondary">Export Current Assignment CSV</button>
             </div>
           </div>
           <p id="export-feedback" class="inline-status" role="status"></p>
-          <label id="teacher-task-navigation" hidden>View published tasks
+          <label id="teacher-task-navigation" hidden>View Published Assignments
             <select id="teacher-task-picker"><option value="">Latest task</option></select>
           </label>
-          <p id="current-task">Loading current task…</p>
+          <p id="current-task">Retrieving Current Assignment…</p>
           <dl class="metrics">
             <div><dt>Joined</dt><dd id="joined">0</dd></div>
             <div><dt>Submitted</dt><dd id="submitted">0</dd></div>
-            <div><dt>Submission attempts</dt><dd id="attempts">0</dd></div>
+            <div><dt>Attempts</dt><dd id="attempts">0</dd></div>
           </dl>
           <div class="table-wrap">
             <table><thead><tr><th scope="col">Student</th><th scope="col">Status</th><th scope="col">Attempts</th><th scope="col">Details</th><th scope="col">Actions</th></tr></thead><tbody id="students"></tbody></table>
           </div>
           <dl class="metrics judge-metrics">
-            <div><dt>No submission</dt><dd id="unsubmitted">0</dd></div>
-            <div><dt>All tests passed</dt><dd id="accepted">0</dd></div>
+            <div><dt>Not Submitted</dt><dd id="unsubmitted">0</dd></div>
+            <div><dt>All Passed</dt><dd id="accepted">0</dd></div>
             <div><dt>Failed</dt><dd id="failed">0</dd></div>
-            <div><dt>Ungraded</dt><dd id="unjudged">0</dd></div>
-            <div><dt>Queued for grading</dt><dd id="queued">0</dd></div>
-            <div><dt>Grading</dt><dd id="pending">0</dd></div>
+            <div><dt>Not Evaluated</dt><dd id="unjudged">0</dd></div>
+            <div><dt>Queued</dt><dd id="queued">0</dd></div>
+            <div><dt>Evaluating</dt><dd id="pending">0</dd></div>
           </dl>
           <p id="judge-state"></p>
           <p id="class-pass-rate"></p>
@@ -238,7 +238,7 @@
       <section>
         <h3>1. Publish an interactive exercise from a notebook</h3>
         <ol>
-          <li><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/submission/english/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Open CS2310_Score_Analysis.ipynb</a> and select Download raw file on GitHub to get the sample notebook (74 cells / 5 exercises).</li>
+          <li><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Open CS2310_Score_Analysis.ipynb</a> and select Download raw file on GitHub to get the sample notebook (74 cells / 5 exercises).</li>
           <li>Creating a classroom opens Lesson preparation. You can also select Lesson preparation on the setup page and create the classroom when you are ready to publish.</li>
           <li>Upload the file under Import notebook. ClassLab detects five interactive exercises. Use Search cells and Filter by type to find a cell.</li>
           <li>Select a cell to preview its source. For an ordinary C++ cell, select Use this cell as starter code. Marked exercises load automatically or can be loaded with Load interactive exercise. You will be asked to confirm before replacing unsaved edits.</li>
@@ -258,7 +258,7 @@
         <h3>4. Prepare your own notebook</h3>
         <p>Place this marker at the beginning of a valid C++ code cell, after the %%cpp directive if present:</p>
         <pre>// @classlab exercise: Fix the loop boundary</pre>
-        <p>You can preview and manually load ordinary code. ClassLab detects marked interactive exercises automatically. Add cases, descriptions, and pitfalls through optional metadata or in the editor. See <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/submission/english/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook markers and metadata</a>.</p>
+        <p>You can preview and manually load ordinary code. ClassLab detects marked interactive exercises automatically. Add cases, descriptions, and pitfalls through optional metadata or in the editor. See <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook markers and metadata</a>.</p>
       </section>
       <section>
         <h3>5. Standard mode and demo mode</h3>
