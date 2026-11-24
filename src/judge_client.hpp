@@ -64,7 +64,7 @@ public:
         const auto status = reply.value("status", "");
         if (demo_ && status == "demo_no_fixture") {
             return {{"status", "demo_no_fixture"},
-                    {"error", "仅支持课堂演示 Notebook 的预置代码与输入：2 3、0 0、-4 9；这里没有编译或运行任意 C++。"}};
+                    {"error", "没有匹配的演示数据；请使用本题支持的预置代码和公开输入。这里没有编译或运行任意 C++。"}};
         }
         if (probe && status == "stdin_required") {
             try {
