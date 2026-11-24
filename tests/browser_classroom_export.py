@@ -20,7 +20,9 @@ def check(browser, base):
     teacher.goto(base)
     teacher.locator("#create input").fill('Class, "CSV"')
     teacher.get_by_role("button", name="创建课堂", exact=True).click()
-    join_url = teacher.locator("#join-link").input_value()
+    join_link = teacher.locator("#join-link")
+    expect(join_link).not_to_have_value("")
+    join_url = join_link.input_value()
     room_id = join_url.rstrip("/").split("/")[-1]
 
     # No task: give a clear message and do not create an empty file.
