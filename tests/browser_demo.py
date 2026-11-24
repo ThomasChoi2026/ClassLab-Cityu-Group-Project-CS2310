@@ -1,7 +1,8 @@
 """Optional smoke test against demo/run.py, using fresh headless Chromium contexts."""
 import argparse
+import csv
 import re
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -107,6 +108,17 @@ def rehearse(browser, base, evidence_dir=None):
     expect(teacher.locator("#submitted")).to_have_text("3", timeout=8000)
     expect(teacher.locator("#accepted")).to_have_text("2")
     expect(teacher.locator("#failed")).to_have_text("1")
+    with teacher.expect_download() as csv_download:
+        teacher.locator("#export-current-csv").click()
+    csv_raw = Path(csv_download.value.path()).read_bytes()
+    assert csv_raw.startswith(b"\\xef\\xbb\\xbf")
+    csv_rows = list(csv.DictReader(StringIO(csv_raw.decode("utf-8-sig"))))
+    assert len(csv_rows) == 3
+    assert {row["Mode"] for row in csv_rows} == {"Demo"}
+    assert {row["Latest Submission Status"] for row in csv_rows} == {
+        "All tests passed", "Tests not all passed (wrong answer)"
+    }
+    assert all("Student Session" not in key and "Code" not in key for key in csv_rows[0])
     if evidence_dir is not None:
         teacher.screenshot(path=str(evidence_dir / "teacher-dashboard.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")
