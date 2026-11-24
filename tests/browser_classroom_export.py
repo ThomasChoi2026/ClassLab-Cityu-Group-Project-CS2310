@@ -158,6 +158,7 @@ def check(browser, base):
     empty_teacher.locator("[name=title]").fill("No students yet")
     empty_teacher.locator("[name=starterCode]").fill("int main() {}")
     empty_teacher.locator("#publish-task").click()
+    expect(empty_teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
     empty_teacher.locator("#export-current-csv").click()
     expect(empty_teacher.locator("#export-feedback")).to_contain_text("还没有学生")
 
