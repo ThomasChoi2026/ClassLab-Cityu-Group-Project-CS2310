@@ -37,7 +37,7 @@ def check(browser, base):
     page.locator("#open-preparation").click()
     expect(page.locator("#compose-prep")).to_have_attribute("aria-pressed", "true")
     expect(page.locator("#publish-task")).to_be_disabled()
-    page.locator("#notebook-import summary").click()
+    expect(page.locator("#notebook-file")).to_be_visible()
 
     notebook = synthetic_notebook()
     page.locator("#notebook-file").set_input_files({
