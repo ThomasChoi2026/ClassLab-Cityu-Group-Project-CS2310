@@ -12,7 +12,7 @@
   <script src="/app.js" defer></script>
 </head>
 <body data-view="teacher">
-  <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span></div></header>
+  <header class="top"><div><strong>ClassLab</strong><span>教师工作台</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">使用指引</button></div></header>
   <div id="demo-banner" class="demo-banner" role="status" hidden>Demo 模式 · 课堂操作实时记录，运行与评测为预置回放。 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">下载教学 Notebook（74 Cells / 5 题）</a></div>
   <main>
     <section id="setup" class="intro">
@@ -87,12 +87,12 @@
         <section class="panel" id="teacher-composer">
           <h2>创建 C++ 练习</h2>
           <div class="compose-switch" role="group" aria-label="练习创建方式">
-            <button type="button" id="compose-quick" aria-pressed="true">快速课堂</button>
-            <button type="button" id="compose-prep" class="secondary" aria-pressed="false">课前备课</button>
+            <button type="button" id="compose-quick" class="secondary" aria-pressed="false">快速课堂</button>
+            <button type="button" id="compose-prep" aria-pressed="true">课前备课</button>
           </div>
-          <p id="compose-hint" role="status">填写标题并粘贴 C++ 代码，或选择让学生从空白开始。</p>
+          <p id="compose-hint" role="status">浏览 Notebook，将所需单元填入起始代码，再核对并发布。</p>
           <form id="publish">
-            <section id="notebook-import" class="notebook-import" hidden aria-label="Notebook 导入">
+            <section id="notebook-import" class="notebook-import" aria-label="Notebook 导入">
               <strong>导入 Notebook</strong>
               <p id="normal-notebook-download"><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">下载教学 Notebook 示例（74 Cells / 5 题）</a></p>
               <label>Notebook 文件<input type="file" id="notebook-file" accept=".ipynb,application/x-ipynb+json"></label>
@@ -149,7 +149,7 @@
               <button id="add-pitfall" type="button" class="secondary">添加易错点</button>
             </fieldset>
             </details>
-          <details id="prep-library" hidden>
+          <details id="prep-library">
             <summary>备课练习库（可选）</summary>
           <fieldset class="case-editor">
             <legend>已保存草稿</legend>
@@ -223,6 +223,41 @@
       </div>
     </section>
     <p id="feedback" role="status" class="feedback"></p>
+    <dialog id="teacher-guide" aria-labelledby="teacher-guide-title">
+      <div class="section-heading">
+        <h2 id="teacher-guide-title">ClassLab 使用指引</h2>
+        <form method="dialog"><button class="secondary" autofocus>关闭</button></form>
+      </div>
+      <section>
+        <h3>1. 从 Notebook 发布互动练习</h3>
+        <ol>
+          <li><a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">打开 CS2310_Score_Analysis.ipynb</a>，在 GitHub 点击 Download raw file 下载示例教材（74 Cells / 5 题）。</li>
+          <li>创建课堂后默认进入「课前备课」，也可先在创建课堂页面点击「课前备课」准备；发布前须创建课堂。</li>
+          <li>在「导入 Notebook」上传文件，系统识别五道互动练习。使用「搜索单元」和「筛选类型」寻找 Cell。</li>
+          <li>选择 Cell 可查看源码预览。普通 C++ Cell 需要点击「用此 Cell 作为起始代码」；标记的互动练习会尝试自动载入，或点击「载入互动练习」，如有未保存的修改会提示确认。</li>
+          <li>核对标题、任务说明、起始代码，并展开「测试用例与易错点」检查预填内容；可按教学需要修改。只有点击「发布为当前任务」才会把任务发送给学生。预览和载入均不等于发布。</li>
+        </ol>
+      </section>
+      <section>
+        <h3>2. 邀请学生并查看课堂反馈</h3>
+        <p>在「邀请学生加入」分享二维码或加入链接。学生在浏览器编辑代码、运行（取决于模式及执行器状态）及提交。教师在「课堂进度」查看提交人数、评测结果、共同失败的测试、常见编译诊断、全班共同修改及备课预期与提交反馈。这些统计是教学复核线索，并非 AI 对学生思考过程的判断。</p>
+      </section>
+      <section>
+        <h3>3. 连续发布及回顾历史任务</h3>
+        <p>无需重新上传 Notebook：选择下一道互动练习，确认新题的标题、代码、用例和易错点已正确载入，再点击「发布为当前任务」。学生端在跟随最新任务时自动收到新题。</p>
+        <p>旧任务及提交不会被删除。使用「查看已发布任务」切换历史任务，查看该题的提交、评测和课堂分析；此操作不会改变学生当前任务。选择「最新发布」返回当前进度。关闭或重新加载页面后需要重新导入 Notebook。</p>
+      </section>
+      <section>
+        <h3>4. 准备自己的 Notebook</h3>
+        <p>在合法 C++ Code Cell 的源码开头（如使用 %%cpp，放在该指令之后）添加标记：</p>
+        <pre>// @classlab exercise: Fix the loop boundary</pre>
+        <p>普通代码可预览并手动载入；带标记的互动练习可自动识别。测试用例、说明和易错点可通过可选 Metadata 预填，或在编辑器中添加。详见 <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook 标记与 Metadata 说明</a>。</p>
+      </section>
+      <section>
+        <h3>5. 正式模式与 Demo 模式</h3>
+        <p>正式模式的真实 C++ Run 和自动评测需要通过安全验收的 Judge。Demo 模式仅回放匹配的预置结果，不实时编译任意 C++。课堂加入、提交记录及课堂分析均为真实操作。</p>
+      </section>
+    </dialog>
     <dialog id="submission-dialog" aria-labelledby="submission-title">
       <div class="section-heading">
         <h2 id="submission-title">最新提交</h2>
