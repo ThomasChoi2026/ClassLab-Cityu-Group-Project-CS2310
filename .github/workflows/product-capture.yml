@@ -102,7 +102,7 @@ jobs:
           native.write_text(src)
           sys.path.insert(0,str(ROOT/'tests'))
           sys.argv=[str(native),str(ROOT/'build/classlab')]
-          runpy.run_path(str(native),run_name='__main__')
+          runpy.run_path(str(native),init_globals={'shot':shot},run_name='__main__')
           current='classroom'
           # The existing notebook acceptance script exercises all five tasks.
           # Run with the actual server and temporary data, no simulated grades.
