@@ -34,11 +34,11 @@ Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C+
 For a fresh checkout:
 
 ~~~bash
-git clone --branch submission/english https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 ~~~
 
-If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. For the English submission, select `submission/english` before building. Preserve any uncommitted work in your current checkout.
+If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. Ensure the checkout contains the desired main revision before building. Preserve any uncommitted work in your current checkout.
 
 ~~~bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -73,7 +73,7 @@ For a one-command build, test and Demo launch from a fresh checkout, use `bash d
 
 ### 3. Open the correct page in Codespaces
 
-1. On GitHub, open the repository's **submission/english** branch and choose **Code → Codespaces**.
+1. On GitHub, open the repository's **main** branch and choose **Code → Codespaces**.
 2. Build and launch the desired mode in the Codespace terminal using the commands above.
 3. Open the **Ports** panel. Forward **8080** for Normal Mode or **8082** for Demo Mode, keep the port **Private**, and click **Open in Browser**.
 4. The forwarded HTTPS URL opens the teacher page. Students use its generated join link or QR code. Other devices need a GitHub account authorized to access that private preview.
