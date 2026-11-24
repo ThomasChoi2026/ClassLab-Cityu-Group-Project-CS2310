@@ -52,7 +52,7 @@ def check(browser, base, evidence):
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
     assert teacher.locator("[name=title]").input_value() == "Preserve this draft"
     expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
-    teacher.locator("#notebook-search").fill("maximum")
+    teacher.locator("#notebook-search").fill("Find the maximum correctly")
     expect(teacher.locator("#notebook-list button")).to_have_count(1)
     expect(teacher.locator("#notebook-list button").first).to_contain_text("Cell 48")
     teacher.locator("#notebook-search").fill("")
