@@ -49,7 +49,7 @@ def check(browser, base):
     expect(page.locator("#notebook-current-label")).to_contain_text("Cell 1")
 
     page.locator("#notebook-filter").select_option("cpp")
-    expect(page.locator("#notebook-list button")).to_have_count(len(notebook["cells"]) - 2)
+    expect(page.locator("#notebook-list button")).to_have_count(len(notebook["cells"]) - 3)
     page.locator("#notebook-search").fill("sample_124")
     expect(page.locator("#notebook-list button")).to_have_count(1)
     expect(page.locator("#notebook-list button")).to_contain_text("Cell 125")
