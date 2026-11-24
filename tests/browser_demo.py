@@ -41,7 +41,19 @@ def rehearse(browser, base, evidence_dir=None):
     teacher.locator("[name=title]").fill("Fix addition")
     teacher.locator("[name=description]").fill("Return the sum.")
     teacher.locator("#teacher-optional-settings").evaluate("(element) => element.open = true")
-    teacher.locator("#demo-cases").click()
+    # Legacy fixtures remain supported through the ordinary test editor.
+    # The obsolete demo-only button is intentionally gone from the teacher UI.
+    expect(teacher.locator("#demo-cases")).to_have_count(0)
+    for name, stdin, output, visibility in [
+        ("Positive", "2 3", "5", "public"), ("Zero", "0 0", "0", "public"),
+        ("Mixed signs", "-4 9", "5", "hidden"),
+    ]:
+        teacher.locator("#add-case").click()
+        row = teacher.locator("#case-editor-rows .case-row").last
+        row.locator("[data-field=name]").fill(name)
+        row.locator("[data-field=input]").fill(stdin)
+        row.locator("[data-field=expectedOutput]").fill(output)
+        row.locator("[data-field=visibility]").select_option(visibility)
     teacher.locator("#publish-task").click()
     expect(teacher.locator("#current-task")).to_contain_text("Fix addition")
 
