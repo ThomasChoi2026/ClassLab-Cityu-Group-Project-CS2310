@@ -84,7 +84,7 @@ def check(browser, base):
     assert formula_row["Latest Submission Status"] == "Submitted (not evaluated)"
     assert formula_row["Passed Test Cases"] == "" and formula_row["Total Test Cases"] == ""
     assert formula_row["Submission Count"] == "1"
-    assert formula_row["Mode"] == "Normal"
+    assert formula_row["Mode"] == "Trusted Native"
     assert all(row["Latest Submission Status"] == "Not submitted" for name, row in by_name.items()
                if name != formula_name)
     assert all(row["Passed Test Cases"] == "" and row["Total Test Cases"] == "" for row in rows)
@@ -187,6 +187,6 @@ if __name__ == "__main__":
         browser = getattr(playwright, args.browser).launch(executable_path=args.executable)
         try:
             check(browser, args.url)
-            print("Classroom CSV browser check passed: current-task-only data, unsubmitted students, status mapping, UTF-8 BOM, CSV quoting, formula protection, score blanks, Normal mode, empty states and request failures.")
+            print("Classroom CSV browser check passed: current-task-only data, unsubmitted students, status mapping, UTF-8 BOM, CSV quoting, formula protection, score blanks, Trusted Native mode, empty states and request failures.")
         finally:
             browser.close()
