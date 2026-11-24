@@ -4,6 +4,10 @@
 
 City University of Hong Kong · CS2310 Computer Programming · Agentic Coding Group Project · 2026
 
+![ClassLab teacher workspace showing automatic recognition of five interactive exercises in a 74-cell demonstration notebook](docs/images/classlab-notebook-integration.png)
+
+*ClassLab in action: the teacher imports an AI-generated demonstration notebook, filters its five marked exercises, and previews starter code before publication.*
+
 [Quick evaluation](#quick-evaluation-and-coursework-testing) · [Official deployment](#official-classroom-use-and-secure-deployment) · [Teacher guide](#teacher-user-guide) · [Student guide](#student-user-guide) · [Design your own notebook](#design-your-own-teaching-notebook) · [Team](#team-contributions)
 
 ## Why ClassLab?
