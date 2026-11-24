@@ -12,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: 36c5c0eac78f4d8cd909ff4a43b3b0957c5e2e3b
       - name: Prepare isolated capture environment
         shell: bash
         run: |
