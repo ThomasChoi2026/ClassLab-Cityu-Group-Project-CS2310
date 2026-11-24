@@ -1,4 +1,4 @@
-"""Full real-Chromium classroom workflow with the new authored Notebook and safe fixture playback."""
+"""Full Chromium classroom workflow with the authored Notebook and no Judge."""
 import argparse
 import json
 from pathlib import Path
@@ -93,9 +93,6 @@ def check(browser, base, evidence):
     teacher = browser.new_page(viewport={"width": 1440, "height": 1080})
     teacher.on("pageerror", lambda error: errors.append(str(error)))
     teacher.goto(base)
-    expect(teacher.locator("#demo-banner")).to_be_visible()
-    expect(teacher.locator("#demo-banner a")).to_have_count(1)
-    expect(teacher.locator("#demo-banner a")).to_contain_text("Download teaching notebook")
     expect(teacher.locator("#demo-cases")).to_have_count(0)
     teacher.locator("#open-teacher-guide").click()
     guide = teacher.locator("#teacher-guide")
@@ -119,7 +116,7 @@ def check(browser, base, evidence):
     teacher.locator("#compose-prep").click()
     upload = teacher.locator("#notebook-file")
     expect(upload).to_be_visible()
-    expect(teacher.locator("#normal-notebook-download")).to_be_hidden()
+    expect(teacher.locator("#normal-notebook-download")).to_be_visible()
     expect(teacher.locator("#notebook-cells")).to_be_hidden()
     teacher.locator("[name=title]").fill("Preserve this draft")
     teacher.locator("[name=starterCode]").fill("int main() { return 7; }")
@@ -224,46 +221,20 @@ def check(browser, base, evidence):
             editor.fill(starter.replace("score > 60", "score >= 60"))
             assert editor.input_value().strip() == ref["referenceSource"].strip()
         expect(student.locator("#stdin-panel")).to_be_hidden()
-        expect(student.locator("#run-code")).to_be_enabled()
-        student.locator("#run-code").click()
-        expect(student.locator("#stdin-panel")).to_be_visible()
-        expect(student.locator("#run-result")).to_contain_text("The current code will not run")
-        expect(student.locator("#stdin-label")).to_have_text("Preset demo input (stdin)")
-        student.locator("[name=runInput]").fill("60")
-        student.locator("#run-code").click()
-        result = student.locator("#run-result")
-        expect(result).to_contain_text("Prerecorded result")
-        expect(result.locator("pre")).to_have_text("PASS" if change else "FAIL")
-        expect(student.locator("#stdin-panel")).to_be_hidden()
-        if index == 2:
-            student.screenshot(path=str(evidence / "02-student-run-replay.png"), full_page=True)
-        # Hidden cases and arbitrary source are not executable via the Demo Run endpoint.
-        if index == 1:
-            student.locator("#run-code").click()
-            expect(student.locator("#stdin-panel")).to_be_visible()
-            student.locator("[name=runInput]").fill("100")
-            student.locator("#run-code").click()
-            expect(result).to_contain_text("No matching")
-            expect(result.locator("pre")).to_have_count(0)
-            editor.fill(starter + "\n// Unregistered source")
-            student.locator("#run-code").click()
-            expect(result).to_contain_text("No matching")
-            expect(result.locator("pre")).to_have_count(0)
-            editor.fill(starter)
+        expect(student.locator("#run-code")).to_be_disabled()
         editor.press("Control+Enter")
         verdict = student.locator("#student-result")
-        expect(verdict).to_contain_text("All tests passed" if change else "Wrong answer", timeout=15000)
-        expect(verdict).to_contain_text("Prerecorded result")
+        expect(verdict).to_contain_text("Ungraded")
         state = student_state(student)
-        hidden = [row for row in state["latestResult"]["cases"] if row["name"].startswith("Hidden test")]
-        assert len(hidden) == 2 and all(set(row) == {"name", "status"} for row in hidden), hidden
+        assert state["latestResult"]["status"] == "judge_unavailable", state
+        assert not state["latestResult"].get("cases"), state
 
     expect(teacher.locator("#submitted")).to_have_text("3", timeout=12000)
-    expect(teacher.locator("#accepted")).to_have_text("2")
-    expect(teacher.locator("#failed")).to_have_text("1")
+    expect(teacher.locator("#accepted")).to_have_text("0")
+    expect(teacher.locator("#failed")).to_have_text("0")
     teacher.screenshot(path=str(evidence / "03-live-classroom-statistics.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")
-    expect(patterns).to_contain_text("All tests passed 2 students")
+    expect(patterns).to_contain_text("score > 60")
     patterns.get_by_role("button").first.click()
     expect(teacher.locator(".diff-del")).to_contain_text("score > 60")
     expect(teacher.locator(".diff-add")).to_contain_text("score >= 60")
@@ -304,8 +275,8 @@ def check(browser, base, evidence):
             teacher.locator("#teacher-task-picker").select_option(first_task_id)
             expect(teacher.locator("#current-task")).to_contain_text(title)
             expect(teacher.locator("#submitted")).to_have_text("3")
-            expect(teacher.locator("#accepted")).to_have_text("2")
-            expect(teacher.locator("#failed")).to_have_text("1")
+            expect(teacher.locator("#accepted")).to_have_text("0")
+            expect(teacher.locator("#failed")).to_have_text("0")
             assert student_state(student)["task"]["id"] == next_task_id
             expect(student.locator("#task-title")).to_have_text(next_title)
             teacher.screenshot(path=str(evidence / "ux-first-task-history.png"), full_page=True)
@@ -349,7 +320,7 @@ def check(browser, base, evidence):
     for student in students:
         student.close()
     teacher.close()
-    print("Notebook classroom browser acceptance passed: direct import, 74/5 filter, safe replacement, private metadata, real submissions, labeled replay, analytics, and all five exercises published in sequence.")
+    print("Notebook classroom browser acceptance passed: direct import, 74/5 filter, safe replacement, private metadata, real submissions, ungraded submissions, analytics, and all five exercises published in sequence.")
 
 
 if __name__ == "__main__":

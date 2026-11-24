@@ -2,7 +2,7 @@ name: ClassLab Notebook classroom integration acceptance
 
 on:
   push:
-    branches: [main, feature/notebook-classroom-integration-20261124, fix/classlab-notebook-publishing, fix/final-ux-refinement]
+    branches: [main, release/sandbox-only, experiment/trusted-native-compile, fix/sandbox-interactive-stdin, fix/native-interactive-stdin, integration/final-secure-english]
   pull_request:
     paths:
       - 'web/**'
@@ -50,18 +50,10 @@ jobs:
           .venv/bin/python tests/browser_teacher_ux.py http://127.0.0.1:18080
           .venv/bin/python tests/browser_notebook_publish.py http://127.0.0.1:18080 --evidence notebook-evidence
           .venv/bin/python tests/browser_classroom_records.py http://127.0.0.1:18080
+          .venv/bin/python tests/browser_notebook_classroom.py http://127.0.0.1:18080 --evidence-dir notebook-evidence
           .venv/bin/python tests/browser_run_first.py ./build/classlab
-      - name: Original QR demo and full marked Notebook end-to-end browser rehearsal
-        run: |
-          python3 demo/run.py --binary ./build/classlab --port 18082 >"$RUNNER_TEMP/notebook-demo.log" 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true' EXIT
-          for _ in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:18082/api/health >/dev/null 2>&1; then break; fi
-            sleep 0.25
-          done
-          .venv/bin/python tests/browser_demo.py http://127.0.0.1:18082
-          .venv/bin/python tests/browser_notebook_classroom.py http://127.0.0.1:18082 --evidence-dir notebook-evidence
+          .venv/bin/python tests/browser_classroom_export.py http://127.0.0.1:18080
+          .venv/bin/python tests/browser_run_output.py http://127.0.0.1:18080
       - name: Upload accepted classroom screenshots
         uses: actions/upload-artifact@v4
         with:

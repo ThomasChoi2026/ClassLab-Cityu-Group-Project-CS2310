@@ -10,7 +10,6 @@
 </head>
 <body data-view="student">
   <header class="top"><div><strong>ClassLab</strong><span>Student Learning Portal</span></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo Mode · Execution and assessment results are replayed from predefined fixtures; submitted C++ programs are not compiled or executed. Classroom activities continue to be recorded in real time.</div>
   <main class="student">
     <section id="setup" class="intro">
       <div><h1>Join the Classroom</h1><p>Enter a display name so that your instructor can identify your submissions.</p></div>
@@ -61,10 +60,16 @@
               <p id="editor-feedback" class="inline-status" role="status"></p>
             </div>
             <div id="stdin-panel" hidden>
-              <label for="run-stdin"><span id="stdin-label">The program is reading standard input (stdin)</span>
-                <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false" placeholder="Enter program input here (e.g., 5 3)"></textarea>
+              <label for="run-stdin"><span id="stdin-label">Standard input (stdin)</span>
+                <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false"></textarea>
               </label>
-              <p id="stdin-hint" class="inline-status">Enter input and select Provide input and rerun. The isolated judge restarts the program. Leave the field empty to send EOF.</p>
+              <p id="stdin-hint" class="inline-status">Enter complete input before batch Run, or send input in stages during an interactive session.</p>
+              <div id="live-actions" class="lesson-actions" hidden>
+                <button id="send-stdin" type="button" class="secondary">Send input</button>
+                <button id="send-eof" type="button" class="secondary">End input (EOF)</button>
+                <button id="stop-run" type="button" class="secondary">Stop</button>
+              </div>
+              <p id="run-action-feedback" class="inline-status" role="status"></p>
             </div>
             <fieldset id="run-controls" class="run-controls" disabled aria-describedby="run-state">
               <legend>ClassLab Program Execution</legend>

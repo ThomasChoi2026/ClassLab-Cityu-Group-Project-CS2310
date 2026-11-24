@@ -6,7 +6,7 @@ ClassLab helps a teacher turn a C++ example from a notebook into a classroom deb
 
 ## Install and run
 
-Use `submission/english` for the English coursework submission. Use `main` to review the latest verified version and as the baseline for new work. Use the corresponding feature branch to review a specific development stage. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
+Use `main` to review the latest verified version and as the baseline for new work. Use the corresponding feature branch to review a specific development stage. Use Linux or WSL with a C++20 compiler, CMake 3.24 or later, Python 3, and network access to fetch the pinned C++ dependencies on the first build. CTest also runs the line-diff regression test when Node.js is available.
 
 ~~~sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -20,17 +20,17 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 
 | Control | What it does |
 | --- | --- |
-| **Restore starter code** | Confirm to replace the current editor contents with the teacher's starter for this task. The page also attempts to save the restored draft in this browser. |
-| **Download .cpp** | Save the current editor contents in a local .cpp file, named from the task title. |
-| **Run code** (Native Run-first) | Requires an available, security-accepted ClassLab Judge. Initially stdin stays hidden. The first run detects actual stdin consumption; if needed, the student enters the complete input and runs the program again from the beginning. This is not a live interactive terminal and does not count as a formal submission. |
-| **Submit code** | Save a formal attempt. Ctrl+Enter or Command+Enter also submits from the editor. The receipt shows the submission time in English using the browser's local time zone and the initial status. A queued or ungraded receipt does not award a score. |
-| **Submission history for this task (latest 50)** | Expand to see your latest 50 attempts, newest first, with time, status and a score when available. The list follows the active task. The latest submission's details remain separate from the history. |
+| **Restore starter code** (Restore starter code) | Confirm to replace the current editor contents with the teacher's starter for this task. The page also attempts to save the restored draft in this browser. |
+| **Download .cpp** (Download .cpp) | Save the current editor contents in a local .cpp file, named from the task title. |
+| **Run code** | With an available Judge, use a persistent execution session if interactive acceptance has passed, or enter complete stdin before batch Run. Run is independent of formal submissions. |
+| **Submit code** (Submit code) | Save a formal attempt. Ctrl+Enter or Command+Enter also submits from the editor. The receipt shows the submission time in the browser's local format and the initial status. A queued or ungraded receipt does not award a score. |
+| **Current task submission history (last 50 attempts)** (Current task submission history) | Expand to see your latest 50 attempts, newest first, with time, status and a score when available. The list follows the active task. The latest submission's details remain separate from the history. |
 
 ### OPT CPP practice
 
 1. Click the original teammate-designed **Send to OPT CPP** button next to **Copy code**. It opens DIVE4DEC's OPT CPP visualizer in a new tab with the current editor contents and an empty input array. Its existing automatic display-mode behavior is unchanged.
-2. Run and provide any requested input within OPT CPP itself. Use its step controls (including **Last**) to inspect the trace and output. ClassLab's native Run-first stdin is independent.
-3. If the generated URL exceeds ClassLab's 8,192-character threshold, use **Open blank OPT CPP** and **Copy current code** to transfer the source manually.
+2. Run and provide any requested input within OPT CPP itself. Use its step controls (including **Last**) to inspect the trace and output. ClassLab's Run stdin is independent.
+3. If the generated URL exceeds ClassLab's 8,192-character threshold, use **Open blank OPT CPP** and **Copy Current Code** to transfer the source manually.
 4. If the external page or its runtime cannot load, keep editing, download a .cpp copy, or submit to ClassLab. Submission and classroom feedback remain available without the external tool. Judge results require an independently verified server installation.
 
 **Privacy.** The address fragment is not included in the initial HTTP request, but the external page can read the code and any input supplied there, and the link may appear in local browser history or be shared. Do not pass passwords, tokens, personal data or private course materials. The external site's handling and policies apply. ClassLab does not receive the external output or award a score from it.
@@ -42,7 +42,6 @@ Run the standard classroom server with ./build/classlab. Open http://127.0.0.1:8
 | ClassLab Judge | The separately configured server Judge uses pinned GCC 14.3.0 in C++20 mode. It processes formal test outcomes only after the execution host passes the documented isolation acceptance. |
 | OPT CPP link | DIVE4DEC's upstream documents an instrumented in-browser xeus-cpp / Clang-REPL WebAssembly runtime. Its trace, C++ features, diagnostics and I/O behavior can differ from GCC. For example, it exposes recorded steps and selected state, with limits on global tracing and debugger operations. See the [upstream documentation](https://github.com/dive4dec/OPT_CPP#limitations). |
 | Official Python Tutor C++ service | The official [C++ Visualizer](https://pythontutor.com/cpp.html) is a separate endpoint. The reported GCC 9.3.0 / C++17 environment could not be independently confirmed against the live official service from the development environment. That version claim is not applied to OPT CPP. |
-| ClassLab demo | The demonstration uses clearly labelled fixed outcomes for bundled exercises. Classroom joins and submissions are real records in temporary storage. |
 
 The Chromium handoff test intercepts the external request. With the regular ClassLab service running and Python Playwright installed, run:
 
@@ -52,24 +51,15 @@ python3 tests/browser_student.py http://127.0.0.1:8080 --executable /usr/bin/chr
 
 The integration check also ran the actual upstream assets from revision 654cd74 on loopback in Chromium. A C++ program read two stdin lines and produced RESULT=8, and an invalid program produced a compilation error. The live OPT CPP endpoint returned a proxy 403 from the cloud environment. Live access, Firefox and Safari execution were not verified.
 
-## Repeatable classroom demo
+## Repeatable classroom demonstration
 
-Start `bash demo/start_coursework.sh 8082` from the repository root. Open port 8082 privately or use the local browser. Each launch uses a temporary classroom store, deleted on Ctrl+C.
-
-Download [the original Score Analysis lecture](../examples/CS2310_Score_Analysis.ipynb) to the teacher device. Open Lesson Preparation, directly upload the file, and select **Fix the grade boundary** (Cell 22 of 74; five marked exercises). The starter, description, test cases and teacher pitfalls are loaded together; review before publishing. See [marker and Metadata rules](NOTEBOOK_CLASSROOM.md).
-
-Use three independent student sessions. For the public input `60`, the exact starter returns the labeled replay `FAIL`; replacing `score > 60` with `score >= 60` returns `PASS`. Have one student submit the starter and two submit the exact corrected source. Show the teacher totals (3 submissions, 2 accepted, 1 wrong answer), common edit and boundary-test evidence. The Notebook remains available for the next exercise.
-
-All five marked exercises support strictly matching prerecorded results. Demo Run accepts public fixture inputs only; grading accepts the complete ordered fixture input list. This is not unrestricted C++ execution. The old synthetic addition notebook remains available as a backwards-compatible fixture.
-
-For browser rehearsal, install Playwright, Chromium, Pillow and zxing-cpp, then run `python3 tests/browser_notebook_classroom.py http://127.0.0.1:8082 --evidence-dir notebook-evidence`. Existing legacy browser checks remain separate. See the [60-second script and startup guide](COURSEWORK_DEMO.md).
+Use the [authored score-analysis Notebook](../examples/CS2310_Score_Analysis.ipynb), publish Cell 22, join three separate browser sessions, correct the boundary and submit. Actual Run and grades require an accepted Judge. Without it, demonstrate saved submissions and source changes only. See [the rehearsal guide](COURSEWORK_DEMO.md).
 
 ## Architecture and evidence
 
 - The browser parses Notebook v4 files locally, supports code-cell sources stored as a string or an array, and publishes only the editor contents and task fields. Notebook metadata, outputs, and other cells stay on the device.
 - The C++20 server handles classroom membership, role checks, submissions, the persistent queue, student-scoped attempt summaries and dashboard aggregation. Hidden tests stay within teacher-authorized paths, and the projection displays classroom totals.
 - The normal Judge uses a private Unix socket and independent containers with a pinned GCC image. The execution service requires deployment acceptance before it can run arbitrary student programs. Phase 5 exercised real GCC with a trusted-source allowlist and verified results through the browser. Full runtime isolation acceptance for arbitrary submissions, including cgroup quotas and resource-exhaustion handling, remains outstanding.
-- Demo mode records real joins, edits and submissions against a temporary store. It replays fixed results for exact synthetic starter/reference variants and registered inputs. It disables arbitrary C++ execution and labels replay results on both sides. It works without Docker, a compiler in the browser, student credentials, or external services at runtime.
 
 ## Development review and collaboration
 
@@ -77,7 +67,7 @@ For browser rehearsal, install Playwright, Chromium, Pillow and zxing-cpp, then 
 | --- | --- |
 | Published | Share the private feature branch link and exact commit for review. Verify reviewer access. |
 | Documented | English overview, setup, architecture, limitations and demo script are in this guide. Keep the guide current as the workflow changes. |
-| Functional | Build and run CTest, rehearse the private demo, and distinguish the replay from the prior real GCC evidence. Keep arbitrary execution disabled until isolation acceptance. |
+| Functional | Build and run CTest, rehearse the private classroom, distinguishing ungraded submissions from real GCC verdicts. Keep arbitrary execution disabled until isolation acceptance. |
 | Innovative | The contribution is the lesson workflow from a notebook cell to immediate participation to class-level feedback. QR codes, compilation and test judging are established techniques. |
 | Teamwork | Assign reviewers for the Notebook workflow, privacy checks, and rehearsal. Record only actual contributions. The Phase 5 baseline's Git author labels list seven commits under Thomas CAI and one under ThomasChoi2026. These figures describe the Phase 5 snapshot. The Git history records later contributors and their original commits. Record any confirmed offline work separately. |
 
@@ -85,4 +75,4 @@ Start each task from the latest `main` on a separate feature branch. Commit and 
 
 ## 60-second English demo script
 
-Follow the current [Coursework Demo Guide](COURSEWORK_DEMO.md#4-60-second-english-demonstration-script), using the full marked Score Analysis Notebook, not the legacy unmarked addition fixture.
+Follow the current [Coursework Demo Guide](COURSEWORK_DEMO.md), using the full marked Score Analysis Notebook, not the legacy unmarked addition fixture.

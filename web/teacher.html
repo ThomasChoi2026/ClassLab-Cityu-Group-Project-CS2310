@@ -13,7 +13,6 @@
 </head>
 <body data-view="teacher">
   <header class="top"><div><strong>ClassLab</strong><span>Teacher Dashboard</span><button id="open-teacher-guide" type="button" class="secondary" aria-haspopup="dialog">User Guide</button></div></header>
-  <div id="demo-banner" class="demo-banner" role="status" hidden>Demo mode · Classroom activity is recorded live. Runs and grading use prerecorded results. <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/examples/CS2310_Score_Analysis.ipynb" target="_blank" rel="noopener noreferrer">Download teaching notebook (74 cells / 5 exercises)</a></div>
   <main>
     <section id="setup" class="intro">
       <div><h1>Create a Programming Class</h1><p>Publish C++ exercises and share the join link with students.</p></div>
@@ -177,7 +176,7 @@
             </div>
           </div>
           <p id="export-feedback" class="inline-status" role="status"></p>
-          <label id="teacher-task-navigation" hidden>View Published Assignments
+          <label id="teacher-task-navigation" hidden>View published tasks
             <select id="teacher-task-picker"><option value="">Latest task</option></select>
           </label>
           <p id="current-task">Retrieving Current Assignment…</p>
@@ -261,8 +260,8 @@
         <p>You can preview and manually load ordinary code. ClassLab detects marked interactive exercises automatically. Add cases, descriptions, and pitfalls through optional metadata or in the editor. See <a href="https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310/blob/main/docs/NOTEBOOK_CLASSROOM.md" target="_blank" rel="noopener noreferrer">Notebook markers and metadata</a>.</p>
       </section>
       <section>
-        <h3>5. Standard mode and demo mode</h3>
-        <p>Live C++ runs and grading in standard mode require a verified isolated judge. Demo mode replays matching fixtures without compiling arbitrary C++. Classroom joins, submission records, and classroom analysis use live activity in both modes.</p>
+        <h3>5. Live execution and grading</h3>
+        <p>Live C++ Run and grading require an isolated judge that has passed deployment acceptance. Workers that also pass interactive acceptance support repeated stdin; otherwise Run uses complete-input batch execution. Without a judge, ClassLab still collects code and displays classroom records, but cannot compile or grade.</p>
       </section>
     </dialog>
     <dialog id="submission-dialog" aria-labelledby="submission-title">

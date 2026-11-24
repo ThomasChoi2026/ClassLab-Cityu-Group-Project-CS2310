@@ -40,9 +40,7 @@ inline std::string limited_text(const Json& data, const char* key, std::size_t l
 
 class Client {
 public:
-    explicit Client(std::string socket, bool demo = false) : socket_(std::move(socket)), demo_(demo) {}
-
-    bool demo() const { return demo_; }
+    explicit Client(std::string socket) : socket_(std::move(socket)) {}
 
     bool configured() const { return !socket_.empty(); }
 
@@ -56,16 +54,39 @@ public:
         return health.value("status", "") == "ready" && health.value("busy", Json(false)) == false;
     }
 
+    bool interactive_available() const {
+        if (!configured()) return false;
+        const auto health = request("", nullptr);
+        return health.value("status", "") == "ready" && health.value("interactive", false);
+    }
+
+    Json interactive(const Json& packet) const {
+        try {
+            httplib::Client client(socket_, 80);
+            client.set_address_family(AF_UNIX);
+            client.set_follow_location(false);
+            client.set_connection_timeout(0, 300000);
+            client.set_read_timeout(3);
+            client.set_write_timeout(3);
+            const auto response = client.Post("/interactive", packet.dump(), "application/json");
+            if (!response || response->status != 200 || response->body.size() > 300000)
+                return judge_error();
+            auto data = Json::parse(response->body, nullptr, false);
+            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) ||
+                !data.contains("status") || !data.at("status").is_string()) return judge_error();
+            data.erase("version");
+            return data;
+        } catch (const std::exception&) {
+            return judge_error();
+        }
+    }
+
     std::unique_lock<std::mutex> reserve() { return std::unique_lock(slot_, std::try_to_lock); }
 
     Json run(const std::string& code, const std::string& input, bool probe = false) const {
         const auto reply = request(code, Json::array({probe ? std::string{} : input}),
                                    probe ? "probe" : "run");
         const auto status = reply.value("status", "");
-        if (demo_ && status == "demo_no_fixture") {
-            return {{"status", "demo_no_fixture"},
-                    {"error", "No matching demo fixture. Use the supported starter or solution code and a public input for this task. This demo does not compile or run arbitrary C++."}};
-        }
         if (probe && status == "stdin_required") {
             try {
                 return {{"status", "stdin_required"},
@@ -94,7 +115,6 @@ public:
         Json inputs = Json::array();
         for (const auto& test : tests) inputs.push_back(test.at("input"));
         const auto reply = request(code, inputs, "grade");
-        if (demo_ && reply.value("status", "") == "demo_no_fixture") return {{"status", "demo_no_fixture"}};
         if (reply.value("status", "") != "success") return failure(reply);
         try {
             const auto& cases = reply.at("cases");
@@ -163,7 +183,7 @@ private:
                 client.Post("/evaluate", Json{{"version", 1}, {"code", code}, {"inputs", inputs}, {"mode", mode}}.dump(), "application/json");
             if (!result || result->status != 200 || result->body.size() > 600000) return judge_error();
             const auto data = Json::parse(result->body, nullptr, false);
-            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) != demo_ ||
+            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) ||
                 !data.contains("status") || !data.at("status").is_string()) return judge_error();
             return data;
         } catch (const std::exception&) {
@@ -172,7 +192,6 @@ private:
     }
 
     std::string socket_;
-    bool demo_;
     std::mutex slot_;
 };
 

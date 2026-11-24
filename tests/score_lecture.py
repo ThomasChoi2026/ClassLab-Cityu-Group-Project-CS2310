@@ -7,7 +7,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from demo.run import SCORE_FIXTURES, score_playback
 
 # Expected results independently stated in the lecture or calculated from its example.
 NORMAL = {
@@ -89,25 +88,10 @@ def main(compiler):
                 actual_reference = run(corrected, case["input"])
                 observed.append(actual_starter)
                 assert actual_reference == case["expectedOutput"], (title, case["name"], actual_reference)
-                for fixture_source, actual in [(source, actual_starter), (answer, actual_reference)]:
-                    fixture = SCORE_FIXTURES[fixture_source]
-                    replay = score_playback(fixture, "run", [case["input"]])
-                    if case["visibility"] == "hidden":
-                        assert replay["status"] == "demo_no_fixture"
-                    else:
-                        assert bytes.fromhex(replay["cases"][0]["stdoutHex"]).decode() == actual
                 checks += 1
             assert observed == reference["starterOutputs"], (title, observed)
             assert any(a != b["expectedOutput"] for a, b in zip(observed, cases)), title
             assert any(a != b["expectedOutput"] and b["visibility"] == "public" for a,b in zip(observed,cases)), title
-            for fixture_source, expected in [(source, observed), (answer, [c["expectedOutput"] for c in cases])]:
-                fixture = SCORE_FIXTURES[fixture_source]
-                assert score_playback(fixture, "probe", [""])["status"] == "stdin_required"
-                results = score_playback(fixture, "grade", inputs)
-                assert [bytes.fromhex(c["stdoutHex"]).decode() for c in results["cases"]] == expected
-                assert score_playback(fixture, "grade", inputs[:-1])["status"] == "demo_no_fixture"
-                assert score_playback(fixture, "run", ["unregistered"])["status"] == "demo_no_fixture"
-            assert source + "\n// modified student code" not in SCORE_FIXTURES
             print(f"Cell {index}: {title}: {len(cases)} validated tests; starter defect reproduced")
     assert normal_count == len(NORMAL)
     print(f"Verified {normal_count} normal programs + 5 starters + 5 references; {checks} exercise cases for each variant.")

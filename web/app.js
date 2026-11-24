@@ -124,10 +124,17 @@ function joinQr(link) {
 const statusText = {
   received: "Submitted",
   success: "Run successful",
+  compiling: "Compiling",
+  running: "Running",
+  stopping: "Stopping",
+  stopped: "Stopped",
+  idle_timeout: "Input/output inactivity timeout",
+  busy: "Execution slots occupied",
+  not_found: "Execution session ended",
+  request_error: "Request error",
   judge_unavailable: "Ungraded · Runner unavailable",
   judge_error: "Grading service error",
   pending: "Grading",
-  demo_no_fixture: "Ungraded · No matching demo fixture",
   queued: "Queued for grading",
   judge_queue_full: "Ungraded · Queue full",
   accepted: "All tests passed",
@@ -155,7 +162,6 @@ function exportedStatus(status, count) {
     judge_unavailable: "Not evaluated (Judge unavailable)",
     judge_queue_full: "Not evaluated (evaluation queue full)",
     judge_error: "Evaluation service error",
-    demo_no_fixture: "Not evaluated (no matching Demo fixture)",
     accepted: "All tests passed",
     wrong_answer: "Tests not all passed (wrong answer)",
     compilation_error: "Compilation error",
@@ -184,7 +190,7 @@ function buildClassroomCsv(state, exportedAt = new Date()) {
       exportedStatus(student.latestStatus, student.count),
       hasScore ? student.passed : "",
       hasScore ? student.total : "",
-      state.demo ? "Demo" : "Normal",
+      "Normal",
       exportedAtUtc,
     ].map(csvCell).join(",");
   });
@@ -198,9 +204,9 @@ function safeFilePart(value) {
     .slice(0, 70) || "ClassLab";
 }
 
-function runResultCopyText(result, demoMode) {
+function runResultCopyText(result) {
   const sections = [];
-  if (demoMode || result.demoFixture) {
+  if (result.demoFixture) {
     sections.push("DEMO REPLAY — Prerecorded result. The current C++ code was neither compiled nor run.");
   }
   if (result.status) {
@@ -595,12 +601,6 @@ function initializeNotebookImport(form, loadExercise) {
       status.textContent = "Notebook retained. Browse the cells to prepare the next exercise.";
     },
   };
-}
-
-function showDemoBanner(state) {
-  byId("demo-banner").hidden = !state.demo;
-  const notebookDownload = byId("normal-notebook-download");
-  if (notebookDownload) notebookDownload.hidden = Boolean(state.demo);
 }
 
 function renderDiff(original, code) {
@@ -1190,7 +1190,6 @@ function initializeTeacher() {
     byId("classroom-progress").hidden = false;
     byId("class-schedule").hidden = false;
     toggle.disabled = false;
-    showDemoBanner(state);
     renderSchedule(state.schedule);
     const archived = Boolean(selectedTask.value);
     renderTasks(state.tasks);
@@ -1211,7 +1210,7 @@ function initializeTeacher() {
     for (const key of ["joined", "submitted", "attempts", "unsubmitted", "accepted", "failed", "queued", "pending", "unjudged"]) {
       byId(key).textContent = state[key];
     }
-    byId("judge-state").textContent = state.demo || state.executionAvailable ? "" :
+    byId("judge-state").textContent = state.executionAvailable ? "" :
       (state.queued ? "The judge is unavailable. Queued submissions have been saved and will resume when it reconnects." : "The isolated runner is unavailable. Ungraded submissions are excluded from the failure count.");
     const judged = state.accepted + state.failed;
     byId("class-pass-rate").textContent = judged ?
@@ -1476,8 +1475,6 @@ function initializeStudent() {
   let resultSignature;
   let pendingSubmission;
   let running = false;
-  let stdinPending = null;
-  let demoMode = false;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -1505,7 +1502,7 @@ function initializeStudent() {
     fallback.setAttribute("aria-label", "Run result for manual copying");
 
     button.addEventListener("click", async () => {
-      fallback.value = runResultCopyText(result, demoMode);
+      fallback.value = runResultCopyText(result);
       fallback.hidden = false;
       const copied = await copyText(fallback, "run-copy-feedback", "Run result copied.");
       if (copied) fallback.hidden = true;
@@ -1517,11 +1514,8 @@ function initializeStudent() {
   }
 
   function showTask(state) {
-    demoMode = Boolean(state.demo);
-    byId("stdin-label").textContent = demoMode ? "Preset demo input (stdin)" : "The program is reading standard input (stdin)";
-    byId("stdin-hint").textContent = demoMode ? "Enter a public input from this task. Running again replays the preset result without executing C++." :
-      "Enter input and select Provide input and rerun. The isolated judge restarts the program. Leave the field empty to send EOF.";
-    showDemoBanner(state);
+    executionAvailable = Boolean(state.executionAvailable);
+    interactive = Boolean(state.interactiveAvailable);
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
@@ -1553,14 +1547,8 @@ function initializeStudent() {
       "open-optcpp"]) {
       byId(id).hidden = archived;
     }
-    byId("run-controls").disabled = archived || !state.executionAvailable || running;
-    const runStatus = byId("run-state");
-    const runMessage = archived ? "" : running ? (demoMode ? "Loading the prerecorded result…" : "Compiling and running…") :
-      stdinPending ? (demoMode ? "Enter the preset input, then run again to replay the result." : "The program requested standard input. Enter it and run again to restart the program.") :
-      state.demo ? "Only preset code and inputs match. Use a public case from this task." :
-      state.executionAvailable ? "Run the program first. You will only be asked for input if it reads stdin. A practice run does not count as a submission." :
-      "The isolated runner is unavailable. Code cannot run right now.";
-    if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
+    if (archived && live) forgetLive();
+    syncRunControls();
     const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
       resultSignature = signature;
@@ -1572,11 +1560,12 @@ function initializeStudent() {
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
     byId("run-result").replaceChildren();
-    clearStdinPrompt(true);
+    forgetLive();
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
     byId("editor-feedback").textContent = currentTask && !archived ? "Latest task opened." : "";
     currentTask = state.task;
+    syncRunControls();
     byId("task-title").textContent = currentTask.title;
     const taskDescription = currentTask.description || "";
     byId("task-description").textContent = taskDescription;
@@ -1595,6 +1584,7 @@ function initializeStudent() {
     if (selectedTask.value === taskId) showTask(state);
   }, (error) => {
     if (error.status === 403 || error.status === 404) {
+      forgetLive();
       localStorage.removeItem(storageKey);
       key = null;
       currentTask = null;
@@ -1610,7 +1600,7 @@ function initializeStudent() {
     }
   });
 
-  selectedTask.addEventListener("change", () => { void refresh(); });
+  selectedTask.addEventListener("change", () => { forgetLive(); void refresh(); });
 
   onSubmit("join", async (data) => {
     const result = await api(endpoint("/students"), { data });
@@ -1625,13 +1615,153 @@ function initializeStudent() {
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "Code copied."));
 
   const input = byId("submit").elements.runInput;
-  function clearStdinPrompt(clearInput = false) {
-    const wasWaitingForInput = stdinPending !== null;
-    stdinPending = null;
-    byId("stdin-panel").hidden = true;
-    if (clearInput || wasWaitingForInput) input.value = "";
-    byId("run-code").textContent = demoMode ? "Demo run (replay)" : "Run code";
+  const activeStatuses = new Set(["compiling", "running", "stopping"]);
+  let live = null;
+  let interactive = false;
+  let executionAvailable = false;
+  let livePolling = false;
+  let liveAction = false;
+
+  function syncRunControls() {
+    const archived = Boolean(selectedTask.value);
+    const active = Boolean(live);
+    const enabled = !archived && executionAvailable && Boolean(currentTask);
+    byId("run-controls").disabled = !enabled || running || active;
+    editor.readOnly = archived || running || active;
+    byId("reset-code").disabled = running || active;
+    byId("stdin-panel").hidden = archived || (!enabled && !active) || (interactive && !active);
+    byId("live-actions").hidden = !active;
+    input.disabled = archived || running || (active && (!live?.stdinOpen || liveAction));
+    byId("send-stdin").disabled = !live?.stdinOpen || liveAction;
+    byId("send-eof").disabled = !live?.stdinOpen || liveAction;
+    byId("stop-run").disabled = !live || liveAction || live.status === "stopping";
+    byId("stdin-label").textContent = interactive || active ? "Interactive standard input (stdin)" : "Complete standard input (batch)";
+    byId("stdin-hint").textContent = interactive || active
+      ? "Send one or more lines. The same process continues; select End input (EOF) to close stdin."
+      : "Enter all required input before Run. This is batch execution: stdin closes after the supplied input. Leave blank for programs without input.";
+    byId("run-state").textContent = active ? (live.status === "compiling" ? "Compiling…" : live.status === "stopping" ? "Stopping…" :
+      "The process is running. You can send input; it may or may not be waiting for stdin.") :
+      !enabled ? "Runner unavailable or historical task selected." :
+      running ? "Compiling and running…" : interactive ? "Run starts a persistent process and does not count as a submission." :
+      "Batch Run: enter complete stdin before running. This does not count as a submission.";
   }
+
+  function showRunResult(result, active = false) {
+    const panel = byId("run-result");
+    panel.replaceChildren();
+    displayResult(panel, result);
+    if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "Exit status " + result.exitCode));
+    if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "Standard output"), element("pre", result.stdout || (active ? "" : "(empty)")));
+    if (result.stderr) panel.append(element("strong", "Standard error"), element("pre", result.stderr));
+    if (result.error) panel.append(element("p", result.error));
+    panel.hidden = false;
+    appendRunResultCopy(panel, result);
+  }
+
+  function sessionRequest(run, action, extra = {}) {
+    return api(endpoint("/run-session"), {headers: headers(), timeoutMs: 7000,
+      data: {action, taskId: run.taskId, ...(run.id ? {sessionId: run.id} : {}), ...extra}});
+  }
+
+  function forgetLive() {
+    const previous = live;
+    live = null;
+    if (previous?.id && key) void sessionRequest(previous, "stop").catch(() => {});
+    input.value = "";
+    syncRunControls();
+  }
+
+  function acceptLive(run, result) {
+    if (live !== run) {
+      if (result.sessionId && key) void sessionRequest({...run, id: result.sessionId}, "stop").catch(() => {});
+      return;
+    }
+    if (["input_closed", "input_limit"].includes(result.status)) {
+      byId("run-action-feedback").textContent = result.error || result.status;
+      return;
+    }
+    if (result.sessionId) run.id = result.sessionId;
+    run.status = result.status;
+    run.stdinOpen = Boolean(result.stdinOpen);
+    const signature = JSON.stringify(result);
+    if (signature !== run.signature) {
+      run.signature = signature;
+      showRunResult(result, activeStatuses.has(result.status));
+    }
+    if (!activeStatuses.has(result.status)) {
+      live = null;
+      input.value = "";
+    }
+    syncRunControls();
+  }
+
+  async function pollLive() {
+    const run = live;
+    if (!run?.id || livePolling || liveAction) return;
+    if (Date.now() - run.started > 150000) {
+      forgetLive();
+      showRunResult({status: "request_error", error: "The execution session has exceeded its maximum lifetime. Run again."});
+      return;
+    }
+    livePolling = true;
+    const revision = run.revision || 0;
+    try {
+      const result = await sessionRequest(run, "poll");
+      if (live === run && !liveAction && revision === (run.revision || 0)) {
+        if (result.status === "judge_error" && !result.sessionId)
+          byId("run-action-feedback").textContent = "Execution session connection unavailable; retrying.";
+        else acceptLive(run, result);
+      }
+    } catch (error) {
+      if (live === run) {
+        if (error.status === 403 || error.status === 409) forgetLive();
+        else byId("run-action-feedback").textContent = "Execution session connection unavailable; retrying.";
+      }
+    } finally {
+      livePolling = false;
+    }
+  }
+
+  setInterval(pollLive, 350);
+  addEventListener("pagehide", () => {
+    if (!live?.id || !key) return;
+    fetch("/api" + endpoint("/run-session"), {method: "POST", keepalive: true,
+      headers: {...headers(), "Content-Type": "application/json"},
+      body: JSON.stringify({action: "stop", taskId: live.taskId, sessionId: live.id})}).catch(() => {});
+  });
+
+  async function liveCommand(action) {
+    const run = live;
+    if (!run || liveAction || (action !== "stop" && !run.stdinOpen)) return;
+    if (!run.id) {
+      if (action === "stop") forgetLive();
+      return;
+    }
+    const original = input.value;
+    const extra = action === "input" ? {input: original.endsWith("\n") ? original : original + "\n"} : {};
+    run.revision = (run.revision || 0) + 1;
+    liveAction = true;
+    syncRunControls();
+    byId("run-action-feedback").textContent = "";
+    try {
+      const result = await sessionRequest(run, action, extra);
+      if (live === run) {
+        if (action === "input" && !["input_closed", "input_limit", "judge_error", "not_found"].includes(result.status)) input.value = "";
+        if (result.status === "judge_error" && !result.sessionId)
+          byId("run-action-feedback").textContent = "Action not confirmed. Check the session state; input is not automatically resent.";
+        else acceptLive(run, result);
+      }
+    } catch (error) {
+      if (live === run) byId("run-action-feedback").textContent = "Action not confirmed: " + error.message + ". Check the output before deciding whether to retry.";
+    } finally {
+      liveAction = false;
+      syncRunControls();
+    }
+  }
+
+  byId("send-stdin").addEventListener("click", () => void liveCommand("input"));
+  byId("send-eof").addEventListener("click", () => void liveCommand("eof"));
+  byId("stop-run").addEventListener("click", () => void liveCommand("stop"));
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
   byId("open-optcpp").addEventListener("click", () => {
@@ -1707,55 +1837,52 @@ function initializeStudent() {
   }
 
   editor.addEventListener("input", () => {
-    clearStdinPrompt();
+    if (!live && !running) {
+      byId("run-result").hidden = true;
+      byId("run-result").replaceChildren();
+    }
     saveEditorDraft("Draft saved in this browser.");
   });
 
   byId("run-code").addEventListener("click", async () => {
-    if (running || selectedTask.value || !currentTask || !editor.reportValidity()) return;
+    if (running || live || selectedTask.value || !currentTask || !editor.reportValidity()) return;
     const taskId = currentTask.id;
+    const code = editor.value;
     const panel = byId("run-result");
-    const provideInput = stdinPending?.taskId === taskId && stdinPending.code === editor.value;
-    const runInput = provideInput ? input.value : "";
-    running = true;
-    byId("run-controls").disabled = true;
-    byId("run-state").textContent = demoMode ? "Loading the prerecorded result…" : "Compiling and running…";
+    byId("run-action-feedback").textContent = "";
     panel.hidden = true;
     panel.replaceChildren();
+    if (interactive) {
+      const run = {taskId, code, id: null, status: "compiling", stdinOpen: false, started: Date.now()};
+      live = run;
+      input.value = "";
+      syncRunControls();
+      try {
+        acceptLive(run, await sessionRequest(run, "start", {code}));
+      } catch (error) {
+        if (live === run) {
+          live = null;
+          showRunResult({status: "request_error", error: error.message});
+          syncRunControls();
+        }
+      }
+      return;
+    }
+    // Explicit batch fallback: provide all input before execution, no probe.
+    const runInput = input.value;
+    running = true;
+    syncRunControls();
     try {
-      const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
-        data: { taskId, code: editor.value, input: runInput, probe: !provideInput } });
-      if (taskId !== currentTask?.id) return;
-      if (result.status === "stdin_required") {
-        stdinPending = { taskId, code: editor.value };
-        byId("stdin-panel").hidden = false;
-        byId("run-code").textContent = demoMode ? "Enter input and replay" : "Provide input and rerun";
-        panel.replaceChildren(element("p", demoMode ?
-          "Demo replay: This example reads standard input. Use a public test input. The current code will not run." :
-          "The program requested standard input. Enter it and run the program again."));
-        if (result.stdout) panel.append(element("strong", "Output before input"), element("pre", result.stdout));
-        if (result.stderr) panel.append(element("strong", "Standard error"), element("pre", result.stderr));
-        panel.hidden = false;
-        appendRunResultCopy(panel, result);
-        input.focus();
-        return;
-      }
-      clearStdinPrompt();
-      displayResult(panel, result);
-      if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "Exit status " + result.exitCode));
-      if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "Standard output"), element("pre", result.stdout || "(empty)"));
-      if (result.stderr) panel.append(element("strong", "Standard error"), element("pre", result.stderr));
-      if (result.error) panel.append(element("p", result.error));
-      panel.hidden = false;
-      appendRunResultCopy(panel, result);
+      const result = await api(endpoint("/run"), {headers: headers(), timeoutMs: 115000,
+        data: {taskId, code, input: runInput, probe: false}});
+      if (taskId !== currentTask?.id || selectedTask.value || code !== editor.value) return;
+      showRunResult(result);
     } catch (error) {
-      if (taskId === currentTask?.id) {
-        panel.replaceChildren(element("p", error.message));
-        panel.hidden = false;
-        appendRunResultCopy(panel, { status: "request_error", error: error.message });
-      }
+      if (taskId === currentTask?.id && !selectedTask.value && code === editor.value)
+        showRunResult({status: "request_error", error: error.message});
     } finally {
       running = false;
+      syncRunControls();
       await refresh();
     }
   });
@@ -1801,6 +1928,5 @@ function initializeStudent() {
   if (key) void refresh();
 }
 
-api("/health").then(showDemoBanner).catch(() => {});
 if (document.body.dataset.view === "teacher") initializeTeacher();
 else initializeStudent();
