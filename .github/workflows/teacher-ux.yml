@@ -38,3 +38,5 @@ jobs:
             sleep 0.2
           done
           .venv/bin/python tests/browser_teacher_ux.py http://127.0.0.1:18081
+          .venv/bin/python tests/browser_classroom_export.py http://127.0.0.1:18081
+          .venv/bin/python tests/browser_run_output.py http://127.0.0.1:18081
