@@ -231,6 +231,8 @@ function initializeNotebookImport(form, loadExercise) {
   const overview = byId("notebook-overview");
   const use = byId("use-notebook-cell");
   const toggleCell = byId("toggle-prep-cell");
+  const combination = byId("notebook-combination");
+  const combinationSummary = combination.querySelector("summary");
   const assemble = byId("assemble-notebook");
   const appendText = byId("append-notebook-text");
   const selection = byId("selected-prep-cells");
@@ -261,6 +263,9 @@ function initializeNotebookImport(form, loadExercise) {
       ? "组合 Cell " + numbers.join(" → ") + (selectionApplied ? " 已填入起始代码。" : " 尚未填入起始代码。")
       : "尚未选择组合单元。";
     assemble.disabled = !numbers.length;
+    combination.hidden = !numbers.length && (!cells[current] || toggleCell.hidden);
+    combinationSummary.textContent = "多 Cell 组合（高级）" + (numbers.length
+      ? " · " + numbers.length + (selectionApplied ? " 个已填入" : " 个待填入") : "");
   }
 
   function matchingCells() {
@@ -312,6 +317,7 @@ function initializeNotebookImport(form, loadExercise) {
       ? "互动练习含 " + cell.exercise.testCases.length + " 个用例；载入后请检查再发布。"
       : isCode ? preparedSource(cell).error || "这里只是预览。请使用此 Cell 或将它加入组合。"
         : "这里只是预览。可将此 Cell 追加到任务说明。");
+    showSelection();
     renderList();
   }
 
@@ -321,6 +327,8 @@ function initializeNotebookImport(form, loadExercise) {
     current = 0;
     selected.clear();
     selectionApplied = false;
+    combination.open = false;
+    combination.hidden = true;
     search.value = "";
     filter.value = "all";
     list.replaceChildren();
@@ -416,6 +424,7 @@ function initializeNotebookImport(form, loadExercise) {
       currentLabel.textContent = "没有匹配的单元";
       preview.textContent = "";
       use.hidden = toggleCell.hidden = appendText.hidden = true;
+      showSelection();
       status.textContent = "没有匹配的单元，可修改搜索或筛选条件。";
       renderList();
     }
@@ -451,7 +460,6 @@ function initializeNotebookImport(form, loadExercise) {
       selected.add(current);
     }
     selectionApplied = false;
-    showSelection();
     showCell();
   });
   assemble.addEventListener("click", () => {
@@ -494,14 +502,14 @@ function initializeNotebookImport(form, loadExercise) {
     finishTask() {
       if (!cells.length) return;
       resetSelection();
+      combination.open = false;
       status.textContent = "已保留 Notebook，可继续浏览并准备下一题。";
     },
   };
 }
 
 function showDemoBanner(state) {
-  if (state.demo) byId("demo-banner").hidden = false;
-  if (state.demo && byId("demo-cases")) byId("demo-cases").hidden = false;
+  byId("demo-banner").hidden = !state.demo;
 }
 
 function renderDiff(original, code) {
@@ -687,6 +695,14 @@ function initializeTeacher() {
   starter.addEventListener("input", syncStarter);
   syncStarter();
 
+  const updatePreparationCounts = () => {
+    byId("preparation-counts").textContent = caseRows.childElementCount + " 个用例 · " + pitfallRows.childElementCount + " 个易错点";
+  };
+  const countObserver = new MutationObserver(updatePreparationCounts);
+  countObserver.observe(caseRows, {childList: true});
+  countObserver.observe(pitfallRows, {childList: true});
+  updatePreparationCounts();
+
   function prepare(enabled) {
     byId("dashboard").toggleAttribute("data-preparing", enabled);
     byId("dashboard").hidden = !enabled;
@@ -696,7 +712,7 @@ function initializeTeacher() {
     if (enabled) {
       selectComposeMode("prep");
       byId("room-name").textContent = "课前备课";
-      byId("save-draft").focus();
+      byId("notebook-file").focus();
     } else {
       byId("open-preparation").focus();
     }
@@ -780,7 +796,8 @@ function initializeTeacher() {
     byId("compose-prep").classList.toggle("secondary", !preparing);
     byId("prep-library").hidden = !preparing;
     byId("notebook-import").hidden = !preparing;
-    byId("teacher-optional-settings").open = preparing;
+    byId("teacher-optional-settings").open = false;
+    byId("prep-library").open = false;
     byId("compose-hint").textContent = preparing
       ? "浏览 Notebook，将所需单元填入起始代码，再核对并发布。"
       : "填写标题并粘贴 C++ 代码，或选择让学生从空白开始。";
@@ -817,16 +834,7 @@ function initializeTeacher() {
     if (focus) row.querySelector("input").focus();
   }
   addCase.addEventListener("click", () => appendCase());
-  byId("demo-cases").addEventListener("click", () => {
-    if (caseRows.childElementCount) {
-      feedback("请先清空已有用例，再填入演示用例。", true, "publish-feedback");
-      return;
-    }
-    for (const [name, input, expectedOutput, visibility] of [
-      ["Positive", "2 3", "5", "public"], ["Zero", "0 0", "0", "public"], ["Mixed signs", "-4 9", "5", "hidden"],
-    ]) appendCase({name, input, expectedOutput, visibility});
-    feedback("已填入三个演示用例。", false, "publish-feedback");
-  });
+
 
   async function praiseStudent(name, number) {
     try {

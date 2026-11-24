@@ -2,7 +2,7 @@ name: ClassLab Notebook classroom integration acceptance
 
 on:
   push:
-    branches: [feature/notebook-classroom-integration-20261124]
+    branches: [main, feature/notebook-classroom-integration-20261124, fix/classlab-notebook-publishing]
   pull_request:
     paths:
       - 'web/**'
@@ -37,7 +37,7 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install playwright pillow zxing-cpp
           .venv/bin/python -m playwright install --with-deps chromium
-      - name: Original student, teacher and native Run-first browser regressions
+      - name: Student, teacher, native Run-first and consecutive Notebook publication regressions
         run: |
           CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=18080 CLASSLAB_DATA="$RUNNER_TEMP/notebook-normal.json" ./build/classlab >"$RUNNER_TEMP/normal.log" 2>&1 &
           pid=$!
@@ -48,6 +48,7 @@ jobs:
           done
           .venv/bin/python tests/browser_student.py http://127.0.0.1:18080
           .venv/bin/python tests/browser_teacher_ux.py http://127.0.0.1:18080
+          .venv/bin/python tests/browser_notebook_publish.py http://127.0.0.1:18080 --evidence notebook-evidence
           .venv/bin/python tests/browser_run_first.py ./build/classlab
       - name: Original QR demo and full marked Notebook end-to-end browser rehearsal
         run: |

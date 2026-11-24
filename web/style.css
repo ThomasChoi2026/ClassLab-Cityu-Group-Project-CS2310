@@ -240,6 +240,13 @@ pre {
 #notebook-overview { overflow-wrap: anywhere; font-weight: 600; }
 #notebook-import[hidden], #notebook-overview[hidden] { display: none; }
 
+/* Keep optional preparation utilities below the primary Notebook workflow. */
+#prep-library, #notebook-combination { border: 1px solid var(--line); border-radius: 8px; padding: .65rem; }
+#prep-library > summary, #notebook-combination > summary { cursor: pointer; font-weight: 600; }
+#notebook-combination { margin-top: .65rem; }
+#notebook-combination[open] > summary { margin-bottom: .65rem; }
+#notebook-import { margin-top: 0; margin-bottom: .25rem; }
+
 .empty-starter-choice { display: flex; align-items: center; }
 .empty-starter-choice input { width: auto; margin: 0; }
 #starter-code-status { margin: 0; }

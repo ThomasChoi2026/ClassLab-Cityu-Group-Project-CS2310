@@ -6,6 +6,17 @@ ClassLab is an interactive C++ teaching tool for CityUHK CS2310. Teachers prepar
 
 [English delivery guide, architecture, and 60-second demo script](docs/COURSE_DELIVERY.md)
 
+## 快速启动：正式版或 Demo
+
+正式版与 Demo 使用同一套源码、同一 C++20 Web 程序。构建完成后选择一种启动方式：
+
+| 模式 | 启动命令 | 打开 |
+| --- | --- | --- |
+| 正式版（未配置 Judge） | `CLASSLAB_DEMO=0 CLASSLAB_JUDGE_SOCKET= ./build/classlab` | http://127.0.0.1:8080 |
+| 作业 Demo（预置回放） | `bash demo/start_coursework.sh 8082` | http://127.0.0.1:8082 |
+
+正式版可真实收集提交和课堂分析，只有独立 Judge 通过部署验收后才启用真实 Run 和自动评测。教师服务器的构建、Judge 安全验收、服务启动、持久化数据与访问方式详见 **[Running ClassLab — 正式版、Demo 与学校服务器部署](docs/RUN_CLASSLAB.md)**。
+
 ## 当前开发与快速验收
 
 ClassLab 持续开发。`main` 保留最近经过验证的版本，是复现和后续开发的起点。新任务从最新 `main` 创建独立功能分支，经测试和审核后合并。各阶段分支保留供查阅和协作。
@@ -117,7 +128,7 @@ int main() {
 ```
 
 - 省略冒号和标题即可使用原始 Cell 编号自动命名。进入 **课前备课 → 直接上传 Notebook → 选择互动练习**，自动载入预设内容。无标记 Notebook 仍显示全部 Cell，普通搜索、筛选、预览、组合继续可用。
-- 普通 Cell 点击后只预览。选择「用此 Cell 作为起始代码」，或选好多个 Cell 后点击「将组合填入起始代码」。可单独将 Markdown 追加到任务说明。发布以起始代码编辑框为准。开放题需要勾选「让学生从空白开始」。
+- 普通 Cell 点击后只预览。选择「用此 Cell 作为起始代码」，或展开「多 Cell 组合（高级）」，选好后点击「将组合填入起始代码」。可单独将 Markdown 追加到任务说明。发布以起始代码编辑框为准。开放题需要勾选「让学生从空白开始」。
 - 在可选 Cell Metadata 中填写公开说明、公开/隐藏测试、预期输出及易错点。检查后手动发布；上传不会覆盖草稿或自动发布。已编辑的草稿需确认才会被互动练习替换，发布成功后会清空本题编辑内容与组合选择，保留当前 Notebook、预览、搜索和筛选。刷新或关闭页面后需重新导入。
 - 教师答案请单独保存，或使用 `// @classlab answer` / Metadata role=answer/reference，使其仅可预览。隐藏测试和易错点不进入学生端任务数据。不要把私密材料写进公开说明或起始代码。
 - [标记及 Metadata 完整规范](docs/NOTEBOOK_CLASSROOM.md) · [完整教学 Notebook（74 Cells / 5 题）](examples/CS2310_Score_Analysis.ipynb) · [课堂 Demo 指南](docs/COURSEWORK_DEMO.md)。

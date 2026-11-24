@@ -72,8 +72,12 @@ def check(browser, base, evidence):
     expect(student.locator("#waiting")).to_be_visible()
     assert count == []
 
+    combination = teacher.locator("#notebook-combination")
+    expect(combination).not_to_have_attribute("open", "")
+    combination.locator("summary").click()
     toggle.click()
     expect(selection).to_contain_text("尚未填入")
+    expect(combination.locator("summary")).to_contain_text("1 个待填入")
     publish.click()
     expect(notice).to_contain_text("所选组合尚未填入")
     assert count == []
@@ -84,6 +88,7 @@ def check(browser, base, evidence):
     teacher.locator("#append-notebook-text").click()
     expect(description).to_have_value(markdown)
     expect(starter).to_have_value(single)
+    teacher.locator("#teacher-optional-settings summary").click()
     teacher.locator("#add-case").click()
     teacher.locator("#case-editor-rows [data-field=name]").fill("First case only")
     teacher.locator("#case-editor-rows [data-field=input]").fill("first")
@@ -105,6 +110,8 @@ def check(browser, base, evidence):
 
     # Instructor selects in reverse order; assembly follows Notebook order.
     select(4)
+    expect(combination).not_to_have_attribute("open", "")
+    combination.locator("summary").click()
     toggle.click()
     select(3)
     toggle.click()
@@ -133,7 +140,9 @@ def check(browser, base, evidence):
     expect(student.locator("#public-tests")).to_be_hidden()
     expect(search).to_have_value("answer")
     expect(teacher.locator("#notebook-current-label")).to_contain_text("Cell 3")
-    expect(selection).to_contain_text("尚未选择组合单元")
+    expect(selection).to_have_text("尚未选择组合单元。")
+    expect(combination).not_to_have_attribute("open", "")
+    expect(teacher.locator("#preparation-counts")).to_have_text("0 个用例 · 0 个易错点")
     expect(overview).to_contain_text("lesson.ipynb")
     assert "lesson.ipynb" in file.input_value()
 

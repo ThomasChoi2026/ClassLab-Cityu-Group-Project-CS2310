@@ -36,7 +36,7 @@ bash demo/start_coursework.sh 8082
 
 ## 2. 完整教学 Notebook
 
-从仓库下载 [CS2310 — From Control Flow to Procedural Abstraction](../examples/CS2310_Score_Analysis.ipynb) 到教师设备。该原创教材由 74 个 Cell 组成，包含五道互动练习。参考实现与预置回放数据在单独的 instructor reference JSON 中，不通过课堂 HTTP 服务分发。
+点击教师端黄色横幅唯一的「下载教学 Notebook（74 Cells / 5 题）」链接，或从仓库下载 [CS2310 — From Control Flow to Procedural Abstraction](../examples/CS2310_Score_Analysis.ipynb) 到教师设备。该原创教材由 74 个 Cell 组成，包含五道互动练习。参考实现与预置回放数据在单独的 instructor reference JSON 中，不通过课堂 HTTP 服务分发。
 
 | 原始 Cell | 互动练习 |
 | --- | --- |
@@ -46,7 +46,7 @@ bash demo/start_coursework.sh 8082
 | 63 | Fix the average function |
 | 72 | Complete the score analyser |
 
-进入教师工作台的 **课前备课**，直接选择文件。上传后默认显示五道互动练习，点击第一题自动填入标题、说明、起始代码、5 个测试（3 个公开、2 个隐藏）与易错点。确认后点「发布为当前任务」。不需要逐格查找，也不要额外点「填入三个演示用例」（该按钮是旧版合成加法题专用）。
+进入教师工作台的 **课前备课**，直接选择文件。上传后默认显示五道互动练习，点击第一题自动填入标题、说明、起始代码、5 个测试（3 个公开、2 个隐藏）与易错点。确认后点「发布为当前任务」。不需要逐格查找或手动填写用例。用例、易错点与练习库默认折叠；需要检查或修改时再展开。旧版合成题仅保留兼容数据及回归测试，不再在界面展示旧下载入口或旧用例按钮。
 
 ## 3. 演示 Run 和学生提交
 

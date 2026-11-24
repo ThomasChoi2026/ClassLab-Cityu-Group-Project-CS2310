@@ -38,6 +38,10 @@ def check(browser, base):
     expect(page.locator("#compose-prep")).to_have_attribute("aria-pressed", "true")
     expect(page.locator("#publish-task")).to_be_disabled()
     expect(page.locator("#notebook-file")).to_be_visible()
+    expect(page.locator("#prep-library")).not_to_have_attribute("open", "")
+    expect(page.locator("#teacher-optional-settings")).not_to_have_attribute("open", "")
+    expect(page.locator("#demo-banner")).to_be_hidden()
+    assert page.locator("#notebook-import").evaluate("(el) => el.compareDocumentPosition(document.querySelector('[name=title]')) & Node.DOCUMENT_POSITION_FOLLOWING")
 
     notebook = synthetic_notebook()
     page.locator("#notebook-file").set_input_files({
@@ -60,6 +64,8 @@ def check(browser, base):
     page.locator("#use-notebook-cell").click()
     expect(page.locator("[name=starterCode]")).to_have_value(re.compile(r"#include <iostream>"))
     assert not page.locator("[name=starterCode]").input_value().startswith("%%cpp")
+    expect(page.locator("#notebook-combination")).not_to_have_attribute("open", "")
+    page.locator("#notebook-combination summary").click()
     page.locator("#toggle-prep-cell").click()
     page.get_by_role("button", name=re.compile(r"^Cell 125 ·")).click()
     page.locator("#toggle-prep-cell").click()
@@ -80,6 +86,9 @@ def check(browser, base):
     assert page.locator("[name=starterCode]").input_value() == before
 
     page.locator("[name=title]").fill("Prepared lesson")
+    page.locator("#prep-library summary").click()
+    page.locator("#save-draft").click()
+    expect(page.locator("#draft-library option")).to_have_count(2)
     page.locator("#compose-quick").click()
     expect(page.locator("#prep-library")).to_be_hidden()
     expect(page.locator("#notebook-import")).to_be_hidden()

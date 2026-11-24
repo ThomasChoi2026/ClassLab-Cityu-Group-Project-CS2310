@@ -35,6 +35,9 @@ def check(browser, base, evidence):
     teacher.on("pageerror", lambda error: errors.append(str(error)))
     teacher.goto(base)
     expect(teacher.locator("#demo-banner")).to_be_visible()
+    expect(teacher.locator("#demo-banner a")).to_have_count(1)
+    expect(teacher.locator("#demo-banner a")).to_contain_text("下载教学 Notebook")
+    expect(teacher.locator("#demo-cases")).to_have_count(0)
     teacher.locator("#create input").fill("CS2310 Score Analysis")
     teacher.get_by_role("button", name="创建课堂", exact=True).click()
     expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
@@ -68,6 +71,10 @@ def check(browser, base, evidence):
     expect(teacher.locator("[name=starterCode]")).to_have_value(starter)
     expect(teacher.locator("#case-editor-rows .case-row")).to_have_count(len(metadata["testCases"]))
     expect(teacher.locator("#pitfall-rows .case-row")).to_have_count(1)
+    expect(teacher.locator("#preparation-counts")).to_have_text("5 个用例 · 1 个易错点")
+    expect(teacher.locator("#teacher-optional-settings")).not_to_have_attribute("open", "")
+    expect(teacher.locator("#prep-library")).not_to_have_attribute("open", "")
+    expect(teacher.locator("#notebook-combination")).to_be_hidden()
     expect(teacher.locator("#case-editor-rows [data-field=visibility]").nth(3)).to_have_value("hidden")
     expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
     teacher.screenshot(path=str(evidence / "01-marked-notebook-and-loaded-exercise.png"), full_page=True)
@@ -79,9 +86,31 @@ def check(browser, base, evidence):
     expect(teacher.locator("#use-notebook-cell")).to_be_hidden()
     expect(teacher.locator("#toggle-prep-cell")).to_be_hidden()
     expect(teacher.locator("[name=starterCode]")).to_have_value(starter)
+    def publish_marked(name, code, fields):
+        row_selector = "#case-editor-rows .case-row"
+        teacher_cases = teacher.locator(row_selector).evaluate_all("""rows => rows.map(row =>
+            Object.fromEntries([...row.querySelectorAll("[data-field]")].map(field =>
+                [field.dataset.field, field.value])))""")
+        assert teacher_cases == fields["testCases"], name
+        with teacher.expect_response(lambda response: response.request.method == "POST"
+                                      and response.url.endswith("/tasks")) as published:
+            teacher.locator("#publish-task").click()
+        assert published.value.status == 201, published.value.text()
+        task = published.value.json()
+        assert (task["title"], task["starterCode"], task["description"]) == (name, code, fields["description"])
+        assert [{key: value for key, value in case.items() if key != "id"}
+                for case in task["testCases"]] == fields["testCases"], name
+
+        expect(teacher.locator("#current-task")).to_contain_text(name)
+        for field in ("title", "description", "starterCode"):
+            expect(teacher.locator(f"[name={field}]")).to_have_value("")
+        expect(teacher.locator(row_selector)).to_have_count(0)
+        expect(teacher.locator("#pitfall-rows .case-row")).to_have_count(0)
+        expect(teacher.locator("#preparation-counts")).to_have_text("0 个用例 · 0 个易错点")
+        expect(teacher.locator("#notebook-list button")).to_have_count(5)
+
     teacher.locator("#notebook-filter").select_option("exercise")
-    teacher.locator("#publish-task").click()
-    expect(teacher.locator("#current-task")).to_contain_text(title)
+    publish_marked(title, starter, metadata)
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
     join = teacher.locator("#join-link").input_value()
     students = []
@@ -153,14 +182,37 @@ def check(browser, base, evidence):
     expect(teacher.locator(".diff-add")).to_contain_text("score >= 60")
     teacher.screenshot(path=str(evidence / "04-common-edit.png"), full_page=True)
     teacher.locator("#submission-dialog").get_by_role("button", name="关闭").click()
-    # A second marked exercise can be selected and published without reuploading.
-    teacher.locator("#notebook-list button").filter(has_text="Debug the accumulation loop").click()
-    expect(teacher.locator("[name=title]")).to_have_value("Debug the accumulation loop")
-    expect(teacher.locator("#current-task")).to_contain_text(title)
-    teacher.locator("#publish-task").click()
-    expect(teacher.locator("#current-task")).to_contain_text("Debug the accumulation loop")
-    expect(students[0].locator("#task-title")).to_have_text("Debug the accumulation loop", timeout=10000)
-    assert "i < n - 1" in students[0].locator("#student-code").input_value()
+    # Publish all five marked exercises from the original import for an already joined student.
+    assert len(references) == 5
+    last_title = title
+    for next_title, next_ref in references.items():
+        if next_title == title:
+            continue
+        cell = notebook["cells"][next_ref["cell"] - 1]
+        code = cell["source"].removeprefix("%%cpp\n")
+        fields = cell["metadata"]["classlab"]
+        student = students[0]
+        student.locator("#student-code").fill("// prior task draft")
+        teacher.locator("#notebook-list button").filter(has_text=next_title).click()
+        expect(teacher.locator("[name=title]")).to_have_value(next_title)
+        expect(teacher.locator("[name=starterCode]")).to_have_value(code)
+        expect(teacher.locator("[name=description]")).to_have_value(fields["description"])
+        expect(teacher.locator("#preparation-counts")).to_have_text(
+            f"{len(fields['testCases'])} 个用例 · {len(fields['pitfalls'])} 个易错点"
+        )
+        expect(teacher.locator("#current-task")).to_contain_text(last_title)
+        publish_marked(next_title, code, fields)
+        expect(student.locator("#task-title")).to_have_text(next_title)
+        expect(student.locator("#student-code")).to_have_value(code)
+        expect(student.locator("#task-description")).to_have_text(fields["description"])
+        task = student_state(student)["task"]
+        assert task["testCases"] == [
+            {key: case[key] for key in ("name", "input", "expectedOutput")}
+            for case in fields["testCases"] if case["visibility"] == "public"
+        ], next_title
+        assert "pitfalls" not in task, next_title
+        last_title = next_title
+    expect(teacher.locator("#notebook-overview")).to_contain_text(LECTURE.name)
     # Replacing the Notebook must work in-place, without publishing or altering the task.
     large = {"nbformat": 4, "nbformat_minor": 4, "metadata": {}, "cells": []}
     for i in range(135):
@@ -191,12 +243,12 @@ def check(browser, base, evidence):
     expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：0")
     expect(teacher.locator("#notebook-filter")).to_have_value("all")
     expect(teacher.locator("#notebook-list button")).to_have_count(3)
-    expect(teacher.locator("#current-task")).to_contain_text("Debug the accumulation loop")
+    expect(teacher.locator("#current-task")).to_contain_text(last_title)
     assert not errors, errors
     for student in students:
         student.close()
     teacher.close()
-    print("Notebook classroom browser acceptance passed: direct import, 74/5 filter, safe replacement, private metadata, real submissions, labeled replay, analytics, next exercise.")
+    print("Notebook classroom browser acceptance passed: direct import, 74/5 filter, safe replacement, private metadata, real submissions, labeled replay, analytics, and all five exercises published in sequence.")
 
 
 if __name__ == "__main__":
