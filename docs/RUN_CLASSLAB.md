@@ -54,7 +54,7 @@ CLASSLAB_JUDGE_SOCKET=/run/classlab-judge/judge.sock \
 
 Use a school-managed, authenticated HTTPS reverse proxy or approved internal access route to reach the web service. Students open the resulting classroom URL or scan the QR code. Do not publish the Unix socket or Docker daemon, and do not expose the application as an unrestricted public service: the current course MVP does not implement production-grade account management and rate limiting.
 
-Create a small test classroom, and confirm the student's Run button enables, a no-input program produces output, an input program requests stdin and reruns with input, and formal submissions produce real verdicts. The deployment has not been certified merely because the repository CI is green. The native Judge needs actual-host acceptance, including isolation, resource limits, cleanup and failure recovery.
+Create a small test classroom, and confirm the student's Run button enables, a no-input program produces output, an input program uses complete stdin supplied before batch Run, or accepts repeated input in one persistent process when the additional interactive deployment checks have passed, and formal submissions produce real verdicts. The deployment has not been certified merely because the repository CI is green. The native Judge needs actual-host acceptance, including isolation, resource limits, cleanup and failure recovery.
 
 ## Quick comparison
 
