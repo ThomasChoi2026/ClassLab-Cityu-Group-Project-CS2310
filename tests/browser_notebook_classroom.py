@@ -78,6 +78,17 @@ def check(browser, base, evidence):
     public = [{"name": t["name"], "input": t["input"], "expectedOutput": t["expectedOutput"]}
               for t in metadata["testCases"] if t["visibility"] == "public"]
     evidence.mkdir(parents=True, exist_ok=True)
+    # The standalone preparation composer can be much wider than the
+    # half-width classroom composer. Exercise both sides of the query.
+    preparation = browser.new_page(viewport={"width": 1440, "height": 1080})
+    preparation.goto(base)
+    preparation.locator("#open-preparation").click()
+    preparation.locator("#notebook-file").set_input_files(LECTURE)
+    expect(preparation.locator("#notebook-list button")).to_have_count(5)
+    assert set(check_notebook_layout(preparation, evidence, "preparation-wide")) == set(references)
+    preparation.set_viewport_size({"width": 780, "height": 960})
+    assert set(check_notebook_layout(preparation, evidence, "preparation-split")) == set(references)
+    preparation.close()
     errors = []
     teacher = browser.new_page(viewport={"width": 1440, "height": 1080})
     teacher.on("pageerror", lambda error: errors.append(str(error)))
