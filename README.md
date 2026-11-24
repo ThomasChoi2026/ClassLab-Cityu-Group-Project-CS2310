@@ -35,7 +35,7 @@ Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C+
 For a fresh checkout:
 
 ~~~bash
-git clone --branch experiment/trusted-native-compile https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch fix/native-interactive-stdin https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 ~~~
 
@@ -117,11 +117,15 @@ The full lecture also contains 22 ordinary teaching programs; the five reference
 
 [Marker and Metadata specification](docs/NOTEBOOK_CLASSROOM.md) · [Full lecture](examples/CS2310_Score_Analysis.ipynb) · [Separate instructor references](examples/score_analysis_references.json)
 
+## Interactive free Run
+
+Start the trusted-native worker as documented above. Run compiles an approved program once, then retains one process and sends subsequent input to its open stdin pipe. Send one or more lines, explicitly send EOF, or Stop. Output updates while the program is alive. Submit still uses complete batch test input. See [interactive execution](docs/INTERACTIVE_RUN.md).
+
 ## Student workflow
 
 Join through the teacher's QR code or link and enter a nickname. **本课堂已发布任务** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **已加入的课堂** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.
 
-- **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal.
+- **运行代码 (Run):** With a validated native Judge, the interactive worker keeps the same process alive for repeated input; an older worker uses explicit complete-stdin batch execution.
 - **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
 - **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
 - **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source. Provide input, run and inspect results in OPT CPP itself. ClassLab does not import its runtime output as a grade.

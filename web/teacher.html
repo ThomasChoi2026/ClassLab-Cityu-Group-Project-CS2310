@@ -262,7 +262,7 @@
       </section>
       <section>
         <h3>5. 真实编译与评测</h3>
-        <p>此实验分支通过本地真实 GCC 编译审查过的源码，未审查的源码只收件、不评测。此模式不是安全沙盒，不用于开放课堂。</p>
+        <p>此实验分支的 Judge 通过本地真实 GCC 编译审查过的源码。Run 支持同一个进程多次输入、EOF 和停止；Submit 仍使用完整测试输入。未经审查的源码只收件、不评测。未连接 Judge 时仍可收集代码和查看课堂记录，但不会产生编译或评测结果。</p>
       </section>
     </dialog>
     <dialog id="submission-dialog" aria-labelledby="submission-title">

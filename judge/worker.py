@@ -306,14 +306,47 @@ def verify_runtime():
         raise RuntimeError("sandbox no-new-privileges probe failed")
 
 
+def sandbox_session(session):
+    """Original isolation profile, separate compile and execution containers."""
+    from interactive import pump
+    failure, binary = compile_source(session.code)
+    if failure:
+        return failure
+    if session.cancel.is_set():
+        return {"status": "stopped"}
+    script = EXECUTE.replace("exec /work/program",
+        "ulimit -S -t 3\nulimit -H -t 4\nexec /work/program")
+    with container(script) as name:
+        with subprocess.Popen([*DOCKER, "start", "-ai", name], env=DOCKER_ENV,
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              start_new_session=True) as process:
+            failure = pump(session, process, bootstrap=binary + b"\n", ready_marker=READY)
+        if failure:
+            return {"status": failure}
+        state = inspect(name)
+        if state["Error"] or state["Status"] != "exited":
+            return {"status": "judge_error"}
+        if state["OOMKilled"]:
+            return {"status": "resource_limit"}
+        rc = state["ExitCode"]
+        status = "success" if rc == 0 else "time_limit" if rc == 152 else "resource_limit" if rc == 137 else "runtime_error"
+        return {"status": status, "exitCode": rc}
+
+
 class Worker(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
     daemon_threads = False
 
-    def __init__(self, path):
+    def __init__(self, path, sessions=None):
+        self.sessions = sessions
         self.available = True
         self.slot = threading.Lock()
         self.connections = threading.BoundedSemaphore(8)
         super().__init__(path, Handler)
+
+    def server_close(self):
+        if self.sessions is not None:
+            self.sessions.close()
+        super().server_close()
 
     def process_request(self, request, address):
         if not self.connections.acquire(blocking=False):
@@ -351,12 +384,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path != "/health":
             return self.respond(404, {"status": "judge_error"})
-        available = self.server.available
+        sessions = self.server.sessions
+        available = self.server.available and not (sessions is not None and sessions.failed)
         self.respond(200 if available else 503, {
             "status": "ready" if available else "judge_error", "busy": self.server.slot.locked(),
+            "interactive": available and sessions is not None,
         })
 
     def do_POST(self):
+        if self.path == "/interactive":
+            from interactive import valid_packet
+            if not self.server.available or self.server.sessions is None or self.server.sessions.failed:
+                return self.respond(503, {"status": "judge_error"})
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if self.headers.get("Transfer-Encoding") or not 0 < size <= MAX_REQUEST:
+                    raise ValueError("invalid request")
+                packet = json.loads(self.rfile.read(size))
+                if not valid_packet(packet):
+                    raise ValueError("invalid packet")
+            except (ValueError, KeyError, TypeError):
+                return self.respond(400, {"status": "judge_error"})
+            return self.respond(200, self.server.sessions.request(packet))
         if self.path != "/evaluate":
             return self.respond(404, {"status": "judge_error"})
         try:
@@ -376,7 +425,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not self.server.slot.acquire(blocking=False):
             return self.respond(429, {"status": "busy"})
         try:
-            if not self.server.available:
+            if not self.server.available or (self.server.sessions is not None and self.server.sessions.failed):
                 return self.respond(503, {"status": "judge_error"})
             try:
                 result = evaluate(code, inputs, mode)
@@ -397,8 +446,12 @@ def main():
     parser.add_argument("--cleanup", action="store_true")
     parser.add_argument("--operator-verified", action="store_true",
                         help="attest the deployment acceptance checks in docs/PHASE_4.md")
+    parser.add_argument("--interactive-operator-verified", action="store_true",
+                        help="attest additional actual-host interactive acceptance; never bypasses preflight")
     args = parser.parse_args()
     RUNTIME = args.runtime
+    if args.interactive_operator_verified and (not args.socket or not args.operator_verified):
+        parser.error("interactive service requires an operator-verified socket deployment")
     if args.socket and not args.operator_verified:
         parser.error("serving student requests requires an operator-verified deployment")
     # docker may be installed by a system package rather than under /usr/local.
@@ -425,7 +478,9 @@ def main():
             or mode not in {0o700, 0o710}):
         parser.error("socket needs an absolute path in a worker-owned 0700 or 0710 directory")
     os.umask(0o077)
-    server = Worker(str(args.socket))
+    from interactive import Manager
+    sessions = Manager(sandbox_session) if args.interactive_operator_verified else None
+    server = Worker(str(args.socket), sessions)
     try:
         if mode == 0o710:
             os.chown(args.socket, -1, metadata.st_gid)

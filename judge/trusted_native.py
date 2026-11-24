@@ -16,6 +16,7 @@ import signal
 import subprocess
 import tempfile
 import threading
+import time
 
 import worker
 
@@ -40,7 +41,7 @@ def approved_sources(extra=()):
     return {source: source for source in sources}
 
 
-def process(args, cwd, stdin, timeout, *, compile_step=False):
+def process(args, cwd, stdin, timeout, *, compile_step=False, cancel=None):
     # These are basic resource limits for reviewed programs, NOT containment.
     cap = 2 * 1024 * 1024 if compile_step else 65536
     limiter = ["/usr/bin/prlimit", "--as=536870912", "--cpu=" + str(timeout),
@@ -52,7 +53,14 @@ def process(args, cwd, stdin, timeout, *, compile_step=False):
                                  stdin=stdin, stdout=out, stderr=err, start_new_session=True)
         timed_out = False
         try:
-            child.wait(timeout=timeout)
+            if cancel is None:
+                child.wait(timeout=timeout)
+            else:
+                deadline = time.monotonic() + timeout
+                while child.poll() is None:
+                    if cancel.wait(0.05) or time.monotonic() >= deadline:
+                        timed_out = True
+                        break
         except subprocess.TimeoutExpired:
             timed_out = True
         finally:
@@ -120,12 +128,57 @@ class NativeEvaluator:
             return {"status": "success", "cases": outcomes}
 
 
+def native_session(evaluator, session):
+    from interactive import pump
+    source = evaluator.sources.get(session.code.strip())
+    if source is None:
+        return {"status": "source_not_approved",
+                "error": "This exact source has not been approved. No code was compiled."}
+    with tempfile.TemporaryDirectory(prefix="classlab-trusted-live-") as tmp:
+        work = Path(tmp)
+        binary = work / "program"
+        (work / "main.cpp").write_text(source + "\n", encoding="utf-8")
+        with open(os.devnull, "rb") as empty:
+            status, rc, _, diagnostics = process(
+                [evaluator.compiler, "-std=c++20", "-O0", "-fdiagnostics-color=never",
+                 "-fmax-errors=12", "main.cpp", "-o", str(binary)],
+                work, empty, 20, compile_step=True, cancel=session.cancel)
+        if session.cancel.is_set():
+            return {"status": "stopped"}
+        if status != "success":
+            if status in ("time_limit", "resource_limit"):
+                return {"status": status}
+            if rc == 1 and diagnostics:
+                return {"status": "compilation_error", "diagnostic": diagnostics.decode(errors="replace")}
+            return {"status": "judge_error"}
+        if not binary.is_file():
+            return {"status": "judge_error"}
+        # Only the pinned reviewed text was compiled. This same process
+        # persists for every subsequent input action.
+        limiter = ["/usr/bin/prlimit", "--as=536870912", "--cpu=3:4",
+                   "--fsize=65536", "--nofile=64", "--core=0", "--nproc=128", "--"]
+        env = {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C",
+               "HOME": str(work), "TMPDIR": str(work)}
+        with subprocess.Popen(limiter + [str(binary)], cwd=work, env=env,
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              start_new_session=True) as child:
+            failure = pump(session, child)
+            rc = child.returncode
+        if failure:
+            return {"status": failure}
+        status = ("success" if rc == 0 else "time_limit" if rc == -signal.SIGXCPU else
+                  "resource_limit" if rc in (-signal.SIGXFSZ, -signal.SIGKILL) else "runtime_error")
+        return {"status": status, "exitCode": rc}
+
+
 @contextlib.contextmanager
-def native_socket(path, evaluator):
+def native_socket(path, evaluator, *, idle=30, wall=90):
     original = worker.evaluate
     worker.evaluate = evaluator
     try:
-        with worker.Worker(str(path)) as server:
+        from interactive import Manager
+        sessions = Manager(lambda session: native_session(evaluator, session), idle=idle, wall=wall)
+        with worker.Worker(str(path), sessions) as server:
             Path(path).chmod(0o600)
             thread = threading.Thread(target=server.serve_forever)
             thread.start()

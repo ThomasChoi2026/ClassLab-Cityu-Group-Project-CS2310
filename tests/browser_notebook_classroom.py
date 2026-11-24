@@ -116,7 +116,7 @@ def check(browser, base, evidence):
     teacher.locator("#compose-prep").click()
     upload = teacher.locator("#notebook-file")
     expect(upload).to_be_visible()
-    expect(teacher.locator("#normal-notebook-download")).to_be_hidden()
+    expect(teacher.locator("#normal-notebook-download")).to_be_visible()
     expect(teacher.locator("#notebook-cells")).to_be_hidden()
     teacher.locator("[name=title]").fill("Preserve this draft")
     teacher.locator("[name=starterCode]").fill("int main() { return 7; }")
