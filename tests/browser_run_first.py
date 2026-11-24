@@ -27,7 +27,7 @@ def check(browser):
             teacher.locator("[name=title]").fill("Native run")
             teacher.locator("[name=starterCode]").fill("NO_STDIN")
             teacher.locator("#publish-task").click()
-            expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+            expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
             student = context.new_page()
             student.goto(join)
@@ -48,12 +48,12 @@ def check(browser):
             student.locator("#run-code").click()
             expect(field).to_be_visible()
             expect(student.locator("#run-result")).to_contain_text("Enter a value:")
-            expect(student.locator("#run-code")).to_have_text("提供输入并重新运行")
+            expect(student.locator("#run-code")).to_have_text("Provide input and rerun")
             typed.fill("5 3")
             student.locator("#run-code").click()
             expect(student.locator("#run-result")).to_contain_text("8")
             expect(field).to_be_hidden()
-            expect(student.locator("#run-code")).to_have_text("运行代码")
+            expect(student.locator("#run-code")).to_have_text("Run code")
             expect(teacher.locator("#attempts")).to_have_text("0")
             context.close()
 
