@@ -87,7 +87,7 @@
             <button type="button" id="compose-quick" aria-pressed="true">快速课堂</button>
             <button type="button" id="compose-prep" class="secondary" aria-pressed="false">课前备课</button>
           </div>
-          <p id="compose-hint" role="status">临时粘贴 C++ 代码，填写标题即可直接发布；说明和测试用例均可选。</p>
+          <p id="compose-hint" role="status">填写标题并粘贴 C++ 代码，或选择让学生从空白开始。</p>
           <div id="prep-library" hidden>
           <fieldset class="case-editor">
             <legend>备课练习库</legend>
@@ -128,7 +128,7 @@
                   </div>
                 </div>
                 <div class="lesson-actions">
-                  <button type="button" class="secondary" id="use-notebook-cell">填入起始代码</button>
+                  <button type="button" class="secondary" id="use-notebook-cell">用此 Cell 作为起始代码</button>
                   <button type="button" class="secondary" id="toggle-prep-cell">加入代码组合</button>
                   <button type="button" class="secondary" id="append-notebook-text" hidden>追加到题目说明</button>
                 </div>
@@ -137,7 +137,9 @@
               </div>
               <p id="notebook-status" class="inline-status" role="status"></p>
             </section>
-            <label>C++ 起始代码<textarea class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+            <label>C++ 起始代码（学生将收到的代码）<textarea aria-describedby="starter-code-status" class="editor" name="starterCode" rows="9" maxlength="20000" wrap="off" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+            <p id="starter-code-status" class="inline-status" role="status"></p>
+            <label id="empty-starter-choice" class="empty-starter-choice"><input id="allow-empty-starter" type="checkbox">让学生从空白开始</label>
             <details id="teacher-optional-settings" class="teacher-optional-settings">
               <summary>测试用例与预期易错点（可选）</summary>
             <fieldset class="case-editor">

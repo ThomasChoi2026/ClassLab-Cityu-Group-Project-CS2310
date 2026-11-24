@@ -224,7 +224,7 @@ pre {
 .notebook-list { display: grid; align-content: start; gap: .3rem; max-height: 24rem; overflow-y: auto; padding: .25rem; border: 1px solid var(--line); border-radius: 8px; background: #f8fbfa; }
 .notebook-cell-entry { min-height: 2.5rem; padding: .45rem .6rem; text-align: left; border: 1px solid #c9d9d7; border-radius: 6px; background: #fff; color: #243d45; font-weight: 500; overflow-wrap: anywhere; }
 .notebook-cell-entry.active { border: 2px solid var(--accent); background: #e3f5ef; }
-.notebook-cell-entry.chosen::before { content: "✓ 已选 · "; color: var(--accent); font-weight: 700; }
+.notebook-cell-entry.chosen { box-shadow: inset 3px 0 var(--accent); }
 .notebook-detail { min-width: 0; }
 .notebook-detail strong { display: block; margin: .25rem 0 .5rem; }
 #notebook-preview { max-height: 24rem; min-height: 12rem; white-space: pre; overflow-wrap: normal; font-size: .85rem; line-height: 1.5; }
@@ -239,3 +239,7 @@ pre {
 #notebook-import > strong { display: block; margin-bottom: .5rem; }
 #notebook-overview { overflow-wrap: anywhere; font-weight: 600; }
 #notebook-import[hidden], #notebook-overview[hidden] { display: none; }
+
+.empty-starter-choice { display: flex; align-items: center; }
+.empty-starter-choice input { width: auto; margin: 0; }
+#starter-code-status { margin: 0; }

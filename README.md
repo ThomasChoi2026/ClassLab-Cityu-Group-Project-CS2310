@@ -117,7 +117,8 @@ int main() {
 ```
 
 - 省略冒号和标题即可使用原始 Cell 编号自动命名。进入 **课前备课 → 直接上传 Notebook → 选择互动练习**，自动载入预设内容。无标记 Notebook 仍显示全部 Cell，普通搜索、筛选、预览、组合继续可用。
-- 在可选 Cell Metadata 中填写公开说明、公开/隐藏测试、预期输出及易错点。检查后手动发布；上传不会覆盖草稿或自动发布。已编辑的草稿需确认才会被互动练习替换，发布后可直接选择下一题。
+- 普通 Cell 点击后只预览。选择「用此 Cell 作为起始代码」，或选好多个 Cell 后点击「将组合填入起始代码」。可单独将 Markdown 追加到任务说明。发布以起始代码编辑框为准。开放题需要勾选「让学生从空白开始」。
+- 在可选 Cell Metadata 中填写公开说明、公开/隐藏测试、预期输出及易错点。检查后手动发布；上传不会覆盖草稿或自动发布。已编辑的草稿需确认才会被互动练习替换，发布成功后会清空本题编辑内容与组合选择，保留当前 Notebook、预览、搜索和筛选。刷新或关闭页面后需重新导入。
 - 教师答案请单独保存，或使用 `// @classlab answer` / Metadata role=answer/reference，使其仅可预览。隐藏测试和易错点不进入学生端任务数据。不要把私密材料写进公开说明或起始代码。
 - [标记及 Metadata 完整规范](docs/NOTEBOOK_CLASSROOM.md) · [完整教学 Notebook（74 Cells / 5 题）](examples/CS2310_Score_Analysis.ipynb) · [课堂 Demo 指南](docs/COURSEWORK_DEMO.md)。
 

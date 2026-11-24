@@ -235,6 +235,7 @@ function initializeNotebookImport(form, loadExercise) {
   const appendText = byId("append-notebook-text");
   const selection = byId("selected-prep-cells");
   const selected = new Set();
+  let selectionApplied = false;
   let cells = [];
   let current = 0;
   let version = 0;
@@ -257,8 +258,8 @@ function initializeNotebookImport(form, loadExercise) {
   function showSelection() {
     const numbers = cells.filter((_, position) => selected.has(position)).map(cell => cell.index + 1);
     selection.textContent = numbers.length
-      ? "已选 " + numbers.length + " 个单元（按 Notebook 原始顺序组合）： " + numbers.join(" → ")
-      : "尚未选择代码单元。";
+      ? "组合 Cell " + numbers.join(" → ") + (selectionApplied ? " 已填入起始代码。" : " 尚未填入起始代码。")
+      : "尚未选择组合单元。";
     assemble.disabled = !numbers.length;
   }
 
@@ -279,7 +280,10 @@ function initializeNotebookImport(form, loadExercise) {
       button.type = "button";
       button.className = "notebook-cell-entry" + (position === current ? " active" : "");
       button.setAttribute("aria-pressed", String(position === current));
-      if (selected.has(position)) button.classList.add("chosen");
+      if (selected.has(position)) {
+        button.classList.add("chosen");
+        button.textContent += " · 已选入组合";
+      }
       button.addEventListener("click", () => {
         current = position;
         showCell();
@@ -299,12 +303,15 @@ function initializeNotebookImport(form, loadExercise) {
     preview.textContent = cell.code;
     const isCode = cell.kind === "code";
     use.hidden = !isCode || cell.protected;
-    use.textContent = cell.exercise ? "载入互动练习" : "填入起始代码";
+    use.textContent = cell.exercise ? "载入互动练习" : "用此 Cell 作为起始代码";
     toggleCell.hidden = !isCode || cell.protected || Boolean(cell.exercise);
     appendText.hidden = isCode || cell.protected;
     toggleCell.textContent = selected.has(current) ? "从组合移除" : "加入代码组合";
     toggleCell.setAttribute("aria-pressed", String(selected.has(current)));
-    status.textContent = cell.warning || (cell.exercise ? "互动练习含 " + cell.exercise.testCases.length + " 个用例；载入后请检查再发布。" : "普通讲授单元：可预览或手动整理代码。");
+    status.textContent = cell.warning || (cell.exercise
+      ? "互动练习含 " + cell.exercise.testCases.length + " 个用例；载入后请检查再发布。"
+      : isCode ? preparedSource(cell).error || "这里只是预览。请使用此 Cell 或将它加入组合。"
+        : "这里只是预览。可将此 Cell 追加到任务说明。");
     renderList();
   }
 
@@ -313,6 +320,7 @@ function initializeNotebookImport(form, loadExercise) {
     cells = [];
     current = 0;
     selected.clear();
+    selectionApplied = false;
     search.value = "";
     filter.value = "all";
     list.replaceChildren();
@@ -334,7 +342,7 @@ function initializeNotebookImport(form, loadExercise) {
     const magic = code.match(/^\s*%%([\w-]+)[^\r\n]*(?:\r?\n|$)/);
     if (magic) {
       const name = magic[1].toLowerCase();
-      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " 的 %%cpp 含参数，请手动整理。"};
+      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " 仅支持无参数的 %%cpp；请手动整理。"};
       if (name !== "cpp") return {error: "Cell " + (cell.index + 1) +
         " 使用 %%" + name + "，不是标准 C++；请在预览中核对并手动转换。"};
       code = code.slice(magic[0].length);
@@ -346,19 +354,22 @@ function initializeNotebookImport(form, loadExercise) {
     if (/(?:^|\n)\s*[%!](?![%=])/.test(code)) {
       return {error: "Cell " + (cell.index + 1) + " 包含未处理的 Notebook 指令，请手动转换。"};
     }
+    if (!code.trim()) return {error: "Cell " + (cell.index + 1) + " 没有可加入的 C++ 代码。"};
     return {code, notes};
   }
 
-  function fillCode(code, notes = []) {
+  function fillCode(code, source, notes) {
     if (code.length > 20000 || new TextEncoder().encode(code).length > 65536) {
       status.textContent = "所选代码超过起始代码长度限制。";
-      return;
+      return false;
     }
     const mainCount = (code.match(/\bmain\s*\(/g) || []).length;
     if (mainCount === 0) notes.push("未发现 main()：代码可能只是定义或片段，请补齐入口和依赖。");
     if (mainCount > 1) notes.push("检测到多个 main()：请保留一个入口并手动整理。");
     form.elements.starterCode.value = code;
-    status.textContent = ["已填入起始代码。", ...notes, "请检查缺失的头文件、类和函数依赖。"].join(" ");
+    form.elements.starterCode.dispatchEvent(new Event("input"));
+    status.textContent = [source + " 已填入起始代码。", ...notes].join(" ");
+    return true;
   }
 
   picker.addEventListener("change", async () => {
@@ -422,20 +433,24 @@ function initializeNotebookImport(form, loadExercise) {
       status.textContent = "保留了当前编辑内容；可点击载入互动练习再次选择。";
       return;
     }
-    selected.clear();
-    showSelection();
-    renderList();
+    resetSelection();
     status.textContent = "已载入互动练习，尚未发布。请核对说明和用例。" + (cell.warning ? " " + cell.warning : "");
   }
   use.addEventListener("click", () => {
     if (cells[current]?.exercise) return importExercise(cells[current]);
     const result = preparedSource(cells[current]);
     if (result.error) return void (status.textContent = result.error);
-    fillCode(result.code, result.notes);
+    if (fillCode(result.code, "Cell " + (cells[current].index + 1), result.notes)) {
+      resetSelection();
+    }
   });
   toggleCell.addEventListener("click", () => {
-    if (!cells[current] || cells[current].protected || cells[current].exercise || cells[current].kind !== "code") return;
-    if (!selected.delete(current)) selected.add(current);
+    if (!selected.delete(current)) {
+      const result = preparedSource(cells[current]);
+      if (result.error) return void (status.textContent = result.error);
+      selected.add(current);
+    }
+    selectionApplied = false;
     showSelection();
     showCell();
   });
@@ -448,7 +463,10 @@ function initializeNotebookImport(form, loadExercise) {
       parts.push(result.code.trimEnd());
       notes.push(...result.notes);
     }
-    if (parts.length) fillCode(parts.join("\n\n"), notes);
+    if (parts.length && fillCode(parts.join("\n\n"), "所选组合", notes)) {
+      selectionApplied = true;
+      showSelection();
+    }
   });
   appendText.addEventListener("click", () => {
     if (!cells[current] || cells[current].kind !== "markdown" || cells[current].protected) return;
@@ -461,7 +479,24 @@ function initializeNotebookImport(form, loadExercise) {
     field.value = next;
     status.textContent = "Markdown 已追加为纯文字，可继续修改。";
   });
-  return clear;
+  function resetSelection() {
+    selected.clear();
+    selectionApplied = false;
+    if (cells.length) renderList();
+    showSelection();
+    toggleCell.textContent = "加入代码组合";
+    toggleCell.setAttribute("aria-pressed", "false");
+  }
+
+  return {
+    hasPendingSelection: () => selected.size > 0 && !selectionApplied,
+    resetSelection,
+    finishTask() {
+      if (!cells.length) return;
+      resetSelection();
+      status.textContent = "已保留 Notebook，可继续浏览并准备下一题。";
+    },
+  };
 }
 
 function showDemoBanner(state) {
@@ -623,7 +658,7 @@ function initializeTeacher() {
   const classroom = byId("classroom-view");
   const toggle = byId("toggle-classroom");
   let lastExerciseDraft = null;
-  initializeNotebookImport(byId("publish"), lesson => {
+  const notebook = initializeNotebookImport(byId("publish"), lesson => {
     const previous = draftValues();
     const occupied = ["title", "description", "starterCode"].some(key => previous[key]?.trim()) || previous.testCases.length || previous.pitfalls.length;
     if (occupied && JSON.stringify(previous) !== lastExerciseDraft && !confirm("载入互动练习将替换当前题目、代码、测试用例及易错点。请先保存需要的草稿。确定载入？")) return false;
@@ -637,6 +672,20 @@ function initializeTeacher() {
   const pitfallRows = byId("pitfall-rows");
   const addPitfall = byId("add-pitfall");
   const publishTask = byId("publish-task");
+  const starter = form.elements.starterCode;
+  const allowBlank = byId("allow-empty-starter");
+
+  function syncStarter() {
+    const hasCode = Boolean(starter.value.trim());
+    byId("empty-starter-choice").hidden = hasCode;
+    if (hasCode) allowBlank.checked = false;
+    byId("starter-code-status").textContent = hasCode
+      ? "此编辑框中的完整代码会发送给学生。"
+      : "起始代码为空。可填入 Notebook 代码、粘贴代码，或选择让学生从空白开始。";
+  }
+
+  starter.addEventListener("input", syncStarter);
+  syncStarter();
 
   function prepare(enabled) {
     byId("dashboard").toggleAttribute("data-preparing", enabled);
@@ -694,12 +743,9 @@ function initializeTeacher() {
   }
 
   const detachDraft = initializeLessonLibrary(draftValues, lesson => {
-    for (const name of ["title", "description", "starterCode"]) form.elements[name].value = lesson[name] || "";
-    caseRows.replaceChildren();
-    pitfallRows.replaceChildren();
-    addCase.disabled = addPitfall.disabled = false;
-    for (const test of lesson.testCases || []) appendCase(test, false);
-    for (const pitfall of lesson.pitfalls || []) appendPitfall(pitfall, false);
+    restoreCompose(lesson);
+    notebook.resetSelection();
+    lastExerciseDraft = null;
   });
 
   // Keep quick paste and lesson preparation drafts independent while switching tabs.
@@ -716,6 +762,8 @@ function initializeTeacher() {
     addCase.disabled = addPitfall.disabled = false;
     for (const test of values?.testCases || []) appendCase(test, false);
     for (const pitfall of values?.pitfalls || []) appendPitfall(pitfall, false);
+    allowBlank.checked = false;
+    syncStarter();
   }
 
   function selectComposeMode(next) {
@@ -734,8 +782,8 @@ function initializeTeacher() {
     byId("notebook-import").hidden = !preparing;
     byId("teacher-optional-settings").open = preparing;
     byId("compose-hint").textContent = preparing
-      ? "导入并整理 Notebook 单元、保存练习；创建课堂后也可以直接发布。"
-      : "临时粘贴 C++ 代码，填写标题即可发布；说明和测试用例均可选。";
+      ? "浏览 Notebook，将所需单元填入起始代码，再核对并发布。"
+      : "填写标题并粘贴 C++ 代码，或选择让学生从空白开始。";
   }
 
   byId("compose-quick").addEventListener("click", () => selectComposeMode("quick"));
@@ -1013,19 +1061,33 @@ function initializeTeacher() {
 
   onSubmit("publish", async (data) => {
     if (!credentials) return;
+    if (composeMode === "prep" && notebook.hasPendingSelection()) {
+      throw new Error("所选组合尚未填入起始代码。请先填入，或从组合移除所选单元。");
+    }
+    if (!data.starterCode.trim() && !allowBlank.checked) {
+      throw new Error("请填入起始代码，或勾选「让学生从空白开始」。");
+    }
+    if (!data.starterCode.trim()) data.starterCode = "";
     const cases = rowData(caseRows);
     const pitfalls = rowData(pitfallRows);
     if (cases.length) data.testCases = cases;
     if (pitfalls.length) data.pitfalls = pitfalls;
-    await api(endpoint("/tasks"), { data, headers: headers() });
-    // Only clear the published workspace; leave the other tab's draft intact.
-    composeBuffers[composeMode] = null;
-    restoreCompose();
-    if (composeMode === "prep") {
-      // Keep the imported lecture available for the next classroom exercise.
-      detachDraft();
+    const composer = byId("teacher-composer");
+    composer.inert = true;
+    try {
+      await api(endpoint("/tasks"), { data, headers: headers() });
+      // Clear only the published task. Keep the Notebook and the other workspace.
+      composeBuffers[composeMode] = null;
+      restoreCompose();
+      if (composeMode === "prep") {
+        notebook.finishTask();
+        detachDraft();
+        lastExerciseDraft = null;
+      }
+    } finally {
+      composer.inert = false;
     }
-    feedback("任务已发布。", false, "publish-feedback");
+    feedback("任务已发布：「" + data.title + "」。学生端将自动更新。", false, "publish-feedback");
     await refresh();
   }, "publish-feedback");
 
