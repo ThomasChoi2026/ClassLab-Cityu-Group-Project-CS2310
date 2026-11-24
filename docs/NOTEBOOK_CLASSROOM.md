@@ -40,7 +40,13 @@ Include the C++ source below the marker and save the Notebook as `.ipynb`. The i
 
 ## Optional Cell Metadata (version 1)
 
-The basic comment is sufficient. You can add tests in the ClassLab teacher editor under **测试用例与易错点** after loading the exercise. To preload them from your file, select the marked Code cell and use your Notebook editor's Cell Metadata view. Add the `classlab` object to that cell's metadata, alongside other cell metadata. The JSON belongs in Cell Metadata. Keep only the C++ code and marker in the source editor.
+### Preload tests and pitfalls before class
+
+The [sample Notebook](../examples/CS2310_Score_Analysis.ipynb) already stores its instructions, tests and expected pitfalls in the metadata of each of its five marked Code cells. In **Cell 22**, `metadata.classlab.testCases` holds the boundary test, and `metadata.classlab.pitfalls` holds **Exclusive instead of inclusive**. Its `needle` is `score > 60`, and its `testNumber` is `"1"`, linking it to the first test with input `60` and expected output `PASS`.
+
+1. In your Notebook editor, select the marked **Code** cell for the exercise. Open that cell's **Cell Metadata** editor. If your editor has no metadata view, save a copy of the `.ipynb` and open the copy as JSON in a text editor. Find the cell by its exercise marker inside the `source` field in the `cells` array. Edit the neighboring `metadata` object. For the sample's Cell 22, the path is `cells[21].metadata` because JSON arrays start at zero.
+2. Add the `classlab` object shown below inside that cell's metadata. Keep existing metadata keys. Put tests in `testCases` in the order you want teachers to see them. Under `pitfalls`, give each expected mistake a `name`, then optionally add a teacher `note`, a literal code fragment in `needle`, and a linked test position in `testNumber`. Use a string such as `"1"` for the first test. If you reorder the tests, update the linked number. Keep the marker and C++ in `source`.
+3. Save the `.ipynb`. In ClassLab, import the file under **课前备课**, click the exercise, then expand **测试用例与易错点** to verify the prefilled entries before publishing. You can also add or adjust them in the website's task editor. Those website edits apply to the task or saved exercise. The original Notebook file stays as saved in your Notebook editor.
 
 This example preloads a prompt, one public test, one hidden test and a common pitfall. The starter intentionally uses `> 60` so the public test at `60` guides students toward `>= 60`.
 
@@ -73,6 +79,10 @@ This example preloads a prompt, one public test, one hidden test and a common pi
 | source | The marker is mandatory; metadata alone cannot turn an ordinary cell into an exercise. Source max 20000 code units / 65536 bytes. |
 
 Unknown classlab fields, invalid types, null in place of optional field values, out-of-range references, oversized fields, unsupported code and conflicting role/marker metadata are not silently ignored. Invalid ClassLab-tagged cells are preview-only with a warning and excluded from the recognized exercise count. Ordinary cells without ClassLab Metadata remain usable. Cell indexes and source are preserved in the browser's model; loading removes only the bare %%cpp wrapper and surrounding leading whitespace.
+
+### Read the teacher feedback
+
+After publication, ClassLab uses each student's latest formal submission for the current task. It counts exact text matches for `needle` and independently counts failures of the linked test among students with a result for that test. A text match is a review clue. It can occur in code that passes, and a different spelling may express the same mistake. The linked test needs a Judge result or a labelled Demo replay. A teacher can see both counts, even when they differ.
 
 ## Teacher-only information
 
