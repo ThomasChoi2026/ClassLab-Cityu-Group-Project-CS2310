@@ -113,7 +113,7 @@ In a single-minute presentation, prepare the browser sessions and example submis
 | Stage | What the teacher does |
 | --- | --- |
 | Prepare | Choose **快速课堂 (Quick Classroom)** to paste C++, or **课前备课 (Lesson Preparation)** to import a Notebook and manage locally saved exercises. |
-| Configure | Set a title, optional description, starter code, up to 12 public/hidden tests and up to 8 anticipated pitfalls. Explicitly select the blank-start option for independent coding tasks. |
+| Configure | Enter a title and provide starter code or choose **让学生从空白开始**. The description, up to 12 public or hidden test cases, and up to 8 expected pitfalls are optional. |
 | Publish | Review the editor and publish explicitly; importing or selecting a Notebook cell does not publish a task. |
 | Share | Invite students using the join link or QR code; switch to classroom projection for a simplified class display. |
 | Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
@@ -139,7 +139,9 @@ int main() {
 
 The marker is a case-sensitive C++ comment. Use a colon (`:`) before a custom title. You can omit both the colon and title with `// @classlab exercise`. The importer uses the title from Cell Metadata if provided, then falls back to the original Cell number. The marker itself needs no semicolon.
 
-Save as `.ipynb`, then import it in **课前备课**. ClassLab detects marked exercises, shows their count and loads the chosen exercise into the editor. Review the fields, add any missing tests, and use **发布为当前任务** to share it. The sample already stores each exercise's expected pitfalls and tests in its Code Cell Metadata. To prepare your own, follow [preload tests and pitfalls before class](docs/NOTEBOOK_CLASSROOM.md#preload-tests-and-pitfalls-before-class), which includes a copyable example and shows where to paste it. Unmarked cells remain available for browsing and manual insertion.
+Save as `.ipynb`, then import it in **课前备课**. ClassLab detects marked exercises, shows their count and loads the chosen exercise into the editor. Review the fields and use **发布为当前任务** to share it. Unmarked cells remain available for browsing and manual insertion.
+
+**Preloading tests and pitfalls is optional.** The sample includes them for demonstration. For your own marked exercise, the marker and C++ code are enough. You may omit the entire `metadata.classlab` object, or include only the fields you need. You can also add a description, tests or pitfalls in the teacher editor after importing. A task without test cases can still be published and collect submissions. A task without expected pitfalls skips that comparison. When linking a pitfall to a test, use an existing test number. For an example you can copy, see [preload tests and pitfalls before class](docs/NOTEBOOK_CLASSROOM.md#preload-tests-and-pitfalls-before-class).
 
 The Notebook is parsed locally in the teacher browser (Notebook v4, up to 2 MiB). Ordinary cells are previewed before insertion; marked exercises load their preset fields. Draft replacement requires confirmation when necessary. The teacher must publish explicitly; the app blocks an unintended empty starter or uninserted code combination. Advanced combination, test settings and the lesson library are collapsed by default. Mark teacher reference cells with `// @classlab answer` or Metadata role `answer` / `reference` so the import controls cannot insert them into a student task. Keep private answers and hidden inputs out of the public description and starter code; do not distribute a teacher Notebook containing them.
 
