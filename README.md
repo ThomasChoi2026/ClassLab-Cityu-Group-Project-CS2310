@@ -21,7 +21,7 @@ ctest --test-dir build --output-on-failure
 python3 demo/run.py
 ~~~
 
-打开 <http://127.0.0.1:8080>。下载横幅上的示例 Notebook、创建课堂、选择第一个代码单元并点击「填入起始代码」。填写标题和说明，点击「填入三个演示用例」后发布。用独立浏览器会话打开加入链接。一位学生提交原代码，另两位将 `a - b` 改为 `a + b` 后提交，教师端应显示 **3 人提交、2 人通过、1 人未通过**。打开「全班共同修改」的示例可核对原代码与提交的行号和增删。教师页面使用本机地址时，二维码也指向本机；手机演示需要双方都能访问的课堂地址。
+打开 <http://127.0.0.1:8080>。从仓库下载 [完整成绩分析教学 Notebook](examples/CS2310_Score_Analysis.ipynb) 到教师设备，创建课堂，进入「课前备课」并直接上传文件。默认显示 5 道互动练习（共 74 Cell），选择 **Fix the grade boundary（Cell 22）** 自动载入题目与用例，检查后发布。学生输入 `60` 回放时，错误版本显示 `FAIL`；将 `score > 60` 修正为 `score >= 60` 后显示 `PASS`。一人提交错误版本、两人提交修正版，教师端显示 3 人提交、2 人通过、1 人失败及共同修改。教师页面与学生设备须访问同一地址。
 
 演示中的加入、源代码和人数都是实时数据，评测使用标明的固定回放。任意新代码不会在演示中执行。普通课堂服务使用下方的启动命令，真实评测仍须通过独立 Judge 的隔离验收。
 
@@ -102,13 +102,26 @@ Students can restore the teacher's starter code, download their current editor c
 
 See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-workflow) for the exact controls, history scope, long-link fallback and browser testing.
 
-## Notebook 备课与易错点
+## Notebook Classroom Integration
 
-1. 在教师首页进入 **课前备课**，或在已建课堂的发布区继续编辑。任选一个 Notebook v4 文件，预览代码或 Markdown。
-2. 把类声明、实现和入口所在的代码单元加入组合，再填入起始代码。组合保留原始单元顺序，预览不会覆盖当前编辑。教师可在编辑器重排定义、补齐缺失依赖与 main，并删掉 Notebook 专用语法。选中的 Markdown 可作为纯文字追加到公开的题目说明，请在发布前核对该部分内容。
-3. 补充标题和测试用例。易错点可关联一个用例（从 1 开始）和一段需复核的源码文字。用例重排或删除后请检查关联编号。
-4. **保存新练习**可保存多道题，刷新后可从练习库载入、更新或删除。草稿存于当前浏览器和站点，清除站点数据、切换设备或改用另一预览地址需要重新准备。课堂上载入后发布，后续修改草稿不会改动已经发布的任务。
-5. 在管理页查看全班的源码片段命中人数、关联用例的失败人数和有效评测人数。打开某位学生的最新提交可对照源码差异和同一组预期易错点。文字命中可能出现在注释或其他上下文中，失败也可能有不同原因，需要教师复核。没有有效 Judge 结果时仍可查看真实提交及源码线索。
+在普通 C++ Code Cell 的第一条非空行（或裸 `%%cpp` 后第一条非空行）添加：
+
+```cpp
+// @classlab exercise: Fix the grade boundary
+#include <iostream>
+int main() {
+    int score;
+    std::cin >> score;
+    std::cout << (score > 60 ? "PASS" : "FAIL") << '\n';
+}
+```
+
+- 省略冒号和标题即可使用原始 Cell 编号自动命名。进入 **课前备课 → 直接上传 Notebook → 选择互动练习**，自动载入预设内容。无标记 Notebook 仍显示全部 Cell，普通搜索、筛选、预览、组合继续可用。
+- 在可选 Cell Metadata 中填写公开说明、公开/隐藏测试、预期输出及易错点。检查后手动发布；上传不会覆盖草稿或自动发布。已编辑的草稿需确认才会被互动练习替换，发布后可直接选择下一题。
+- 教师答案请单独保存，或使用 `// @classlab answer` / Metadata role=answer/reference，使其仅可预览。隐藏测试和易错点不进入学生端任务数据。不要把私密材料写进公开说明或起始代码。
+- [标记及 Metadata 完整规范](docs/NOTEBOOK_CLASSROOM.md) · [完整教学 Notebook（74 Cells / 5 题）](examples/CS2310_Score_Analysis.ipynb) · [课堂 Demo 指南](docs/COURSEWORK_DEMO.md)。
+
+教师可以通过原有练习库保存、更新草稿，或在全班分析中查看用例失败与源码片段命中情况；这些是复核线索，不应直接认定学生的思路。
 
 原创示例 [polymorphism-slicing.ipynb](examples/polymorphism-slicing.ipynb) 包含继承层次、接收参数的函数及 main，分三个代码单元。组合后，输入 0 预期输出 animal，输入 1 预期输出 meow。起始版本把 Cat 按 Animal 值传递，实际输出 animal。学生将参数改为 const Animal& animal 后可保留动态派发。教师可用 const Animal animal 作为复核片段，并关联第二个用例。CTest 编译并运行这两个固定示例，还验证错误的 override 签名产生编译诊断。
 
@@ -118,7 +131,7 @@ See the [student workflow and privacy notes](docs/COURSE_DELIVERY.md#student-wor
 
 教师可直接粘贴 C++，也可选择本地的 Notebook v4 文件并将一个代码单元填入任务编辑器。Notebook 只在浏览器解析。教师切换到课堂投影后，屏幕只保留课堂名称、加入二维码、任务标题与汇总进度。
 
-构建完成后，可运行 `bash demo/start_coursework.sh 8082` 进行完整作业演示；它先执行 CTest，再启动临时课堂。演示模式可在学生页面点击「演示 Run（回放）」、输入预置 stdin 并查看明确标注的结果，但**不会编译或执行任意学生 C++**，也不开放正式 Judge。三个合成用例和课程教学 Notebook 可用于 QR 加入、提交与教师统计演示。用 Ctrl+C 停止并清理演示数据；完整 60 秒流程见 [作业 Demo 指南](docs/COURSEWORK_DEMO.md)。
+构建完成后，可运行 `bash demo/start_coursework.sh 8082` 进行完整作业演示；它先执行 CTest，再启动临时课堂。演示模式可在学生页面点击「演示 Run（回放）」、输入预置 stdin 并查看明确标注的结果，但**不会编译或执行任意学生 C++**，也不开放正式 Judge。五道完整教学练习支持预置源码/输入回放（自由 Run 仅支持其公开输入），旧版合成题仍可用。用 Ctrl+C 停止并清理演示数据；完整 60 秒流程见 [作业 Demo 指南](docs/COURSEWORK_DEMO.md)。
 
 ~~~sh
 python3 demo/run.py
