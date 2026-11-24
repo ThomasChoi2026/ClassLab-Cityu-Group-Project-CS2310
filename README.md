@@ -119,7 +119,7 @@ In a single-minute presentation, prepare the browser sessions and example submis
 | Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
 | Continue | Publish the next exercise without re-uploading. The Notebook stays available in the current page, while the editor clears and the dashboard switches to the active task. Reloading or closing the page requires re-importing the Notebook. |
 
-Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records. After publishing multiple tasks, select **查看已发布任务** in Classroom Progress to inspect earlier submissions, code differences and test statistics. The selection only changes the teacher view. The classroom projection shows the latest task.
+Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records. After publishing multiple tasks, select **查看已发布任务** in Classroom Progress to inspect earlier submissions, code differences and test statistics. The selection only changes the teacher view. The classroom projection shows the latest task. **切换已管理的课堂** lets teachers return to any classroom whose access key is still saved in this browser. Creating a new classroom keeps those keys and records.
 
 ### Notebook classroom integration
 

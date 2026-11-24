@@ -6,16 +6,17 @@ from playwright.sync_api import expect, sync_playwright
 
 def check(browser, base):
     teacher = browser.new_page()
-    other_teacher = browser.new_page()
     student = browser.new_page(viewport={"width": 390, "height": 844})
     errors = []
-    for page in (teacher, other_teacher, student):
+    for page in (teacher, student):
         page.on("pageerror", lambda error: errors.append(str(error)))
 
     def create(page, name):
-        page.goto(base)
+        if page.url == "about:blank":
+            page.goto(base)
         page.locator("#create input").fill(name)
         page.locator("#create button").first.click()
+        expect(page.locator("#room-name")).to_have_text(name)
         link = page.locator("#join-link")
         expect(link).not_to_have_value("")
         return link.input_value()
@@ -47,7 +48,6 @@ def check(browser, base):
         return f"{base}/api/rooms/{room}", {"X-Student-Key": key}
 
     alpha = create(teacher, "Records Alpha")
-    beta = create(other_teacher, "Records Beta")
     join(alpha)
     first = publish(teacher, "First lesson", "int main() { return 1; }", tests=True)
     editor = student.locator("#student-code")
@@ -56,6 +56,26 @@ def check(browser, base):
     editor.fill(code)
     student.locator("#submit-code").click()
     expect(teacher.locator("#attempts")).to_have_text("1")
+    expect(teacher.locator("#publish-feedback")).to_contain_text("First lesson")
+    teacher.locator("[name=title]").fill("Second lesson")
+    teacher.locator("[name=starterCode]").fill("int main() { return 2; }")
+    settings = teacher.locator("#teacher-optional-settings")
+    for add, row, name in (
+        ("#add-case", "#case-editor-rows", "测试用例"),
+        ("#add-pitfall", "#pitfall-rows", "预期易错点"),
+    ):
+        if not settings.evaluate("(details) => details.open"):
+            settings.locator("summary").click()
+        teacher.locator(add).click()
+        settings.locator("summary").click()
+        teacher.locator("#publish-task").click()
+        expect(settings).to_have_attribute("open", "")
+        expect(teacher.locator(f"{row} [data-field=name]")).to_be_focused()
+        expect(teacher.locator("#publish-feedback")).to_contain_text(name + " 1")
+        expect(teacher.locator("#publish-feedback")).not_to_contain_text("任务已发布")
+        expect(student.locator("#task-title")).to_have_text("First lesson")
+        teacher.locator(f"{row} .case-row button").click()
+        settings.locator("summary").click()
     second = publish(teacher, "Second lesson", "int main() { return 2; }")
     expect(editor).to_have_value("int main() { return 2; }")
 
@@ -77,6 +97,10 @@ def check(browser, base):
     expect(editor).not_to_be_editable()
     expect(student.locator("#run-code")).to_be_disabled()
     expect(student.locator("#submit-code")).to_be_hidden()
+    for control in ("submit-shortcut", "run-controls", "reset-code", "open-optcpp", "optcpp-options"):
+        expect(student.locator("#" + control)).to_be_hidden()
+    for control in ("copy-code", "download-code"):
+        expect(student.locator("#" + control)).to_be_visible()
     expect(student.locator("#history-list li")).to_have_count(1)
     alpha_api, alpha_key = credentials(alpha)
     archived = student.request.get(f"{alpha_api}/task?taskId={first}", headers=alpha_key)
@@ -105,7 +129,34 @@ def check(browser, base):
     teacher.locator("#toggle-classroom").click()
     expect(teacher.locator("#projection-task")).to_have_text("Third lesson")
 
-    beta_task = publish(other_teacher, "Beta task", "int main() { return 4; }")
+    # Migrate the single-room local record that earlier ClassLab versions stored.
+    teacher.evaluate("localStorage.removeItem('classlab.teacher.classrooms')")
+    teacher.reload()
+    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Third lesson")
+    teacher.locator("[name=title]").fill("Alpha draft")
+    teacher.locator("#new-classroom").click()
+    room_picker = teacher.locator("#teacher-room-picker")
+    expect(room_picker).to_be_visible()
+    expect(room_picker.locator("option").nth(1)).to_have_text("Records Alpha")
+    beta = create(teacher, "Records Beta")
+    expect(teacher.locator("[name=title]")).to_have_value("")
+    beta_task = publish(teacher, "Beta task", "int main() { return 4; }")
+    beta_room = beta.rsplit("/", 1)[1]
+    alpha_room = alpha.rsplit("/", 1)[1]
+    room_picker.select_option(alpha_room)
+    expect(teacher.locator("#room-name")).to_have_text("Records Alpha")
+    expect(teacher.locator("#join-link")).to_have_value(alpha)
+    expect(teacher.locator("[name=title]")).to_have_value("Alpha draft")
+    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Third lesson")
+    teacher_picker.select_option(first)
+    expect(teacher.locator("#current-task")).to_have_text("往期任务 · First lesson")
+    teacher.get_by_role("button", name="查看提交").click()
+    expect(teacher.locator("#full-source")).to_contain_text(code)
+    teacher.locator("#submission-dialog").get_by_role("button", name="关闭").click()
+    teacher.reload()
+    expect(teacher.locator("#room-name")).to_have_text("Records Alpha")
+    room_picker.select_option(beta_room)
+    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Beta task")
     join(beta)
     expect(editor).to_have_value("int main() { return 4; }")
     beta_api, beta_key = credentials(beta)

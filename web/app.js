@@ -671,7 +671,44 @@ function taskQuery(taskId) {
 
 function initializeTeacher() {
   const storageKey = "classlab.teacher";
+  const roomsKey = storageKey + ".classrooms";
+  const roomPicker = byId("teacher-room-picker");
+  const roomNavigation = byId("teacher-room-navigation");
   let credentials = JSON.parse(localStorage.getItem(storageKey) || "null");
+  function readRoomRecords() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(roomsKey) || "{}");
+      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    } catch {
+      return {};
+    }
+  }
+
+  let roomRecords = readRoomRecords();
+
+  function rememberRoom(name = "课堂 " + credentials.id.slice(0, 8)) {
+    if (roomRecords[credentials.id]?.name === name &&
+        roomRecords[credentials.id]?.teacherKey === credentials.teacherKey) return;
+    roomRecords = readRoomRecords();
+    roomRecords[credentials.id] = {...credentials, name};
+    localStorage.setItem(roomsKey, JSON.stringify(roomRecords));
+    renderRoomNavigation();
+  }
+
+  function renderRoomNavigation() {
+    const placeholder = element("option", "选择课堂");
+    placeholder.value = "";
+    const rooms = Object.values(roomRecords).map(room => {
+      const option = element("option", room.name);
+      option.value = room.id;
+      return option;
+    });
+    roomPicker.replaceChildren(placeholder, ...rooms);
+    roomPicker.value = credentials?.id || "";
+    roomNavigation.hidden = rooms.length <= Number(Boolean(credentials)) ||
+      !byId("classroom-view").hidden || byId("dashboard").hasAttribute("data-preparing");
+  }
+
   const headers = () => ({ "X-Teacher-Key": credentials.teacherKey });
   const endpoint = (suffix) => "/rooms/" + credentials.id + suffix;
   const renderSchedule = scheduleView(async slot => {
@@ -705,6 +742,7 @@ function initializeTeacher() {
   });
 
   const form = byId("publish");
+  const composer = byId("teacher-composer");
   const pitfallRows = byId("pitfall-rows");
   const addPitfall = byId("add-pitfall");
   const publishTask = byId("publish-task");
@@ -723,6 +761,21 @@ function initializeTeacher() {
   starter.addEventListener("input", syncStarter);
   syncStarter();
 
+  form.addEventListener("invalid", event => {
+    const firstInvalid = Array.from(form.elements).find(field => field.willValidate && !field.validity.valid);
+    if (event.target !== firstInvalid) return;
+    const row = firstInvalid.closest(".case-row");
+    const label = firstInvalid.closest("label")?.textContent.trim() || "此字段";
+    const message = row
+      ? (row.parentElement === caseRows ? "测试用例" : "预期易错点") + " " +
+        (Array.from(row.parentElement.children).indexOf(row) + 1) + " · " + label
+      : label;
+    const section = firstInvalid.closest("details");
+    if (section) section.open = true;
+    feedback(message + "：" + firstInvalid.validationMessage, true, "publish-feedback");
+    firstInvalid.focus();
+  }, true);
+
   const updatePreparationCounts = () => {
     byId("preparation-counts").textContent = caseRows.childElementCount + " 个用例 · " + pitfallRows.childElementCount + " 个易错点";
   };
@@ -737,6 +790,7 @@ function initializeTeacher() {
     byId("setup").hidden = enabled;
     byId("exit-preparation").hidden = !enabled;
     publishTask.disabled = enabled;
+    renderRoomNavigation();
     if (enabled) {
       selectComposeMode("prep");
       byId("room-name").textContent = "课前备课";
@@ -750,17 +804,10 @@ function initializeTeacher() {
   byId("exit-preparation").addEventListener("click", () => prepare(false));
 
   byId("new-classroom").addEventListener("click", () => {
-    if (credentials && !confirm("将离开当前课堂，并清除本浏览器保存的教师访问密钥（不可恢复）。确定创建新课堂？")) return;
-    localStorage.removeItem(storageKey);
-    credentials = null;
-    selectedTask.value = "";
-    renderTasks();
-    byId("setup").hidden = false;
-    if (qrDialog.open) qrDialog.close();
-    if (submissionDialog.open) submissionDialog.close();
-    project(false);
-    byId("dashboard").hidden = true;
+    if (composer.inert) return;
+    selectRoom(null);
     byId("create").reset();
+    byId("create").elements.name.focus();
   });
 
   function rowData(rows) {
@@ -797,7 +844,8 @@ function initializeTeacher() {
   // Keep quick paste and lesson preparation drafts independent while switching tabs.
   // This only affects the teacher form; the existing local lesson library is unchanged.
   let composeMode = "quick";
-  const composeBuffers = {quick: null, prep: null};
+  let composeBuffers = {quick: null, prep: null};
+  const roomDrafts = new Map();
 
   function restoreCompose(values = null) {
     for (const name of ["title", "description", "starterCode"]) {
@@ -844,6 +892,7 @@ function initializeTeacher() {
     classroom.hidden = !enabled;
     toggle.setAttribute("aria-pressed", String(enabled));
     toggle.textContent = enabled ? "返回管理" : "课堂投影";
+    renderRoomNavigation();
   }
 
   toggle.addEventListener("click", () => {
@@ -898,9 +947,10 @@ function initializeTeacher() {
     button.addEventListener("click", async () => {
       button.disabled = true;
       try {
+        const roomId = credentials.id;
         const latest = await api(endpoint("/latest/" + number + "?taskId=" + encodeURIComponent(taskId)),
           { headers: headers() });
-        if (management.hidden || configurationTask !== taskId) return;
+        if (credentials?.id !== roomId || management.hidden || configurationTask !== taskId) return;
         byId("submission-title").textContent = latest.name + "的最新提交";
         renderDiff(latest.starterCode, latest.code);
         displayResult(byId("teacher-result"), latest.result, publishedCases);
@@ -980,6 +1030,43 @@ function initializeTeacher() {
     }));
   }
 
+  function selectRoom(next, keepComposer = false) {
+    if (!keepComposer) {
+      composeBuffers[composeMode] = draftValues();
+      roomDrafts.set(credentials?.id || "", {mode: composeMode, buffers: composeBuffers});
+      const draft = roomDrafts.get(next?.id || "");
+      composeMode = draft?.mode || "quick";
+      composeBuffers = draft?.buffers || {quick: null, prep: null};
+      restoreCompose(composeBuffers[composeMode]);
+      selectComposeMode(composeMode);
+      notebook.resetSelection();
+      detachDraft();
+      lastExerciseDraft = null;
+    } else {
+      roomDrafts.delete("");
+    }
+    credentials = next;
+    if (next) localStorage.setItem(storageKey, JSON.stringify(next));
+    else localStorage.removeItem(storageKey);
+    selectedTask.value = "";
+    renderTasks();
+    configurationTask = null;
+    publishedCases = [];
+    analysisSignature = undefined;
+    byId("classroom-progress").hidden = true;
+    byId("class-schedule").hidden = true;
+    toggle.disabled = true;
+    feedback("", false, "publish-feedback");
+    feedback("");
+    if (next) {
+      byId("room-name").textContent = next.name || "课堂";
+      showDashboard();
+    } else {
+      prepare(false);
+    }
+    project(false);
+  }
+
   function showDashboard() {
     byId("dashboard").removeAttribute("data-preparing");
     byId("exit-preparation").hidden = true;
@@ -1008,6 +1095,10 @@ function initializeTeacher() {
   }
 
   function showProgress(state) {
+    rememberRoom(state.name);
+    byId("classroom-progress").hidden = false;
+    byId("class-schedule").hidden = false;
+    toggle.disabled = false;
     showDemoBanner(state);
     renderSchedule(state.schedule);
     const archived = Boolean(selectedTask.value);
@@ -1080,19 +1171,18 @@ function initializeTeacher() {
     if (!credentials) return;
     const room = credentials.id;
     const taskId = selectedTask.value;
-    const state = await api(endpoint("/progress") + taskQuery(taskId), { headers: headers() });
-    if (credentials?.id === room && selectedTask.value === taskId) showProgress(state);
+    try {
+      const state = await api(endpoint("/progress") + taskQuery(taskId), { headers: headers() });
+      if (credentials?.id === room && selectedTask.value === taskId) showProgress(state);
+    } catch (error) {
+      if (credentials?.id === room && selectedTask.value === taskId) throw error;
+    }
   }, (error) => {
     if (error.status === 403 || error.status === 404) {
-      localStorage.removeItem(storageKey);
-      credentials = null;
-      selectedTask.value = "";
-      renderTasks();
-      byId("setup").hidden = false;
-      if (qrDialog.open) qrDialog.close();
-      if (submissionDialog.open) submissionDialog.close();
-      project(false);
-      byId("dashboard").hidden = true;
+      roomRecords = readRoomRecords();
+      delete roomRecords[credentials.id];
+      localStorage.setItem(roomsKey, JSON.stringify(roomRecords));
+      selectRoom(null);
       feedback(error.message, true);
     } else {
       refreshStatus("连接中断，数值可能过时");
@@ -1105,11 +1195,27 @@ function initializeTeacher() {
     void refresh();
   });
 
+  addEventListener("storage", event => {
+    if (event.key !== roomsKey) return;
+    roomRecords = readRoomRecords();
+    renderRoomNavigation();
+  });
+
+  roomPicker.addEventListener("change", () => {
+    const next = roomRecords[roomPicker.value];
+    if (!next || next.id === credentials?.id || composer.inert ||
+        byId("create").querySelector("button").disabled) {
+      roomPicker.value = credentials?.id || "";
+      return;
+    }
+    selectRoom(next);
+    void refresh();
+  });
+
   onSubmit("create", async (data) => {
-    credentials = await api("/rooms", { data });
-    localStorage.setItem(storageKey, JSON.stringify(credentials));
-    byId("room-name").textContent = data.name;
-    showDashboard();
+    const room = await api("/rooms", { data });
+    selectRoom({...room, name: data.name}, true);
+    rememberRoom(data.name);
     await refresh();
   });
 
@@ -1133,7 +1239,6 @@ function initializeTeacher() {
     const pitfalls = rowData(pitfallRows);
     if (cases.length) data.testCases = cases;
     if (pitfalls.length) data.pitfalls = pitfalls;
-    const composer = byId("teacher-composer");
     composer.inert = true;
     try {
       await api(endpoint("/tasks"), { data, headers: headers() });
@@ -1157,9 +1262,11 @@ function initializeTeacher() {
   qrButton.addEventListener("click", () => qrDialog.showModal());
 
   if (credentials) {
+    rememberRoom(roomRecords[credentials.id]?.name || credentials.name);
     showDashboard();
     void refresh();
   }
+  renderRoomNavigation();
 }
 
 function renderHistory(history) {
@@ -1278,8 +1385,10 @@ function initializeStudent() {
     renderTasks(state.tasks);
     byId("archive-notice").hidden = !archived;
     editor.readOnly = archived;
-    byId("reset-code").disabled = archived;
-    byId("submit-code").hidden = archived;
+    for (const id of ["reset-code", "submit-code", "submit-shortcut", "run-controls", "run-state",
+      "open-optcpp", "optcpp-options"]) {
+      byId(id).hidden = archived;
+    }
     byId("run-controls").disabled = archived || !state.executionAvailable || running;
     const runStatus = byId("run-state");
     const runMessage = archived ? "" : running ? (demoMode ? "正在读取预置演示结果…" : "正在编译和运行…") :
