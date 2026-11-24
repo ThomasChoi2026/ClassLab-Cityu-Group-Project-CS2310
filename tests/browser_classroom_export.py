@@ -153,7 +153,11 @@ def check(browser, base):
         assert synthetic_by_name[name]["Total Test Cases"] == ""
 
     # An empty classroom must not create a misleading empty CSV.
-    empty_teacher = context.new_page()
+    # Use a separate browser context so the previously created classroom's localStorage
+    # cannot redirect this page straight to the dashboard. This scenario must start
+    # from a genuinely empty teacher session.
+    empty_context = browser.new_context(accept_downloads=True)
+    empty_teacher = empty_context.new_page()
     empty_teacher.goto(base)
     empty_teacher.locator("#create input").fill("Empty classroom")
     empty_teacher.get_by_role("button", name="创建课堂", exact=True).click()
@@ -163,6 +167,7 @@ def check(browser, base):
     expect(empty_teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
     empty_teacher.locator("#export-current-csv").click()
     expect(empty_teacher.locator("#export-feedback")).to_contain_text("还没有学生")
+    empty_context.close()
 
     # Network/API failures should be reported and the button should recover.
     teacher.route("**/api/rooms/*/progress*", lambda route: route.abort())
