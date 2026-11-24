@@ -2,7 +2,7 @@ name: ClassLab Notebook classroom integration acceptance
 
 on:
   push:
-    branches: [main, feature/notebook-classroom-integration-20261124, fix/classlab-notebook-publishing]
+    branches: [main, feature/notebook-classroom-integration-20261124, fix/classlab-notebook-publishing, fix/final-ux-refinement]
   pull_request:
     paths:
       - 'web/**'
