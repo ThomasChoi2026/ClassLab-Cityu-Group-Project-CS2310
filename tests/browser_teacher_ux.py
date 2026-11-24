@@ -43,7 +43,7 @@ def check(browser, base):
     expect(page.locator("#demo-banner")).to_be_hidden()
     download = page.get_by_role("link", name="Download sample teaching notebook (74 cells / 5 exercises)")
     expect(download).to_be_visible()
-    expect(download).to_have_attribute("href", re.compile(r"/blob/submission/english/examples/CS2310_Score_Analysis\.ipynb$"))
+    expect(download).to_have_attribute("href", re.compile(r"/blob/main/examples/CS2310_Score_Analysis\.ipynb$"))
     assert page.locator("#notebook-import").evaluate("(el) => el.compareDocumentPosition(document.querySelector('[name=title]')) & Node.DOCUMENT_POSITION_FOLLOWING")
 
     notebook = synthetic_notebook()
