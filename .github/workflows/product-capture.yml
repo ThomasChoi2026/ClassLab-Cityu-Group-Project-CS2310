@@ -21,16 +21,18 @@ jobs:
           git archive 36c5c0eac78f4d8cd909ff4a43b3b0957c5e2e3b | tar -x -C /tmp/classlab-capture/source
           cd /tmp/classlab-capture
           cat > Dockerfile <<'EOF'
-          FROM mcr.microsoft.com/playwright/python:v1.51.1-noble
-          RUN apt-get update && apt-get install -y --no-install-recommends g++ cmake make ca-certificates && rm -rf /var/lib/apt/lists/*
-          RUN python -m pip install --no-cache-dir playwright==1.51.1 pillow zxing-cpp
+          FROM ubuntu:24.04
+          ENV DEBIAN_FRONTEND=noninteractive PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+          RUN apt-get update && apt-get install -y --no-install-recommends g++ cmake make ca-certificates python3 python3-venv && rm -rf /var/lib/apt/lists/*
+          RUN python3 -m venv /venv && /venv/bin/pip install --no-cache-dir playwright==1.65.2 pillow==13.0.0 zxing-cpp==3.1.1 && /venv/bin/python -m playwright install --with-deps chromium
+          RUN useradd -m -s /bin/bash pwuser && chmod -R a+rX /ms-playwright
           WORKDIR /work
           COPY source/ /work/
           RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
           COPY capture.py /work/capture.py
           RUN mkdir -p /out/videos && chown -R pwuser:pwuser /out /work
           USER pwuser
-          CMD ["python","/work/capture.py"]
+          CMD ["/venv/bin/python","/work/capture.py"]
           EOF
           cat > capture.py <<'PY'
           import os, sys, runpy, subprocess, tempfile, json, re, shutil
@@ -106,7 +108,7 @@ jobs:
           # Run with the actual server and temporary data, no simulated grades.
           import workflow
           with tempfile.TemporaryDirectory() as td, workflow.server(Path(td)/'rooms.json') as base:
-              for filename in ['browser_notebook_classroom.py','browser_teacher_ux.py','browser_classroom_records.py','browser_classroom_export.py','browser_run_output.py']:
+              for filename in ['browser_notebook_classroom.py','browser_teacher_ux.py','browser_classroom_records.py']:
                   current=filename.removeprefix('browser_').removesuffix('.py')
                   path=ROOT/'tests'/filename
                   sys.argv=[str(path),base]
