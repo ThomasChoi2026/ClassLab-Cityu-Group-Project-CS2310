@@ -786,7 +786,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             if (action != "stop") {
                 const auto task = active_task(room);
                 if (task.is_null() || task.at("id") != task_id)
-                    throw ApiError{409, "教师已更新任务，请刷新后再运行。"};
+                    throw ApiError{409, "The teacher has published a new task. Refresh before running again."};
             }
             packet["owner"] = request.matches[1].str() + ":" + key;
             return nullptr;
@@ -797,10 +797,10 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
             packet["sessionId"] = field(body, "sessionId", 32);
             if (action == "input") packet["input"] = field(body, "input", 8192, true);
         } else {
-            throw ApiError{400, "无效的运行会话操作。"};
+            throw ApiError{400, "Invalid execution session action."};
         }
         if (!judge.interactive_available()) {
-            reply(response, {{"status", "judge_unavailable"}, {"error", "交互执行器不可用。"}}, 503);
+            reply(response, {{"status", "judge_unavailable"}, {"error", "Interactive execution is unavailable."}}, 503);
             return;
         }
         reply(response, judge.interactive(packet));

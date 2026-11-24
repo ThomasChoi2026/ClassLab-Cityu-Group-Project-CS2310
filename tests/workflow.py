@@ -158,7 +158,7 @@ class ClassroomWorkflow(unittest.TestCase):
             with server(data) as base:
                 status, page = request(base, "/")
                 self.assertEqual(status, 200)
-                self.assertIn("Task description (optional)", page)
+                self.assertIn("Task Description (Optional)", page)
                 self.assertNotIn('name="description" required', page)
                 _, room = request(base, "/api/rooms", {"name": "Optional description"})
                 root = "/api/rooms/" + room["id"]

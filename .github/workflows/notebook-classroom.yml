@@ -2,7 +2,7 @@ name: ClassLab Notebook classroom integration acceptance
 
 on:
   push:
-    branches: [main, release/sandbox-only, experiment/trusted-native-compile, fix/sandbox-interactive-stdin, fix/native-interactive-stdin]
+    branches: [main, release/sandbox-only, experiment/trusted-native-compile, fix/sandbox-interactive-stdin, fix/native-interactive-stdin, integration/final-secure-english]
   pull_request:
     paths:
       - 'web/**'

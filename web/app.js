@@ -124,14 +124,14 @@ function joinQr(link) {
 const statusText = {
   received: "Submitted",
   success: "Run successful",
-  compiling: "正在编译",
-  running: "运行中",
-  stopping: "正在停止",
-  stopped: "已停止",
-  idle_timeout: "输入/输出等待超时",
-  busy: "运行资源正忙",
-  not_found: "运行会话已结束",
-  request_error: "请求错误",
+  compiling: "Compiling",
+  running: "Running",
+  stopping: "Stopping",
+  stopped: "Stopped",
+  idle_timeout: "Input/output inactivity timeout",
+  busy: "Execution slots occupied",
+  not_found: "Execution session ended",
+  request_error: "Request error",
   judge_unavailable: "Ungraded · Runner unavailable",
   judge_error: "Grading service error",
   pending: "Grading",
@@ -1635,24 +1635,24 @@ function initializeStudent() {
     byId("send-stdin").disabled = !live?.stdinOpen || liveAction;
     byId("send-eof").disabled = !live?.stdinOpen || liveAction;
     byId("stop-run").disabled = !live || liveAction || live.status === "stopping";
-    byId("stdin-label").textContent = interactive || active ? "交互标准输入（stdin）" : "完整标准输入（批处理）";
+    byId("stdin-label").textContent = interactive || active ? "Interactive standard input (stdin)" : "Complete standard input (batch)";
     byId("stdin-hint").textContent = interactive || active
-      ? "输入一行或多行后点击发送。程序在同一进程中继续执行；点击 EOF 才主动结束输入流。"
-      : "运行前请一次填入程序所需的全部输入。运行时会关闭 stdin；这不是交互终端。无输入程序可留空。";
-    byId("run-state").textContent = active ? (live.status === "compiling" ? "正在编译…" : live.status === "stopping" ? "正在停止…" :
-      "程序仍在运行，可继续发送输入；不保证正在等待 stdin。") :
-      !enabled ? "执行器不可用，或当前正在查看历史任务。" :
-      running ? "正在编译和运行…" : interactive ? "Run 启动一个持续进程，不计入正式提交。" :
-      "批处理运行：请先填写完整 stdin，再点击运行。不计入正式提交。";
+      ? "Send one or more lines. The same process continues; select End input (EOF) to close stdin."
+      : "Enter all required input before Run. This is batch execution: stdin closes after the supplied input. Leave blank for programs without input.";
+    byId("run-state").textContent = active ? (live.status === "compiling" ? "Compiling…" : live.status === "stopping" ? "Stopping…" :
+      "The process is running. You can send input; it may or may not be waiting for stdin.") :
+      !enabled ? "Runner unavailable or historical task selected." :
+      running ? "Compiling and running…" : interactive ? "Run starts a persistent process and does not count as a submission." :
+      "Batch Run: enter complete stdin before running. This does not count as a submission.";
   }
 
   function showRunResult(result, active = false) {
     const panel = byId("run-result");
     panel.replaceChildren();
     displayResult(panel, result);
-    if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
-    if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || (active ? "" : "（空）")));
-    if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
+    if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "Exit status " + result.exitCode));
+    if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "Standard output"), element("pre", result.stdout || (active ? "" : "(empty)")));
+    if (result.stderr) panel.append(element("strong", "Standard error"), element("pre", result.stderr));
     if (result.error) panel.append(element("p", result.error));
     panel.hidden = false;
     appendRunResultCopy(panel, result);
@@ -1700,7 +1700,7 @@ function initializeStudent() {
     if (!run?.id || livePolling || liveAction) return;
     if (Date.now() - run.started > 150000) {
       forgetLive();
-      showRunResult({status: "request_error", error: "执行会话已超过最大生命周期，请重新运行。"});
+      showRunResult({status: "request_error", error: "The execution session has exceeded its maximum lifetime. Run again."});
       return;
     }
     livePolling = true;
@@ -1709,13 +1709,13 @@ function initializeStudent() {
       const result = await sessionRequest(run, "poll");
       if (live === run && !liveAction && revision === (run.revision || 0)) {
         if (result.status === "judge_error" && !result.sessionId)
-          byId("run-action-feedback").textContent = "会话连接暂时不可用，正在重试。";
+          byId("run-action-feedback").textContent = "Execution session connection unavailable; retrying.";
         else acceptLive(run, result);
       }
     } catch (error) {
       if (live === run) {
         if (error.status === 403 || error.status === 409) forgetLive();
-        else byId("run-action-feedback").textContent = "会话连接暂时不可用，正在重试。";
+        else byId("run-action-feedback").textContent = "Execution session connection unavailable; retrying.";
       }
     } finally {
       livePolling = false;
@@ -1748,11 +1748,11 @@ function initializeStudent() {
       if (live === run) {
         if (action === "input" && !["input_closed", "input_limit", "judge_error", "not_found"].includes(result.status)) input.value = "";
         if (result.status === "judge_error" && !result.sessionId)
-          byId("run-action-feedback").textContent = "未确认操作结果；请检查会话状态。系统不会自动重发输入。";
+          byId("run-action-feedback").textContent = "Action not confirmed. Check the session state; input is not automatically resent.";
         else acceptLive(run, result);
       }
     } catch (error) {
-      if (live === run) byId("run-action-feedback").textContent = "操作未确认：" + error.message + "。请检查输出后再决定是否重试。";
+      if (live === run) byId("run-action-feedback").textContent = "Action not confirmed: " + error.message + ". Check the output before deciding whether to retry.";
     } finally {
       liveAction = false;
       syncRunControls();

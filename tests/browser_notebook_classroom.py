@@ -224,7 +224,7 @@ def check(browser, base, evidence):
         expect(student.locator("#run-code")).to_be_disabled()
         editor.press("Control+Enter")
         verdict = student.locator("#student-result")
-        expect(verdict).to_contain_text("未评测")
+        expect(verdict).to_contain_text("Ungraded")
         state = student_state(student)
         assert state["latestResult"]["status"] == "judge_unavailable", state
         assert not state["latestResult"].get("cases"), state
