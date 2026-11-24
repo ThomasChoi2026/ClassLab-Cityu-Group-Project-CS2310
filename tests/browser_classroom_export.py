@@ -112,6 +112,10 @@ def check(browser, base):
         {"number": 6, "name": "Queue full", "count": 1, "latestStatus": "judge_queue_full"},
         {"number": 7, "name": "Accepted", "count": 1, "latestStatus": "accepted", "passed": 3, "total": 3},
         {"number": 8, "name": "Wrong answer", "count": 1, "latestStatus": "wrong_answer", "passed": 1, "total": 3},
+        {"number": 9, "name": "Compile error", "count": 1, "latestStatus": "compilation_error"},
+        {"number": 10, "name": "Runtime error", "count": 1, "latestStatus": "runtime_error"},
+        {"number": 11, "name": "Timed out", "count": 1, "latestStatus": "time_limit"},
+        {"number": 12, "name": "Resource limited", "count": 1, "latestStatus": "resource_limit"},
     ]
     def synthetic_progress(route):
         response = route.fetch()
@@ -132,6 +136,10 @@ def check(browser, base):
         "Queue full": "Not evaluated (evaluation queue full)",
         "Accepted": "All tests passed",
         "Wrong answer": "Tests not all passed (wrong answer)",
+        "Compile error": "Compilation error",
+        "Runtime error": "Runtime error",
+        "Timed out": "Time limit exceeded",
+        "Resource limited": "Resource limit exceeded",
     }, statuses
     synthetic_by_name = {row["Student Name"]: row for row in synthetic_rows}
     assert synthetic_by_name["Accepted"]["Passed Test Cases"] == "3"
