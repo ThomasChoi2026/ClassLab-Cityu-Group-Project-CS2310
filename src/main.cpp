@@ -43,7 +43,9 @@ struct ApiError {
 };
 
 std::string random_id() {
-    std::random_device random;
+    thread_local std::mt19937_64 rng(
+    std::random_device{}()
+);
     constexpr std::string_view hex = "0123456789abcdef";
     std::string id;
     for (int i = 0; i < 32; ++i) {

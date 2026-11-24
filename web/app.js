@@ -940,7 +940,12 @@ function initializeTeacher() {
       "暂无已完成的评测，暂不计算通过率。";
     refreshStatus("每 2 秒更新");
     byId("empty-students").hidden = state.students.length > 0;
-    const signature = JSON.stringify([state.task?.id, state.students, state.caseStats, state.errorGroups, state.editPatterns, state.pitfallStats]);
+    const signature = JSON.stringify([
+    state.task?.id,
+    state.latestResult?.receivedAt,
+    state.latestResult?.status,
+    state.submissionHistory?.length
+]);
     if (signature === analysisSignature) return;
     analysisSignature = signature;
     renderAnalysis(state);
@@ -1041,7 +1046,15 @@ function initializeTeacher() {
 function renderHistory(history) {
   byId("submission-history").hidden = history.length === 0;
   const rows = history.map(item => {
-    const time = new Date(item.receivedAt * 1000).toLocaleString();
+    const time =
+    new Date(
+        item.receivedAt * 1000
+    ).toLocaleString(
+        "zh-HK",
+        {
+            hour12: false
+        }
+    );
     const score = item.total === undefined ? "" : " (" + item.passed + "/" + item.total + ")";
     return element("li", time + " · " + (statusText[item.status] || "状态未知") + score);
   });
