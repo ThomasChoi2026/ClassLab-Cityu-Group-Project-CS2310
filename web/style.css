@@ -155,7 +155,7 @@ pre {
 .diff-add { background: #d5f2df; color: #15452a; }
 .diff-del { background: #ffe0dd; color: #6a2625; }
 
-.notebook-import { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .75rem; }
+.notebook-import { width: 100%; min-width: 0; container-type: inline-size; border: 1px solid var(--line); border-radius: 8px; padding: .75rem; }
 .notebook-import summary { cursor: pointer; font-weight: 650; }
 .notebook-import select { width: 100%; min-width: 0; }
 #notebook-preview { max-height: 12rem; }
@@ -218,20 +218,25 @@ pre {
 .teacher-optional-settings summary { cursor: pointer; font-weight: 650; }
 .teacher-optional-settings[open] > summary { margin-bottom: .65rem; }
 #prep-library { width: 100%; }
-.notebook-search-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr); gap: .65rem; margin-block: .85rem; }
+.notebook-search-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .65rem; margin-block: .85rem; }
 .notebook-search-row select { width: 100%; }
-.notebook-browser { display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr); gap: .75rem; }
-.notebook-list { display: grid; align-content: start; gap: .3rem; max-height: 24rem; overflow-y: auto; padding: .25rem; border: 1px solid var(--line); border-radius: 8px; background: #f8fbfa; }
-.notebook-cell-entry { min-height: 2.5rem; padding: .45rem .6rem; text-align: left; border: 1px solid #c9d9d7; border-radius: 6px; background: #fff; color: #243d45; font-weight: 500; overflow-wrap: anywhere; }
-.notebook-cell-entry.active { border: 2px solid var(--accent); background: #e3f5ef; }
+.notebook-browser { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; min-width: 0; }
+.notebook-list { display: flex; flex-direction: column; gap: .3rem; min-width: 0; max-height: 18rem; overflow-y: auto; padding: .3rem; border: 1px solid var(--line); border-radius: 8px; background: #f8fbfa; }
+.notebook-cell-entry { display: block; flex: 0 0 auto; width: 100%; min-width: 0; max-width: 100%; height: auto; min-height: 2.5rem; padding: .55rem .65rem; text-align: left; border: 1px solid #c9d9d7; border-radius: 6px; background: #fff; color: #243d45; font-weight: 500; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.notebook-cell-meta, .notebook-cell-title { display: block; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.notebook-cell-meta { font-size: .78rem; color: var(--muted); margin-bottom: .15rem; }
+.notebook-cell-title { font-weight: 650; }
+.notebook-cell-entry.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #e3f5ef; }
 .notebook-cell-entry.chosen { box-shadow: inset 3px 0 var(--accent); }
 .notebook-detail { min-width: 0; }
-.notebook-detail strong { display: block; margin: .25rem 0 .5rem; }
-#notebook-preview { max-height: 24rem; min-height: 12rem; white-space: pre; overflow-wrap: normal; font-size: .85rem; line-height: 1.5; }
-@media (max-width: 860px) {
-  .notebook-browser { grid-template-columns: 1fr; }
-  .notebook-list { max-height: 13rem; }
-  .notebook-search-row { grid-template-columns: 1fr; }
+.notebook-detail strong { display: block; margin: .25rem 0 .5rem; overflow-wrap: anywhere; }
+#notebook-preview { width: 100%; max-height: 24rem; min-height: 12rem; white-space: pre; overflow: auto; overflow-wrap: normal; tab-size: 4; font-size: .85rem; line-height: 1.5; }
+@container (min-width: 32rem) {
+  .notebook-search-row { grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr); }
+}
+@container (min-width: 41rem) {
+  .notebook-browser { grid-template-columns: minmax(15rem, .8fr) minmax(22rem, 1.2fr); }
+  .notebook-list { max-height: 24rem; }
 }
 
 /* Notebook upload is visible directly in lesson preparation. */
@@ -252,3 +257,14 @@ pre {
 #starter-code-status { margin: 0; }
 
 #teacher-task-picker, #student-task-picker { min-width: 0; max-width: 100%; }
+
+/* The optional teacher guide is available even before a classroom is created. */
+.top div { flex-wrap: wrap; }
+#open-teacher-guide { margin-inline-start: auto; min-height: 36px; padding: .4rem .75rem; }
+#teacher-guide { width: min(46rem, calc(100% - 2rem)); overflow: auto; }
+#teacher-guide .section-heading { align-items: center; }
+#teacher-guide .section-heading form { flex: none; }
+#teacher-guide section { margin-top: 1rem; }
+#teacher-guide h3 { margin: 0 0 .4rem; font-size: 1rem; }
+#teacher-guide li { margin-block: .45rem; line-height: 1.55; overflow-wrap: anywhere; }
+#teacher-guide a { color: var(--accent); }
