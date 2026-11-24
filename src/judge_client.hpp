@@ -64,7 +64,7 @@ public:
         const auto status = reply.value("status", "");
         if (demo_ && status == "demo_no_fixture") {
             return {{"status", "demo_no_fixture"},
-                    {"error", "没有匹配的演示数据；请使用本题支持的预置代码和公开输入。这里没有编译或运行任意 C++。"}};
+                    {"error", "No matching demonstration fixture was found. Please use the starter code and public inputs supported by this assignment. Arbitrary C++ programs are not compiled or executed in demonstration mode."}};
         }
         if (probe && status == "stdin_required") {
             try {

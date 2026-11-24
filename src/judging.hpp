@@ -83,7 +83,7 @@ inline Json student_result(const Json& submission, const Json& task) {
             row["expectedOutput"] = test.at("expectedOutput");
             if (outcome->contains("actualOutput")) row["actualOutput"] = outcome->at("actualOutput");
         } else {
-            row["name"] = "隐藏测试 " + std::to_string(hidden_number);
+            row["name"] = "Hidden Test " + std::to_string(hidden_number);
         }
         visible["cases"].push_back(std::move(row));
     }
