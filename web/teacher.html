@@ -166,7 +166,14 @@
           </form>
         </section>
         <section class="panel" id="classroom-progress">
-          <div class="section-heading"><h2>课堂进度</h2><span id="refresh-state" role="status">正在加载</span></div>
+          <div class="section-heading progress-heading">
+            <h2>课堂进度</h2>
+            <div class="progress-actions">
+              <span id="refresh-state" role="status">正在加载</span>
+              <button id="export-current-csv" type="button" class="secondary">导出当前任务 CSV</button>
+            </div>
+          </div>
+          <p id="export-feedback" class="inline-status" role="status"></p>
           <label id="teacher-task-navigation" hidden>查看已发布任务
             <select id="teacher-task-picker"><option value="">最新发布</option></select>
           </label>
