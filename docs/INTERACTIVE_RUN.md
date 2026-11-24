@@ -9,3 +9,12 @@ Default: complete-stdin batch Run. The interactive backend uses the original pin
 
 ## Native experiment
 Only the exact locally reviewed source from the approved list is eligible for real execution. No sandbox is claimed. Do not approve unreviewed source or expose the worker publicly.
+
+## Actual-host test
+After all original PHASE_4 checks pass on the approved host, build and run:
+
+~~~sh
+python3 tests/interactive_sandbox.py ./build/classlab --runtime runsc --operator-verified
+~~~
+
+Confirm CPU/memory/PID limits, EOF delivery and no leftover labeled containers on the actual host. This is not an ordinary cloud CI test. Only enable the additional flag after actual-host acceptance. Default remains complete-input batch Run.
