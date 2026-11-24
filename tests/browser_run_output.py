@@ -13,7 +13,7 @@ def check(browser, base):
     teacher = context.new_page()
     teacher.goto(base)
     teacher.locator("#create input").fill("Run output copy test")
-    teacher.get_by_role("button", name="创建课堂", exact=True).click()
+    teacher.get_by_role("button", name="Create classroom", exact=True).click()
     join_link = teacher.locator("#join-link")
     # Classroom creation is asynchronous; wait until the server returns the student URL.
     expect(join_link).not_to_have_value("")
@@ -22,7 +22,7 @@ def check(browser, base):
     teacher.locator("[name=title]").fill("Copy Run output")
     teacher.locator("[name=starterCode]").fill("int main() { return 0; }")
     teacher.locator("#publish-task").click()
-    expect(teacher.locator("#publish-feedback")).to_contain_text("任务已发布")
+    expect(teacher.locator("#publish-feedback")).to_contain_text("Task published")
 
     student = context.new_page()
     student.goto(join_url)
@@ -82,11 +82,11 @@ def check(browser, base):
     student.locator("#run-code").click()
     expect(student.locator("#copy-run-result")).to_be_visible()
     student.locator("#copy-run-result").click()
-    expect(student.locator("#run-copy-feedback")).to_have_text("运行结果已复制。")
+    expect(student.locator("#run-copy-feedback")).to_have_text("Run result copied.")
     copied = student.evaluate("navigator.clipboard.readText()")
-    assert "运行状态：运行成功" in copied
-    assert "标准输出：\n  first line  \nsecond\tline\n" in copied
-    assert "退出状态：0" in copied
+    assert "Run status: Run successful" in copied
+    assert "Standard output:\n  first line  \nsecond\tline\n" in copied
+    assert "Exit status: 0" in copied
     assert len(run_requests) == 1
 
     # Compiler failure: copy the complete diagnostic, without rendering-only markup.
@@ -94,25 +94,25 @@ def check(browser, base):
     expect(student.locator("#copy-run-result")).to_be_visible()
     student.locator("#copy-run-result").click()
     copied = student.evaluate("navigator.clipboard.readText()")
-    assert "编译诊断：\nmain.cpp:3:5: error: expected ';' before '}' token\n  }" in copied
-    assert "编译错误" in copied
+    assert "Compiler diagnostics:\nmain.cpp:3:5: error: expected ';' before '}' token\n  }" in copied
+    assert "Compilation error" in copied
 
     # Runtime failure: include stderr and exit code.
     student.locator("#run-code").click()
     expect(student.locator("#copy-run-result")).to_be_visible()
     student.locator("#copy-run-result").click()
     copied = student.evaluate("navigator.clipboard.readText()")
-    assert "运行错误" in copied
-    assert "标准错误：\nsegmentation fault\n" in copied
-    assert "退出状态：139" in copied
+    assert "Runtime error" in copied
+    assert "Standard error:\nsegmentation fault\n" in copied
+    assert "Exit status: 139" in copied
 
     # Empty stdout remains copyable and is not replaced with invented output.
     student.locator("#run-code").click()
     expect(student.locator("#copy-run-result")).to_be_visible()
     student.locator("#copy-run-result").click()
     copied = student.evaluate("navigator.clipboard.readText()")
-    assert "标准输出：\n\n" in copied
-    assert "退出状态：0" in copied
+    assert "Standard output:\n\n" in copied
+    assert "Exit status: 0" in copied
 
     # Clipboard failure keeps the original result selected for manual copying.
     student.evaluate("""() => Object.defineProperty(navigator, "clipboard", {
@@ -121,8 +121,8 @@ def check(browser, base):
     })""")
     student.locator("#copy-run-result").click()
     expect(student.locator("#run-copy-fallback")).to_be_visible()
-    expect(student.locator("#run-copy-feedback")).to_contain_text("已选中文本")
-    assert student.locator("#run-copy-fallback").input_value().endswith("退出状态：0")
+    expect(student.locator("#run-copy-feedback")).to_contain_text("Text selected")
+    assert student.locator("#run-copy-fallback").input_value().endswith("Exit status: 0")
     assert len(run_requests) == 4
 
     # A fresh task clears old output and its copy button.

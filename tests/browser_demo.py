@@ -20,7 +20,7 @@ def rehearse(browser, base, evidence_dir=None):
     teacher.goto(base)
     expect(teacher.locator("#demo-banner")).to_be_visible()
     teacher.locator("#create input").fill("CS2310 rehearsal")
-    teacher.get_by_role("button", name="创建课堂", exact=True).click()
+    teacher.get_by_role("button", name="Create classroom", exact=True).click()
     qr = teacher.locator("#show-qr")
     expect(qr).to_be_visible()
     image = Image.open(BytesIO(qr.screenshot()))
@@ -76,18 +76,18 @@ def rehearse(browser, base, evidence_dir=None):
         expect(page.locator("#stdin-panel")).to_be_hidden()
         page.locator("#run-code").click()
         expect(page.locator("#stdin-panel")).to_be_visible()
-        expect(page.locator("#run-result")).to_contain_text("不会执行当前代码")
+        expect(page.locator("#run-result")).to_contain_text("The current code will not run")
         page.locator("[name=runInput]").fill("2 3")
         page.locator("#run-code").click()
-        expect(page.locator("#run-result")).to_contain_text("预置演示回放")
+        expect(page.locator("#run-result")).to_contain_text("Prerecorded result")
         expect(page.locator("#run-result")).to_contain_text("5" if change else "-1")
         expect(page.locator("#stdin-panel")).to_be_hidden()
         page.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
         page.locator("#copy-run-result").click()
-        expect(page.locator("#run-copy-feedback")).to_have_text("运行结果已复制。")
+        expect(page.locator("#run-copy-feedback")).to_have_text("Run result copied.")
         copied = page.evaluate("navigator.clipboard.readText()")
-        assert "DEMO REPLAY" in copied and "预置演示回放" in copied
-        assert "标准输出：" in copied
+        assert "DEMO REPLAY" in copied and "Prerecorded result" in copied
+        assert "Standard output:" in copied
         assert ("5" in copied) if change else ("-1" in copied)
         page.evaluate("""() => Object.defineProperty(navigator, "clipboard", {
             configurable: true,
@@ -95,13 +95,13 @@ def rehearse(browser, base, evidence_dir=None):
         })""")
         page.locator("#copy-run-result").click()
         expect(page.locator("#run-copy-fallback")).to_be_visible()
-        expect(page.locator("#run-copy-feedback")).to_contain_text("已选中文本")
+        expect(page.locator("#run-copy-feedback")).to_contain_text("Text selected")
         if evidence_dir is not None and index == 2:
             page.screenshot(path=str(evidence_dir / "student-run-replay.png"), full_page=True)
         code.press("Control+Enter")
         result = page.locator("#student-result")
-        expect(result).to_contain_text("全部通过" if change else "输出不符", timeout=15000)
-        expect(result).to_contain_text("预置演示回放：没有编译或执行当前 C++ 代码。")
+        expect(result).to_contain_text("All tests passed" if change else "Wrong answer", timeout=15000)
+        expect(result).to_contain_text("Prerecorded result. The current C++ code was neither compiled nor run.")
         assert "-4 9" not in result.inner_text()
         page.close()
 
@@ -122,9 +122,9 @@ def rehearse(browser, base, evidence_dir=None):
     if evidence_dir is not None:
         teacher.screenshot(path=str(evidence_dir / "teacher-dashboard.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")
-    expect(patterns).to_contain_text("全部通过 2 人")
+    expect(patterns).to_contain_text("All tests passed 2 students")
     patterns.get_by_role("button").click()
-    expect(teacher.locator("#diff-summary")).to_contain_text("新增 1 行，删除 1 行")
+    expect(teacher.locator("#diff-summary")).to_contain_text("Lines added: 1; lines removed: 1")
     expect(teacher.locator(".diff-del")).to_contain_text("a - b")
     expect(teacher.locator(".diff-add")).to_contain_text("a + b")
     if evidence_dir is not None:

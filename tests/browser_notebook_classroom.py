@@ -45,7 +45,7 @@ def check_notebook_layout(page, evidence, label):
                     part.scrollWidth > part.clientWidth + 1)
                     failures.push("clipped text: " + part.textContent);
             }
-            if (button.querySelector(".notebook-cell-meta").textContent.includes("课堂互动练习"))
+            if (button.querySelector(".notebook-cell-meta").textContent.includes("Interactive exercise"))
                 failures.push("repeated classification");
         }
         if (list.scrollWidth > list.clientWidth + 1) failures.push("horizontal list overflow");
@@ -95,18 +95,18 @@ def check(browser, base, evidence):
     teacher.goto(base)
     expect(teacher.locator("#demo-banner")).to_be_visible()
     expect(teacher.locator("#demo-banner a")).to_have_count(1)
-    expect(teacher.locator("#demo-banner a")).to_contain_text("下载教学 Notebook")
+    expect(teacher.locator("#demo-banner a")).to_contain_text("Download teaching notebook")
     expect(teacher.locator("#demo-cases")).to_have_count(0)
     teacher.locator("#open-teacher-guide").click()
     guide = teacher.locator("#teacher-guide")
     expect(guide).to_be_visible()
-    for phrase in ("CS2310_Score_Analysis.ipynb", "发布为当前任务", "查看已发布任务", "@classlab exercise", "Judge"):
+    for phrase in ("CS2310_Score_Analysis.ipynb", "Publish as current task", "View published tasks", "@classlab exercise", "judge"):
         expect(guide).to_contain_text(phrase)
-    guide.get_by_role("button", name="关闭").click()
+    guide.get_by_role("button", name="Close").click()
     expect(guide).to_be_hidden()
     teacher.locator("#create input").fill("CS2310 Score Analysis")
-    teacher.get_by_role("button", name="创建课堂", exact=True).click()
-    expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
+    teacher.get_by_role("button", name="Create classroom", exact=True).click()
+    expect(teacher.locator("#current-task")).to_have_text("No task published yet")
     expect(teacher.locator("#compose-prep")).to_have_attribute("aria-pressed", "true")
     expect(teacher.locator("#notebook-file")).to_be_visible()
     teacher.locator("#compose-quick").click()
@@ -125,8 +125,8 @@ def check(browser, base, evidence):
     teacher.locator("[name=starterCode]").fill("int main() { return 7; }")
     upload.set_input_files(LECTURE)
     expect(teacher.locator("#notebook-overview")).to_contain_text("CS2310_Score_Analysis.ipynb")
-    expect(teacher.locator("#notebook-overview")).to_contain_text("总 Cell：74")
-    expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：5")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Total cells: 74")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Interactive exercises: 5")
     expect(teacher.locator("#notebook-filter")).to_have_value("exercise")
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
     for width in (1440, 1280, 1100, 960, 860, 768, 600, 390):
@@ -140,7 +140,7 @@ def check(browser, base, evidence):
         check_notebook_layout(teacher, evidence, f"effective-{int(zoom * 100)}pct")
     teacher.set_viewport_size({"width": 1440, "height": 1080})
     assert teacher.locator("[name=title]").input_value() == "Preserve this draft"
-    expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
+    expect(teacher.locator("#current-task")).to_have_text("No task published yet")
     teacher.locator("#notebook-search").fill("Find the maximum correctly")
     expect(teacher.locator("#notebook-list button")).to_have_count(1)
     expect(teacher.locator("#notebook-list button").first).to_contain_text("Cell 48")
@@ -157,12 +157,12 @@ def check(browser, base, evidence):
     expect(teacher.locator("[name=starterCode]")).to_have_value(starter)
     expect(teacher.locator("#case-editor-rows .case-row")).to_have_count(len(metadata["testCases"]))
     expect(teacher.locator("#pitfall-rows .case-row")).to_have_count(1)
-    expect(teacher.locator("#preparation-counts")).to_have_text("5 个用例 · 1 个易错点")
+    expect(teacher.locator("#preparation-counts")).to_have_text("Test cases: 5 · Pitfalls: 1")
     expect(teacher.locator("#teacher-optional-settings")).not_to_have_attribute("open", "")
     expect(teacher.locator("#prep-library")).not_to_have_attribute("open", "")
     expect(teacher.locator("#notebook-combination")).to_be_hidden()
     expect(teacher.locator("#case-editor-rows [data-field=visibility]").nth(3)).to_have_value("hidden")
-    expect(teacher.locator("#current-task")).to_have_text("尚未发布任务")
+    expect(teacher.locator("#current-task")).to_have_text("No task published yet")
     teacher.screenshot(path=str(evidence / "01-marked-notebook-and-loaded-exercise.png"), full_page=True)
 
     # The teacher reference Markdown is visible to the teacher, never transferable.
@@ -192,7 +192,7 @@ def check(browser, base, evidence):
             expect(teacher.locator(f"[name={field}]")).to_have_value("")
         expect(teacher.locator(row_selector)).to_have_count(0)
         expect(teacher.locator("#pitfall-rows .case-row")).to_have_count(0)
-        expect(teacher.locator("#preparation-counts")).to_have_text("0 个用例 · 0 个易错点")
+        expect(teacher.locator("#preparation-counts")).to_have_text("Test cases: 0 · Pitfalls: 0")
         expect(teacher.locator("#notebook-list button")).to_have_count(5)
         return task["id"]
 
@@ -218,7 +218,7 @@ def check(browser, base, evidence):
         assert "pitfalls" not in task and "referenceSource" not in task
         assert student.request.get(base + "/examples/CS2310_Score_Analysis.ipynb").status == 404
         assert student.request.get(base + "/examples/score_analysis_references.json").status == 404
-        expect(student.locator("#open-optcpp")).to_have_text("抄送至OPT_CPP")
+        expect(student.locator("#open-optcpp")).to_have_text("Send to OPT CPP")
         assert student.locator("#embedded-optcpp").count() == 0
         if change:
             editor.fill(starter.replace("score > 60", "score >= 60"))
@@ -227,12 +227,12 @@ def check(browser, base, evidence):
         expect(student.locator("#run-code")).to_be_enabled()
         student.locator("#run-code").click()
         expect(student.locator("#stdin-panel")).to_be_visible()
-        expect(student.locator("#run-result")).to_contain_text("不会执行当前代码")
-        expect(student.locator("#stdin-label")).to_have_text("预置演示输入（stdin）")
+        expect(student.locator("#run-result")).to_contain_text("The current code will not run")
+        expect(student.locator("#stdin-label")).to_have_text("Preset demo input (stdin)")
         student.locator("[name=runInput]").fill("60")
         student.locator("#run-code").click()
         result = student.locator("#run-result")
-        expect(result).to_contain_text("预置演示回放")
+        expect(result).to_contain_text("Prerecorded result")
         expect(result.locator("pre")).to_have_text("PASS" if change else "FAIL")
         expect(student.locator("#stdin-panel")).to_be_hidden()
         if index == 2:
@@ -243,19 +243,19 @@ def check(browser, base, evidence):
             expect(student.locator("#stdin-panel")).to_be_visible()
             student.locator("[name=runInput]").fill("100")
             student.locator("#run-code").click()
-            expect(result).to_contain_text("无匹配")
+            expect(result).to_contain_text("No matching")
             expect(result.locator("pre")).to_have_count(0)
             editor.fill(starter + "\n// Unregistered source")
             student.locator("#run-code").click()
-            expect(result).to_contain_text("无匹配")
+            expect(result).to_contain_text("No matching")
             expect(result.locator("pre")).to_have_count(0)
             editor.fill(starter)
         editor.press("Control+Enter")
         verdict = student.locator("#student-result")
-        expect(verdict).to_contain_text("全部通过" if change else "输出不符", timeout=15000)
-        expect(verdict).to_contain_text("预置演示回放")
+        expect(verdict).to_contain_text("All tests passed" if change else "Wrong answer", timeout=15000)
+        expect(verdict).to_contain_text("Prerecorded result")
         state = student_state(student)
-        hidden = [row for row in state["latestResult"]["cases"] if row["name"].startswith("隐藏测试")]
+        hidden = [row for row in state["latestResult"]["cases"] if row["name"].startswith("Hidden test")]
         assert len(hidden) == 2 and all(set(row) == {"name", "status"} for row in hidden), hidden
 
     expect(teacher.locator("#submitted")).to_have_text("3", timeout=12000)
@@ -263,12 +263,12 @@ def check(browser, base, evidence):
     expect(teacher.locator("#failed")).to_have_text("1")
     teacher.screenshot(path=str(evidence / "03-live-classroom-statistics.png"), full_page=True)
     patterns = teacher.locator("#edit-patterns")
-    expect(patterns).to_contain_text("全部通过 2 人")
+    expect(patterns).to_contain_text("All tests passed 2 students")
     patterns.get_by_role("button").first.click()
     expect(teacher.locator(".diff-del")).to_contain_text("score > 60")
     expect(teacher.locator(".diff-add")).to_contain_text("score >= 60")
     teacher.screenshot(path=str(evidence / "04-common-edit.png"), full_page=True)
-    teacher.locator("#submission-dialog").get_by_role("button", name="关闭").click()
+    teacher.locator("#submission-dialog").get_by_role("button", name="Close").click()
     # Publish all five marked exercises from the original import for an already joined student.
     assert len(references) == 5
     last_title = title
@@ -285,7 +285,7 @@ def check(browser, base, evidence):
         expect(teacher.locator("[name=starterCode]")).to_have_value(code)
         expect(teacher.locator("[name=description]")).to_have_value(fields["description"])
         expect(teacher.locator("#preparation-counts")).to_have_text(
-            f"{len(fields['testCases'])} 个用例 · {len(fields['pitfalls'])} 个易错点"
+            f"Test cases: {len(fields['testCases'])} · Pitfalls: {len(fields['pitfalls'])}"
         )
         expect(teacher.locator("#current-task")).to_contain_text(last_title)
         next_task_id = publish_marked(next_title, code, fields)
@@ -330,9 +330,9 @@ def check(browser, base, evidence):
                                "execution_count": None, "outputs": []})
     upload.set_input_files({"name": "large.ipynb", "mimeType": "application/json",
                             "buffer": json.dumps(large).encode()})
-    expect(teacher.locator("#notebook-overview")).to_contain_text("总 Cell：135")
-    expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：5")
-    expect(teacher.locator("#notebook-overview")).to_contain_text("需检查：1")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Total cells: 135")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Interactive exercises: 5")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Needs review: 1")
     expect(teacher.locator("#notebook-list button")).to_have_count(5)
     expect(teacher.locator("#notebook-list button").first).to_contain_text("ClassLab Exercise · Cell 1")
     teacher.locator("#notebook-filter").select_option("all")
@@ -341,7 +341,7 @@ def check(browser, base, evidence):
         expect(teacher.locator("#use-notebook-cell")).to_be_hidden()
         expect(teacher.locator("#toggle-prep-cell")).to_be_hidden()
     upload.set_input_files(ROOT / "examples/classlab-demo.ipynb")
-    expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：0")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("Interactive exercises: 0")
     expect(teacher.locator("#notebook-filter")).to_have_value("all")
     expect(teacher.locator("#notebook-list button")).to_have_count(3)
     expect(teacher.locator("#current-task")).to_contain_text(last_title)

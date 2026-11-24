@@ -196,7 +196,7 @@ class JudgeProtocol(unittest.TestCase):
                                      [(1, 1), (2, 0)])
                     self.assertNotIn("HIDDEN_NAME", json.dumps(result))
                     self.assertEqual(result["cases"][0]["actualOutput"], "-1\r\n")
-                    self.assertEqual(result["cases"][1], {"name": "隐藏测试 1", "status": "passed"})
+                    self.assertEqual(result["cases"][1], {"name": "Hidden test 1", "status": "passed"})
                     self.assertEqual(submit("INVALID", a, "a2")[1]["judgement"], "queued")
                     expect(a, "judge_error")
                     self.assertEqual(submit("JUDGE_FAILURE", a, "a3")[1]["judgement"], "queued")

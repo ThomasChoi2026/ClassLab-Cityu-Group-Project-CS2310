@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const {compareLines} = vm.runInNewContext(fs.readFileSync(require.resolve("../web/diff.js"), "utf8") +
   "\n;({compareLines})");
 
-const inputs = ["", "x", "x\n", "\n", "x\nx\ny", " x\n\ny", "x\r\ny", "<script>", "中文"];
+const inputs = ["", "x", "x\n", "\n", "x\nx\ny", " x\n\ny", "x\r\ny", "<script>", "café"];
 for (const original of inputs) {
   for (const revised of inputs) {
     const rows = compareLines(original, revised);

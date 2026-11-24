@@ -1,38 +1,38 @@
-# ClassLab — Codex 项目常驻指令
+# ClassLab project instructions for Codex
 
-此文件为 ClassLab 仓库根目录中的 Codex 项目指令。执行任何任务前，先阅读 `docs/PROJECT_CONTEXT.md`，再根据真实代码和用户当前指令核实状态。文件描述的是项目背景，不代表功能已经完成。
+Before working on this repository, read `docs/PROJECT_CONTEXT.md`. Verify the current state against the actual code and the user's current request. The project background includes plans as well as implemented features.
 
-## 项目与语言
+## Project and language
 
-- GitHub 仓库：`ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310`。
-- 课程：City University of Hong Kong CS2310 Computer Programming — Agentic Coding Project。
-- 与用户沟通、项目文档和进度汇报优先使用简体中文；源代码命名、API 名称可使用英文。
-- 核心目标：教师快速推送 C++ 编程任务，学生扫码或使用链接在自己设备上接收与修改代码，提交后由系统评测；教师实时查看全班进度。
-- 默认技术方向：C++20 后端、HTML/CSS/JavaScript 前端；需要时用成熟库和 CMake，不要盲目过度设计。
-- 不要求产品内置 AI。AI 编程代理可用于开发与测试，但实际功能应由代码、规则和运行环境完成。
+- Repository: `ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310`.
+- Course: City University of Hong Kong, CS2310 Computer Programming — Agentic Coding Project.
+- Use English for submission materials, project documentation, interface text, and progress reports. Use English names for code and APIs.
+- Teachers publish C++ programming tasks. Students join by QR code or link, edit and submit on their own devices, and receive grading results when grading is available. Teachers follow class progress live.
+- The default stack is a C++20 backend with an HTML, CSS, and JavaScript frontend. Use established libraries and CMake when needed. Keep the design simple.
+- The product requires no integrated AI. Coding agents can assist with development and testing. Product features should work through code, rules, and the runtime.
 
-## 操作安全与 Git
+## Repository and Git practices
 
-1. 此项目只在 Codex Cloud 连接的指定 GitHub 仓库中开发，不在用户 Mac 的本地 CS C++ 私人工作区中创建项目文件。
-2. 不得访问、导入、复制、上传用户私人课程课件、Notebook、录音、练习、ZIP、备份、密钥、账号凭据或其他无关内容；如必须参考资料，先请求用户选择性提供与任务相关的内容。
-3. 执行写入操作前确认当前仓库身份；任何 Git 修改均只针对指定仓库。
-4. 不要更改仓库可见性、访问权限或默认分支。禁止擅自合并到 `main`。新工作优先在独立分支上进行，供用户查看差异或 Pull Request；涉及上传/提交时以用户对当前任务的明确授权为准。
-5. 先检查已有文件与 Git 状态，避免覆盖或重复生成。不要为了“做出进度”生成大量空目录、无效占位符或未经验证的功能。
-6. 不要把尚未实现的功能写成已实现。每次完成都汇报实际改动、运行的测试及失败或未验证事项。
+1. Work in the specified GitHub repository through the connected Codex Cloud environment. Keep project files out of the user's private CS C++ workspace on their Mac.
+2. Do not access, import, copy, or upload private course slides, notebooks, recordings, exercises, archives, backups, keys, credentials, or unrelated material. If a reference is necessary, ask the user to provide the relevant portion.
+3. Verify the repository identity before writing. Limit Git changes to this repository.
+4. Preserve repository visibility, access permissions, and the default branch. Do not merge into `main` without authorization. Prefer a separate branch for review through a diff or pull request. Follow the user's authorization for the current task when pushing or submitting.
+5. Inspect existing files and Git status first. Avoid overwriting work, duplicating files, creating empty placeholders, or claiming progress on unverified functionality.
+6. Report actual changes, tests run, failures, and outstanding checks. Describe a feature as implemented only after verifying it.
 
-## 课程交付目标
+## Coursework delivery
 
-- 优先保证 GitHub 上的代码可复现、核心流程可演示，并提供给组员和教授的构建、测试与演示说明。
-- 用 Codex Cloud 开发和测试。需要录制时使用临时私有预览，演示结束可停止云端环境。Mac 仅用于浏览。
-- 公开部署、长期运维与商业级扩容不属于当前范围。预览优先用免费额度，创建可能收费的资源前须经用户确认。
+- Prioritize a reproducible GitHub checkout, a demonstrable classroom workflow, and build, test, and demo instructions for teammates and the professor.
+- Use Codex Cloud for development and testing. Use a temporary private preview for recording and stop it after the demo. The Mac is for browsing.
+- Public deployment, long-term operations, and commercial scaling are outside the coursework scope. Prefer free preview resources and get confirmation before creating a resource that may incur charges.
 
-## 技术边界
+## Technical scope
 
-- 第一版核心流程：教师创建会话与发布一段起始代码及测试；学生通过链接/二维码进入、修改并提交；系统返回评测状态；教师看到人数与通过情况。
-- JupyterLab 真正一键推送、自动绑定学生账户、移动推送通知、多语言评测、AI 智能辅导均为后续候选，不应在初版中承诺已完成。
-- 运行用户提交的任意 C++ 程序存在安全风险。未验证隔离前，不得让主服务器直接运行不受信任的学生代码，也不得向公网开放这一能力。设计时明确隔离、超时、内存、进程、文件系统与网络限制；容器本身不等于绝对安全。
-- 云端开发环境不等于永久部署服务器。演示时如需要手机访问，需单独验证公开/受控访问地址与网络连通性。
+- For the first version, the teacher creates a session and publishes starter code and tests. Students join by link or QR code, edit, and submit. The system reports grading status and the teacher sees participation and pass counts.
+- A one-click JupyterLab publishing extension, automatic student account linking, mobile push notifications, multilingual grading, and AI tutoring are future candidates.
+- Do not execute untrusted student code directly on the web server or expose execution publicly before isolation has been verified. Specify isolation, timeouts, memory, process, filesystem, and network limits. Containerization alone does not establish safety.
+- A cloud workspace is temporary. To demonstrate on phones, verify the controlled preview URL and connectivity separately.
 
-## 开发节奏
+## Development order
 
-先用最小垂直切片验证完整师生流程，再逐步加入评测和进度统计。优先实际编译、测试、检查输出；不要把猜测写成结论。项目交付时间非常紧，避免无关功能扩张。每个新任务先对照 `docs/PROJECT_CONTEXT.md` 的开放问题和当前仓库实际状态。
+Verify the smallest complete teacher-to-student workflow first, then add grading and progress statistics. Compile, test, and inspect actual output. Review the open questions in `docs/PROJECT_CONTEXT.md` against the repository when starting each task. Prioritize a reliable demonstration within the short coursework schedule.

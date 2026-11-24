@@ -61,8 +61,8 @@ def check(browser, base):
     teacher.locator("[name=starterCode]").fill("int main() { return 2; }")
     settings = teacher.locator("#teacher-optional-settings")
     for add, row, name in (
-        ("#add-case", "#case-editor-rows", "测试用例"),
-        ("#add-pitfall", "#pitfall-rows", "预期易错点"),
+        ("#add-case", "#case-editor-rows", "Test case"),
+        ("#add-pitfall", "#pitfall-rows", "Expected pitfall"),
     ):
         if not settings.evaluate("(details) => details.open"):
             settings.locator("summary").click()
@@ -72,7 +72,7 @@ def check(browser, base):
         expect(settings).to_have_attribute("open", "")
         expect(teacher.locator(f"{row} [data-field=name]")).to_be_focused()
         expect(teacher.locator("#publish-feedback")).to_contain_text(name + " 1")
-        expect(teacher.locator("#publish-feedback")).not_to_contain_text("任务已发布")
+        expect(teacher.locator("#publish-feedback")).not_to_contain_text("Task published")
         expect(student.locator("#task-title")).to_have_text("First lesson")
         teacher.locator(f"{row} .case-row button").click()
         settings.locator("summary").click()
@@ -82,13 +82,13 @@ def check(browser, base):
     teacher_picker = teacher.locator("#teacher-task-picker")
     student_picker = student.locator("#student-task-picker")
     teacher_picker.select_option(first)
-    expect(teacher.locator("#current-task")).to_have_text("往期任务 · First lesson")
+    expect(teacher.locator("#current-task")).to_have_text("Earlier task · First lesson")
     expect(teacher.locator("#attempts")).to_have_text("1")
-    expect(teacher.locator("#students").get_by_role("button", name="移出")).to_have_count(0)
-    teacher.get_by_role("button", name="查看提交").click()
+    expect(teacher.locator("#students").get_by_role("button", name="Remove")).to_have_count(0)
+    teacher.get_by_role("button", name="View submission").click()
     expect(teacher.locator("#submission-dialog")).to_be_visible()
     expect(teacher.locator("#full-source")).to_contain_text(code)
-    teacher.locator("#submission-dialog").get_by_role("button", name="关闭").click()
+    teacher.locator("#submission-dialog").get_by_role("button", name="Close").click()
 
     student_picker.select_option(first)
     expect(student.locator("#task-title")).to_have_text("First lesson")
@@ -113,9 +113,9 @@ def check(browser, base):
                                 data={"taskId": first, "code": code, "input": ""}).status == 409
 
     third = publish(teacher, "Third lesson", "int main() { return 3; }")
-    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Third lesson")
+    expect(teacher.locator("#current-task")).to_have_text("Current task · Third lesson")
     expect(teacher.locator("#attempts")).to_have_text("0")
-    expect(student_picker.locator("option").first).to_have_text("最新发布 · Third lesson")
+    expect(student_picker.locator("option").first).to_have_text("Latest task · Third lesson")
     expect(student.locator("#task-title")).to_have_text("First lesson")
     student_picker.select_option(second)
     expect(editor).to_have_value("int main() { return 2; }")
@@ -125,14 +125,14 @@ def check(browser, base):
     expect(student.locator("#submit-code")).to_be_enabled()
     assert third != second
     teacher_picker.select_option(first)
-    expect(teacher.locator("#current-task")).to_have_text("往期任务 · First lesson")
+    expect(teacher.locator("#current-task")).to_have_text("Earlier task · First lesson")
     teacher.locator("#toggle-classroom").click()
     expect(teacher.locator("#projection-task")).to_have_text("Third lesson")
 
     # Migrate the single-room local record that earlier ClassLab versions stored.
     teacher.evaluate("localStorage.removeItem('classlab.teacher.classrooms')")
     teacher.reload()
-    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Third lesson")
+    expect(teacher.locator("#current-task")).to_have_text("Current task · Third lesson")
     teacher.locator("[name=title]").fill("Alpha draft")
     teacher.locator("#new-classroom").click()
     room_picker = teacher.locator("#teacher-room-picker")
@@ -147,16 +147,16 @@ def check(browser, base):
     expect(teacher.locator("#room-name")).to_have_text("Records Alpha")
     expect(teacher.locator("#join-link")).to_have_value(alpha)
     expect(teacher.locator("[name=title]")).to_have_value("Alpha draft")
-    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Third lesson")
+    expect(teacher.locator("#current-task")).to_have_text("Current task · Third lesson")
     teacher_picker.select_option(first)
-    expect(teacher.locator("#current-task")).to_have_text("往期任务 · First lesson")
-    teacher.get_by_role("button", name="查看提交").click()
+    expect(teacher.locator("#current-task")).to_have_text("Earlier task · First lesson")
+    teacher.get_by_role("button", name="View submission").click()
     expect(teacher.locator("#full-source")).to_contain_text(code)
-    teacher.locator("#submission-dialog").get_by_role("button", name="关闭").click()
+    teacher.locator("#submission-dialog").get_by_role("button", name="Close").click()
     teacher.reload()
     expect(teacher.locator("#room-name")).to_have_text("Records Alpha")
     room_picker.select_option(beta_room)
-    expect(teacher.locator("#current-task")).to_have_text("当前任务 · Beta task")
+    expect(teacher.locator("#current-task")).to_have_text("Current task · Beta task")
     join(beta)
     expect(editor).to_have_value("int main() { return 4; }")
     beta_api, beta_key = credentials(beta)

@@ -14,7 +14,7 @@ The project's distinctive contribution is this **Notebook → exercise → stude
 
 [**Get the sample Notebook (.ipynb)**](examples/CS2310_Score_Analysis.ipynb) on GitHub. Choose **Download raw file** to save it before opening ClassLab. The file contains 74 cells and five marked exercises.
 
-Import the same file through **课前备课 (Lesson Preparation)** in either mode. Demo Mode supplies labelled replay for the five sample exercises. Normal Mode uses the Notebook for real classroom activity and requires a validated Judge for native execution and grading. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
+Import the same file through **Lesson preparation** in either mode. Demo Mode supplies labelled replay for the five sample exercises. Normal Mode uses the Notebook for real classroom activity and requires a validated Judge for native execution and grading. To prepare your own file, see [marking a Notebook exercise](#notebook-classroom-integration) and the [authoring guide](docs/NOTEBOOK_CLASSROOM.md).
 
 ## Quick Start
 
@@ -22,8 +22,8 @@ Import the same file through **课前备课 (Lesson Preparation)** in either mod
 
 | Choose | Command after building | Browser / Codespaces port |
 | --- | --- | --- |
-| Normal Mode（正式版） | `CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab` | 8080 |
-| Demo Mode（作业演示） | `python3 demo/run.py --port 8082` | 8082 |
+| Normal Mode | `CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab` | 8080 |
+| Demo Mode | `python3 demo/run.py --port 8082` | 8082 |
 
 To enable native C++ execution in Normal Mode, see the [school-server setup guide](docs/RUN_CLASSLAB.md).
 
@@ -34,11 +34,11 @@ Use Linux, WSL or a Linux GitHub Codespace. Requirements: Git, CMake 3.24+, a C+
 For a fresh checkout:
 
 ~~~bash
-git clone --branch main https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
+git clone --branch submission/english https://github.com/ThomasChoi2026/ClassLab-Cityu-Group-Project-CS2310.git
 cd ClassLab-Cityu-Group-Project-CS2310
 ~~~
 
-If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. Ensure the checkout contains the latest desired main revision before building; preserve any uncommitted work.
+If you already have the repository open in Codespaces, use its terminal in the repository root instead of cloning it again. For the English submission, select `submission/english` before building. Preserve any uncommitted work in your current checkout.
 
 ~~~bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -47,7 +47,7 @@ cmake --build build --parallel 2
 
 ### 2. Choose a mode
 
-#### A. Normal Mode — 正式课堂模式 (port 8080)
+#### A. Normal Mode (port 8080)
 
 ~~~bash
 CLASSLAB_DEMO=0 CLASSLAB_HOST=127.0.0.1 CLASSLAB_PORT=8080 CLASSLAB_JUDGE_SOCKET= ./build/classlab
@@ -59,7 +59,7 @@ Create a classroom, import a Notebook or paste any C++ starter code, and collect
 
 **The command above deliberately launches without a Judge.** Code submission, class progress and source comparison still work. Native Run and automatic grading require a separately installed and security-accepted Judge (see [Judge deployment](docs/PHASE_4.md)). The external OPT CPP link remains available.
 
-#### B. Demo Mode — 作业演示模式 (port 8082)
+#### B. Demo Mode (port 8082)
 
 ~~~bash
 python3 demo/run.py --port 8082
@@ -73,7 +73,7 @@ For a one-command build, test and Demo launch from a fresh checkout, use `bash d
 
 ### 3. Open the correct page in Codespaces
 
-1. On GitHub, open the repository's **main** branch and choose **Code → Codespaces**.
+1. On GitHub, open the repository's **submission/english** branch and choose **Code → Codespaces**.
 2. Build and launch the desired mode in the Codespace terminal using the commands above.
 3. Open the **Ports** panel. Forward **8080** for Normal Mode or **8082** for Demo Mode, keep the port **Private**, and click **Open in Browser**.
 4. The forwarded HTTPS URL opens the teacher page. Students use its generated join link or QR code. Other devices need a GitHub account authorized to access that private preview.
@@ -96,12 +96,12 @@ The two modes can run simultaneously in separate terminals on these ports. Stop 
 
 **Use Demo Mode for a reliable coursework presentation without configuring a native Judge.**
 
-Use the [sample Notebook download above](#download-the-sample-notebook-before-starting). The same file is linked from the Demo teacher banner and from **课前备课** in Normal Mode.
+Use the [sample Notebook download above](#download-the-sample-notebook-before-starting). The same file is linked from the Demo teacher banner and from **Lesson preparation** in Normal Mode.
 
-1. Create a classroom and switch to **课前备课 (Lesson Preparation)**.
+1. Create a classroom and switch to **Lesson preparation**.
 2. Upload the downloaded Notebook directly. ClassLab identifies **5 exercises among 74 cells**. Select **Fix the grade boundary — Cell 22**.
-3. Review the automatically populated title, description and starter code; expand **测试用例与易错点** if needed to inspect five test cases (three public, two hidden) and the teacher-only pitfall. Click **发布为当前任务 (Publish)**.
-4. Open the student join link in separate browser sessions. Click **演示 Run（回放）**, enter the public input `60`, then click again. The starter produces the prerecorded output `FAIL`. Replace only `score > 60` with `score >= 60`; the same input now produces the prerecorded output `PASS`.
+3. Review the automatically populated title, description and starter code; expand **Test cases and pitfalls** if needed to inspect five test cases (three public, two hidden) and the teacher-only pitfall. Click **Publish as current task**.
+4. Open the student join link in separate browser sessions. Click **Demo run (replay)**, enter the public input `60`, then click again. The starter produces the prerecorded output `FAIL`. Replace only `score > 60` with `score >= 60`; the same input now produces the prerecorded output `PASS`.
 5. Have one student submit the starter and two submit the exact corrected code. The teacher dashboard shows **3 submitted, 2 accepted, 1 failed**. Open the shared code change, explain the boundary error, and choose the next exercise without re-uploading the Notebook.
 
 In a single-minute presentation, prepare the browser sessions and example submissions in advance. The interaction and stored submission records are real; the Demo verdicts are not live C++ execution.
@@ -112,14 +112,14 @@ In a single-minute presentation, prepare the browser sessions and example submis
 
 | Stage | What the teacher does |
 | --- | --- |
-| Prepare | Choose **快速课堂 (Quick Classroom)** to paste C++, or **课前备课 (Lesson Preparation)** to import a Notebook and manage locally saved exercises. |
-| Configure | Enter a title and provide starter code or choose **让学生从空白开始**. The description, up to 12 public or hidden test cases, and up to 8 expected pitfalls are optional. |
+| Prepare | Choose **Quick classroom** to paste C++, or **Lesson preparation** to import a Notebook and manage locally saved exercises. |
+| Configure | Enter a title and provide starter code or choose **Let students start with a blank editor**. The description, up to 12 public or hidden test cases, and up to 8 expected pitfalls are optional. |
 | Publish | Review the editor and publish explicitly; importing or selecting a Notebook cell does not publish a task. |
 | Share | Invite students using the join link or QR code; switch to classroom projection for a simplified class display. |
 | Review | Inspect each student's latest submission, source diff, test outcomes, shared edits and pitfall evidence. Use them as review clues, not proof of a student's reasoning. |
 | Continue | Publish the next exercise without re-uploading. The Notebook stays available in the current page, while the editor clears and the dashboard switches to the active task. Reloading or closing the page requires re-importing the Notebook. |
 
-Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records. After publishing multiple tasks, select **查看已发布任务** in Classroom Progress to inspect earlier submissions, code differences and test statistics. The selection only changes the teacher view. The classroom projection shows the latest task. **切换已管理的课堂** lets teachers return to any classroom whose access key is still saved in this browser. Creating a new classroom keeps those keys and records.
+Additional teacher controls include praise, student removal and a weekly timetable with overlap detection. The lesson library saves drafts in the current browser; it is independent of server-side classroom records. After publishing multiple tasks, select **View published tasks** in Classroom Progress to inspect earlier submissions, code differences and test statistics. The selection only changes the teacher view. The classroom projection shows the latest task. **Switch classrooms** lets teachers return to any classroom whose access key is still saved in this browser. Creating a new classroom keeps those keys and records.
 
 ### Notebook classroom integration
 
@@ -139,7 +139,7 @@ int main() {
 
 The marker is a case-sensitive C++ comment. Use a colon (`:`) before a custom title. You can omit both the colon and title with `// @classlab exercise`. The importer uses the title from Cell Metadata if provided, then falls back to the original Cell number. The marker itself needs no semicolon.
 
-Save as `.ipynb`, then import it in **课前备课**. ClassLab detects marked exercises, shows their count and loads the chosen exercise into the editor. Review the fields and use **发布为当前任务** to share it. Unmarked cells remain available for browsing and manual insertion.
+Save as `.ipynb`, then import it in **Lesson preparation**. ClassLab detects marked exercises, shows their count and loads the chosen exercise into the editor. Review the fields and use **Publish as current task** to share it. Unmarked cells remain available for browsing and manual insertion.
 
 **Preloading tests and pitfalls is optional.** The sample includes them for demonstration. For your own marked exercise, the marker and C++ code are enough. You may omit the entire `metadata.classlab` object, or include only the fields you need. You can also add a description, tests or pitfalls in the teacher editor after importing. A task without test cases can still be published and collect submissions. A task without expected pitfalls skips that comparison. When linking a pitfall to a test, use an existing test number. For an example you can copy, see [preload tests and pitfalls before class](docs/NOTEBOOK_CLASSROOM.md#preload-tests-and-pitfalls-before-class).
 
@@ -159,12 +159,12 @@ All five support exact-source Demo playback. The full lecture also contains 22 o
 
 ## Student workflow
 
-Join through the teacher's QR code or link and enter a nickname. **本课堂已发布任务** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **已加入的课堂** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.
+Join through the teacher's QR code or link and enter a nickname. **Published tasks in this classroom** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **Your classrooms** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.
 
-- **运行代码 (Run):** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
-- **提交代码 (Submit):** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
-- **恢复起始代码 / 下载 .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
-- **抄送至OPT_CPP:** Open the external OPT CPP visualizer in a new tab with the current source. Provide input, run and inspect results in OPT CPP itself. ClassLab does not import its runtime output as a grade.
+- **Run code:** With a validated native Judge, the first execution probes stdin consumption. If input is needed, provide the complete input and run again from the beginning; it is not a live interactive terminal. In Demo Mode, only exact registered source and inputs have prerecorded results. New marked exercises accept only public fixture inputs for free Run.
+- **Submit code:** Save a formal attempt, independently of Run. Use Ctrl+Enter or Command+Enter as a shortcut. A receipt does not imply a grade. Public test details and hidden test statuses are displayed when results exist.
+- **Restore starter code / Download .cpp:** Restore the original starter after confirmation, or download the current source. The browser retains the current task draft and displays the newest 50 formal attempts for that task.
+- **Send to OPT CPP:** Open the external OPT CPP visualizer in a new tab with the current source. Provide input, run and inspect results in OPT CPP itself. ClassLab does not import its runtime output as a grade.
 
 For long source code, the external handoff offers a blank visualizer link and manual copy controls. The external site can read the transmitted source and any input you provide there; avoid sending sensitive information.
 
