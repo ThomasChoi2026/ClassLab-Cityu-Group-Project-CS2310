@@ -331,6 +331,7 @@ function initializeNotebookImport(form, loadExercise) {
     const magic = code.match(/^\s*%%([\w-]+)[^\r\n]*(?:\r?\n|$)/);
     if (magic) {
       const name = magic[1].toLowerCase();
+      if (name === "cpp" && !/^\s*%%cpp[ \t]*(?:\r?\n|$)/.test(code)) return {error: "Cell " + (cell.index + 1) + " 的 %%cpp 含参数，请手动整理。"};
       if (name !== "cpp") return {error: "Cell " + (cell.index + 1) +
         " 使用 %%" + name + "，不是标准 C++；请在预览中核对并手动转换。"};
       code = code.slice(magic[0].length);
@@ -1044,6 +1045,9 @@ function initializeStudent() {
 
   function showTask(state) {
     demoMode = Boolean(state.demo);
+    byId("stdin-label").textContent = demoMode ? "预置演示输入（stdin）" : "程序正在读取标准输入（stdin）";
+    byId("stdin-hint").textContent = demoMode ? "请填写本题公开的预置输入；再次点击仅回放固定结果，不执行 C++。" :
+      "填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。";
     showDemoBanner(state);
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
