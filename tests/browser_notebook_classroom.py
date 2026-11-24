@@ -161,6 +161,37 @@ def check(browser, base, evidence):
     expect(teacher.locator("#current-task")).to_contain_text("Debug the accumulation loop")
     expect(students[0].locator("#task-title")).to_have_text("Debug the accumulation loop", timeout=10000)
     assert "i < n - 1" in students[0].locator("#student-code").input_value()
+    # Replacing the Notebook must work in-place, without publishing or altering the task.
+    large = {"nbformat": 4, "nbformat_minor": 4, "metadata": {}, "cells": []}
+    for i in range(135):
+        source = "int main() { return 0; }\n"
+        meta = {}
+        if i in (0, 29, 58, 87, 116):
+            source = "// @classlab exercise\n" + source
+        if i == 8:
+            source = "// @classlab answer\n" + source
+        if i == 10:
+            source = "// @classlab exercise: Malformed metadata\n" + source
+            meta = {"classlab": {"testCases": [{"name": "missing fields"}]}}
+        large["cells"].append({"cell_type": "code", "source": source, "metadata": meta,
+                               "execution_count": None, "outputs": []})
+    upload.set_input_files({"name": "large.ipynb", "mimeType": "application/json",
+                            "buffer": json.dumps(large).encode()})
+    expect(teacher.locator("#notebook-overview")).to_contain_text("总 Cell：135")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：5")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("需检查：1")
+    expect(teacher.locator("#notebook-list button")).to_have_count(5)
+    expect(teacher.locator("#notebook-list button").first).to_contain_text("ClassLab Exercise · Cell 1")
+    teacher.locator("#notebook-filter").select_option("all")
+    for num in (9, 11):
+        teacher.locator("#notebook-list button").filter(has_text=f"Cell {num} ·").click()
+        expect(teacher.locator("#use-notebook-cell")).to_be_hidden()
+        expect(teacher.locator("#toggle-prep-cell")).to_be_hidden()
+    upload.set_input_files(ROOT / "examples/classlab-demo.ipynb")
+    expect(teacher.locator("#notebook-overview")).to_contain_text("课堂互动练习：0")
+    expect(teacher.locator("#notebook-filter")).to_have_value("all")
+    expect(teacher.locator("#notebook-list button")).to_have_count(3)
+    expect(teacher.locator("#current-task")).to_contain_text("Debug the accumulation loop")
     assert not errors, errors
     for student in students:
         student.close()
