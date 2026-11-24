@@ -107,6 +107,10 @@ The full lecture also contains 22 ordinary teaching programs; the five reference
 
 [Marker and Metadata specification](docs/NOTEBOOK_CLASSROOM.md) · [Full lecture](examples/CS2310_Score_Analysis.ipynb) · [Separate instructor references](examples/score_analysis_references.json)
 
+## Interactive free Run
+
+The student UI supports persistent execution sessions when the Judge advertises interactive capability. Until the sandbox host passes the additional interactive acceptance, enter the **complete stdin before Run**. This is explicit batch execution, not an interactive terminal. Submit remains batch grading. See [interactive execution](docs/INTERACTIVE_RUN.md).
+
 ## Student workflow
 
 Join through the teacher's QR code or link and enter a nickname. **本课堂已发布任务** lists earlier tasks and follows new publications when set to the latest task. Earlier tasks are read-only and retain their own drafts and submission history. **已加入的课堂** lists classrooms joined on this browser and site. Use it to switch rooms without signing up again while the local session is valid.

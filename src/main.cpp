@@ -736,6 +736,7 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
                     {"submissionHistory", history}};
         });
         result["executionAvailable"] = judge.available();
+        result["interactiveAvailable"] = judge.interactive_available();
         reply(response, result);
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/run)", [&](const Request& request, Response& response) {
@@ -771,6 +772,36 @@ void routes(httplib::Server& server, Store& store, judging::Client& judge, Grade
         if (waiting == true) throw ApiError{429, "有正式提交在等待评测，请稍后再自由运行。"};
         auto result = judge.run(body.at("code").get<std::string>(), body.at("input").get<std::string>(), probe);
         reply(response, result);
+    });
+    server.Post(R"(/api/rooms/([a-f0-9]{32})/run-session)", [&](const Request& request, Response& response) {
+        const auto body = body_of(request);
+        const auto action = field(body, "action", 12);
+        const auto task_id = field(body, "taskId", 32);
+        Json packet = {{"version", 1}, {"taskId", task_id}, {"action", action}};
+        store.read([&](const Json& rooms) -> Json {
+            const auto& room = room_for(rooms, request);
+            const auto key = require_student(room, request);
+            if (action != "stop") {
+                const auto task = active_task(room);
+                if (task.is_null() || task.at("id") != task_id)
+                    throw ApiError{409, "教师已更新任务，请刷新后再运行。"};
+            }
+            packet["owner"] = request.matches[1].str() + ":" + key;
+            return nullptr;
+        });
+        if (action == "start") {
+            packet["code"] = field(body, "code", 65536);
+        } else if (action == "poll" || action == "input" || action == "eof" || action == "stop") {
+            packet["sessionId"] = field(body, "sessionId", 32);
+            if (action == "input") packet["input"] = field(body, "input", 8192, true);
+        } else {
+            throw ApiError{400, "无效的运行会话操作。"};
+        }
+        if (!judge.interactive_available()) {
+            reply(response, {{"status", "judge_unavailable"}, {"error", "交互执行器不可用。"}}, 503);
+            return;
+        }
+        reply(response, judge.interactive(packet));
     });
     server.Post(R"(/api/rooms/([a-f0-9]{32})/submissions)", [&](const Request& request, Response& response) {
         const auto body = body_of(request);

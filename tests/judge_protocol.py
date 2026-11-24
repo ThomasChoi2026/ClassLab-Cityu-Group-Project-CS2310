@@ -54,6 +54,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         assert set(packet) == {"version", "code", "inputs", "mode"}
         assert packet["version"] == 1
         code = packet["code"]
+        if packet["mode"] == "run" and code == "NO_STDIN":
+            assert packet["inputs"] == [""]
+            self.reply({"status": "success", "cases": [{"status": "success", "stdoutHex": b"Hello\n".hex(), "exitCode": 0, "stderr": ""}]})
+            return
         if packet["mode"] == "probe":
             assert packet["inputs"] == [""]
             if code == "READS_INPUT":

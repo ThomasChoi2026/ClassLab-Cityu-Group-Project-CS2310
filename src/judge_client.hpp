@@ -54,6 +54,33 @@ public:
         return health.value("status", "") == "ready" && health.value("busy", Json(false)) == false;
     }
 
+    bool interactive_available() const {
+        if (!configured()) return false;
+        const auto health = request("", nullptr);
+        return health.value("status", "") == "ready" && health.value("interactive", false);
+    }
+
+    Json interactive(const Json& packet) const {
+        try {
+            httplib::Client client(socket_, 80);
+            client.set_address_family(AF_UNIX);
+            client.set_follow_location(false);
+            client.set_connection_timeout(0, 300000);
+            client.set_read_timeout(3);
+            client.set_write_timeout(3);
+            const auto response = client.Post("/interactive", packet.dump(), "application/json");
+            if (!response || response->status != 200 || response->body.size() > 300000)
+                return judge_error();
+            auto data = Json::parse(response->body, nullptr, false);
+            if (!data.is_object() || data.value("version", 0) != 1 || data.value("demoFixture", false) ||
+                !data.contains("status") || !data.at("status").is_string()) return judge_error();
+            data.erase("version");
+            return data;
+        } catch (const std::exception&) {
+            return judge_error();
+        }
+    }
+
     std::unique_lock<std::mutex> reserve() { return std::unique_lock(slot_, std::try_to_lock); }
 
     Json run(const std::string& code, const std::string& input, bool probe = false) const {

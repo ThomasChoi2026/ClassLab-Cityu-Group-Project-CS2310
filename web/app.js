@@ -124,6 +124,14 @@ function joinQr(link) {
 const statusText = {
   received: "已提交",
   success: "运行成功",
+  compiling: "正在编译",
+  running: "运行中",
+  stopping: "正在停止",
+  stopped: "已停止",
+  idle_timeout: "输入/输出等待超时",
+  busy: "运行资源正忙",
+  not_found: "运行会话已结束",
+  request_error: "请求错误",
   judge_unavailable: "未评测 · 执行器不可用",
   judge_error: "评测服务错误",
   pending: "评测中",
@@ -1467,7 +1475,6 @@ function initializeStudent() {
   let resultSignature;
   let pendingSubmission;
   let running = false;
-  let stdinPending = null;
   const editor = byId("submit").elements.code;
   let praiseSeqSeen = Number(localStorage.getItem(storageKey + ".praiseSeq") || 0);
   let praiseTimer;
@@ -1507,8 +1514,8 @@ function initializeStudent() {
   }
 
   function showTask(state) {
-    byId("stdin-label").textContent = "程序正在读取标准输入（stdin）";
-    byId("stdin-hint").textContent = "填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。";
+    executionAvailable = Boolean(state.executionAvailable);
+    interactive = Boolean(state.interactiveAvailable);
     renderSchedule(state.schedule);
     byId("setup").hidden = true;
     byId("workspace").hidden = false;
@@ -1540,13 +1547,8 @@ function initializeStudent() {
       "open-optcpp"]) {
       byId(id).hidden = archived;
     }
-    byId("run-controls").disabled = archived || !state.executionAvailable || running;
-    const runStatus = byId("run-state");
-    const runMessage = archived ? "" : running ? "正在编译和运行…" :
-      stdinPending ? "程序已请求标准输入。填写后再次点击运行，将从头执行程序。" :
-      state.executionAvailable ? "先运行程序；仅当程序实际读取 stdin 时才要求输入，不计入正式提交。" :
-      "隔离执行器不可用，暂时无法运行代码。";
-    if (runStatus.textContent !== runMessage) runStatus.textContent = runMessage;
+    if (archived && live) forgetLive();
+    syncRunControls();
     const signature = JSON.stringify([state.task?.id, state.latestResult, state.submissionHistory]);
     if (signature !== resultSignature) {
       resultSignature = signature;
@@ -1558,11 +1560,12 @@ function initializeStudent() {
     feedback("", false, "submit-feedback");
     byId("run-result").hidden = true;
     byId("run-result").replaceChildren();
-    clearStdinPrompt(true);
+    forgetLive();
     byId("optcpp-fallback").hidden = true;
     byId("optcpp-status").textContent = "";
     byId("editor-feedback").textContent = currentTask && !archived ? "已打开最新任务。" : "";
     currentTask = state.task;
+    syncRunControls();
     byId("task-title").textContent = currentTask.title;
     const taskDescription = currentTask.description || "";
     byId("task-description").textContent = taskDescription;
@@ -1581,6 +1584,7 @@ function initializeStudent() {
     if (selectedTask.value === taskId) showTask(state);
   }, (error) => {
     if (error.status === 403 || error.status === 404) {
+      forgetLive();
       localStorage.removeItem(storageKey);
       key = null;
       currentTask = null;
@@ -1596,7 +1600,7 @@ function initializeStudent() {
     }
   });
 
-  selectedTask.addEventListener("change", () => { void refresh(); });
+  selectedTask.addEventListener("change", () => { forgetLive(); void refresh(); });
 
   onSubmit("join", async (data) => {
     const result = await api(endpoint("/students"), { data });
@@ -1611,13 +1615,148 @@ function initializeStudent() {
   byId("copy-code").addEventListener("click", () => copyText(editor, "editor-feedback", "代码已复制。"));
 
   const input = byId("submit").elements.runInput;
-  function clearStdinPrompt(clearInput = false) {
-    const wasWaitingForInput = stdinPending !== null;
-    stdinPending = null;
-    byId("stdin-panel").hidden = true;
-    if (clearInput || wasWaitingForInput) input.value = "";
-    byId("run-code").textContent = "运行代码";
+  const activeStatuses = new Set(["compiling", "running", "stopping"]);
+  let live = null;
+  let interactive = false;
+  let executionAvailable = false;
+  let livePolling = false;
+  let liveAction = false;
+
+  function syncRunControls() {
+    const archived = Boolean(selectedTask.value);
+    const active = Boolean(live);
+    const enabled = !archived && executionAvailable && Boolean(currentTask);
+    byId("run-controls").disabled = !enabled || running || active;
+    editor.readOnly = archived || running || active;
+    byId("reset-code").disabled = running || active;
+    byId("stdin-panel").hidden = archived || (!enabled && !active) || (interactive && !active);
+    byId("live-actions").hidden = !active;
+    input.disabled = archived || running || (active && (!live?.stdinOpen || liveAction));
+    byId("send-stdin").disabled = !live?.stdinOpen || liveAction;
+    byId("send-eof").disabled = !live?.stdinOpen || liveAction;
+    byId("stop-run").disabled = !live || liveAction || live.status === "stopping";
+    byId("stdin-label").textContent = interactive || active ? "交互标准输入（stdin）" : "完整标准输入（批处理）";
+    byId("stdin-hint").textContent = interactive || active
+      ? "输入一行或多行后点击发送。程序在同一进程中继续执行；点击 EOF 才主动结束输入流。"
+      : "运行前请一次填入程序所需的全部输入。运行时会关闭 stdin；这不是交互终端。无输入程序可留空。";
+    byId("run-state").textContent = active ? (live.status === "compiling" ? "正在编译…" : live.status === "stopping" ? "正在停止…" :
+      "程序仍在运行，可继续发送输入；不保证正在等待 stdin。") :
+      !enabled ? "执行器不可用，或当前正在查看历史任务。" :
+      running ? "正在编译和运行…" : interactive ? "Run 启动一个持续进程，不计入正式提交。" :
+      "批处理运行：请先填写完整 stdin，再点击运行。不计入正式提交。";
   }
+
+  function showRunResult(result, active = false) {
+    const panel = byId("run-result");
+    panel.replaceChildren();
+    displayResult(panel, result);
+    if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
+    if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || (active ? "" : "（空）")));
+    if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
+    if (result.error) panel.append(element("p", result.error));
+    panel.hidden = false;
+    appendRunResultCopy(panel, result);
+  }
+
+  function sessionRequest(run, action, extra = {}) {
+    return api(endpoint("/run-session"), {headers: headers(), timeoutMs: 7000,
+      data: {action, taskId: run.taskId, ...(run.id ? {sessionId: run.id} : {}), ...extra}});
+  }
+
+  function forgetLive() {
+    const previous = live;
+    live = null;
+    if (previous?.id && key) void sessionRequest(previous, "stop").catch(() => {});
+    input.value = "";
+    syncRunControls();
+  }
+
+  function acceptLive(run, result) {
+    if (live !== run) {
+      if (result.sessionId && key) void sessionRequest({...run, id: result.sessionId}, "stop").catch(() => {});
+      return;
+    }
+    if (["input_closed", "input_limit"].includes(result.status)) {
+      byId("run-action-feedback").textContent = result.error || result.status;
+      return;
+    }
+    if (result.sessionId) run.id = result.sessionId;
+    run.status = result.status;
+    run.stdinOpen = Boolean(result.stdinOpen);
+    const signature = JSON.stringify(result);
+    if (signature !== run.signature) {
+      run.signature = signature;
+      showRunResult(result, activeStatuses.has(result.status));
+    }
+    if (!activeStatuses.has(result.status)) {
+      live = null;
+      input.value = "";
+    }
+    syncRunControls();
+  }
+
+  async function pollLive() {
+    const run = live;
+    if (!run?.id || livePolling || liveAction) return;
+    livePolling = true;
+    const revision = run.revision || 0;
+    try {
+      const result = await sessionRequest(run, "poll");
+      if (live === run && !liveAction && revision === (run.revision || 0)) {
+        if (result.status === "judge_error" && !result.sessionId)
+          byId("run-action-feedback").textContent = "会话连接暂时不可用，正在重试。";
+        else acceptLive(run, result);
+      }
+    } catch (error) {
+      if (live === run) {
+        if (error.status === 403 || error.status === 409) forgetLive();
+        else byId("run-action-feedback").textContent = "会话连接暂时不可用，正在重试。";
+      }
+    } finally {
+      livePolling = false;
+    }
+  }
+
+  setInterval(pollLive, 350);
+  addEventListener("pagehide", () => {
+    if (!live?.id || !key) return;
+    fetch("/api" + endpoint("/run-session"), {method: "POST", keepalive: true,
+      headers: {...headers(), "Content-Type": "application/json"},
+      body: JSON.stringify({action: "stop", taskId: live.taskId, sessionId: live.id})}).catch(() => {});
+  });
+
+  async function liveCommand(action) {
+    const run = live;
+    if (!run || liveAction || (action !== "stop" && !run.stdinOpen)) return;
+    if (!run.id) {
+      if (action === "stop") forgetLive();
+      return;
+    }
+    const original = input.value;
+    const extra = action === "input" ? {input: original.endsWith("\n") ? original : original + "\n"} : {};
+    run.revision = (run.revision || 0) + 1;
+    liveAction = true;
+    syncRunControls();
+    byId("run-action-feedback").textContent = "";
+    try {
+      const result = await sessionRequest(run, action, extra);
+      if (live === run) {
+        if (action === "input" && !["input_closed", "input_limit", "judge_error", "not_found"].includes(result.status)) input.value = "";
+        if (result.status === "judge_error" && !result.sessionId)
+          byId("run-action-feedback").textContent = "未确认操作结果；请检查会话状态。系统不会自动重发输入。";
+        else acceptLive(run, result);
+      }
+    } catch (error) {
+      if (live === run) byId("run-action-feedback").textContent = "操作未确认：" + error.message + "。请检查输出后再决定是否重试。";
+    } finally {
+      liveAction = false;
+      syncRunControls();
+    }
+  }
+
+  byId("send-stdin").addEventListener("click", () => void liveCommand("input"));
+  byId("send-eof").addEventListener("click", () => void liveCommand("eof"));
+  byId("stop-run").addEventListener("click", () => void liveCommand("stop"));
   const fallback = byId("optcpp-fallback");
   const optStatus = byId("optcpp-status");
   byId("open-optcpp").addEventListener("click", () => {
@@ -1693,53 +1832,52 @@ function initializeStudent() {
   }
 
   editor.addEventListener("input", () => {
-    clearStdinPrompt();
+    if (!live && !running) {
+      byId("run-result").hidden = true;
+      byId("run-result").replaceChildren();
+    }
     saveEditorDraft("草稿已保存在此浏览器。");
   });
 
   byId("run-code").addEventListener("click", async () => {
-    if (running || selectedTask.value || !currentTask || !editor.reportValidity()) return;
+    if (running || live || selectedTask.value || !currentTask || !editor.reportValidity()) return;
     const taskId = currentTask.id;
+    const code = editor.value;
     const panel = byId("run-result");
-    const provideInput = stdinPending?.taskId === taskId && stdinPending.code === editor.value;
-    const runInput = provideInput ? input.value : "";
-    running = true;
-    byId("run-controls").disabled = true;
-    byId("run-state").textContent = "正在编译和运行…";
+    byId("run-action-feedback").textContent = "";
     panel.hidden = true;
     panel.replaceChildren();
+    if (interactive) {
+      const run = {taskId, code, id: null, status: "compiling", stdinOpen: false};
+      live = run;
+      input.value = "";
+      syncRunControls();
+      try {
+        acceptLive(run, await sessionRequest(run, "start", {code}));
+      } catch (error) {
+        if (live === run) {
+          live = null;
+          showRunResult({status: "request_error", error: error.message});
+          syncRunControls();
+        }
+      }
+      return;
+    }
+    // Explicit batch fallback: provide all input before execution, no probe.
+    const runInput = input.value;
+    running = true;
+    syncRunControls();
     try {
-      const result = await api(endpoint("/run"), { headers: headers(), timeoutMs: 115000,
-        data: { taskId, code: editor.value, input: runInput, probe: !provideInput } });
-      if (taskId !== currentTask?.id) return;
-      if (result.status === "stdin_required") {
-        stdinPending = { taskId, code: editor.value };
-        byId("stdin-panel").hidden = false;
-        byId("run-code").textContent = "提供输入并重新运行";
-        panel.replaceChildren(element("p", "程序实际读取了标准输入，请提供输入后重新运行。"));
-        if (result.stdout) panel.append(element("strong", "输入前的输出"), element("pre", result.stdout));
-        if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
-        panel.hidden = false;
-        appendRunResultCopy(panel, result);
-        input.focus();
-        return;
-      }
-      clearStdinPrompt();
-      displayResult(panel, result);
-      if (Object.hasOwn(result, "exitCode")) panel.append(element("p", "退出状态 " + result.exitCode));
-      if (Object.hasOwn(result, "stdout")) panel.append(element("strong", "标准输出"), element("pre", result.stdout || "（空）"));
-      if (result.stderr) panel.append(element("strong", "标准错误"), element("pre", result.stderr));
-      if (result.error) panel.append(element("p", result.error));
-      panel.hidden = false;
-      appendRunResultCopy(panel, result);
+      const result = await api(endpoint("/run"), {headers: headers(), timeoutMs: 115000,
+        data: {taskId, code, input: runInput, probe: false}});
+      if (taskId !== currentTask?.id || selectedTask.value || code !== editor.value) return;
+      showRunResult(result);
     } catch (error) {
-      if (taskId === currentTask?.id) {
-        panel.replaceChildren(element("p", error.message));
-        panel.hidden = false;
-        appendRunResultCopy(panel, { status: "request_error", error: error.message });
-      }
+      if (taskId === currentTask?.id && !selectedTask.value && code === editor.value)
+        showRunResult({status: "request_error", error: error.message});
     } finally {
       running = false;
+      syncRunControls();
       await refresh();
     }
   });

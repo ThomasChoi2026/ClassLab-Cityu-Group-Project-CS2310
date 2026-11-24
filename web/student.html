@@ -60,10 +60,16 @@
               <p id="editor-feedback" class="inline-status" role="status"></p>
             </div>
             <div id="stdin-panel" hidden>
-              <label for="run-stdin"><span id="stdin-label">程序正在读取标准输入（stdin）</span>
+              <label for="run-stdin"><span id="stdin-label">标准输入（stdin）</span>
                 <textarea id="run-stdin" name="runInput" rows="3" maxlength="2700" spellcheck="false" placeholder="在这里输入程序需要的数据，例如 5 3"></textarea>
               </label>
-              <p id="stdin-hint" class="inline-status">填写输入后，再点击「提供输入并重新运行」。程序将在隔离 Judge 内从头执行。留空表示发送 EOF。</p>
+              <p id="stdin-hint" class="inline-status">批处理模式请在运行前填写完整输入；交互模式可以逐次发送输入。</p>
+              <div id="live-actions" class="lesson-actions" hidden>
+                <button id="send-stdin" type="button" class="secondary">发送输入</button>
+                <button id="send-eof" type="button" class="secondary">结束输入 (EOF)</button>
+                <button id="stop-run" type="button" class="secondary">停止运行</button>
+              </div>
+              <p id="run-action-feedback" class="inline-status" role="status"></p>
             </div>
             <fieldset id="run-controls" class="run-controls" disabled aria-describedby="run-state">
               <legend>ClassLab 自由运行</legend>
